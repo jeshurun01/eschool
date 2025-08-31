@@ -25,7 +25,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     
     # Applications principales
-    path('', TemplateView.as_view(template_name='base.html'), name='home'),
+    path('', TemplateView.as_view(template_name='home.html'), name='home'),
     path('accounts/', include('accounts.urls')),
     path('academic/', include('academic.urls')),
     path('finance/', include('finance.urls')),
