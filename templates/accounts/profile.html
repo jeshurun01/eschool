@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Mon profil{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div class="sm:flex sm:items-center">
+                <div class="flex-shrink-0">
+                    {% if user.avatar %}
+                        <img class="h-20 w-20 rounded-full" src="{{ user.avatar.url }}" alt="">
+                    {% else %}
+                        <div class="h-20 w-20 rounded-full bg-indigo-500 flex items-center justify-center">
+                            <span class="text-2xl font-medium text-white">{{ user.first_name.0 }}{{ user.last_name.0 }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="mt-4 sm:mt-0 sm:ml-6">
+                    <h1 class="text-2xl font-bold text-gray-900">{{ user.full_name }}</h1>
+                    <p class="text-sm text-gray-500">{{ user.get_role_display_verbose }}</p>
+                    <p class="text-sm text-gray-500">{{ user.email }}</p>
+                </div>
+            </div>
+            <div class="mt-5 sm:mt-0">
+                <a href="{% url 'accounts:profile_edit' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Modifier le profil
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Informations personnelles -->
+    <div class="lg:col-span-2">
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Informations personnelles</h3>
+                <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Prénom</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user.first_name }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Nom</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user.last_name }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">E-mail</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user.email }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Téléphone</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user.phone|default:"Non renseigné" }}</dd>
+                    </div>
+                    {% if user.date_of_birth %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Date de naissance</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user.date_of_birth|date:"d/m/Y" }}</dd>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Genre</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user.get_gender_display|default:"Non renseigné" }}</dd>
+                    </div>
+                    {% if user.address %}
+                    <div class="sm:col-span-2">
+                        <dt class="text-sm font-medium text-gray-500">Adresse</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user.address }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informations du compte -->
+    <div>
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Informations du compte</h3>
+                <dl class="mt-5 space-y-5">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Rôle</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user.get_role_display_verbose }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Date d'inscription</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user.date_joined|date:"d/m/Y à H:i" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Dernière connexion</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            {% if user.last_login %}
+                                {{ user.last_login|date:"d/m/Y à H:i" }}
+                            {% else %}
+                                Jamais connecté
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">E-mail vérifié</dt>
+                        <dd class="mt-1">
+                            {% if user.email_verified %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Vérifié
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    Non vérifié
+                                </span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
