@@ -12,6 +12,7 @@ urlpatterns = [
     
     # Dashboard principal
     path('', views.dashboard, name='dashboard'),
+    path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     
     # Profil utilisateur
     path('profile/', views.profile_view, name='profile'),

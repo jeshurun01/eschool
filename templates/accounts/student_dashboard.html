@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Étudiant - eSchool{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #3B82F6;
+        transition: transform 0.2s;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #1F2937;
+    }
+    
+    .stat-label {
+        color: #6B7280;
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
+    }
+    
+    .activity-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid #E5E7EB;
+        transition: background-color 0.2s;
+    }
+    
+    .activity-item:hover {
+        background-color: #F9FAFB;
+    }
+    
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+    }
+    
+    .green { background-color: #DEF7EC; color: #03543F; }
+    .yellow { background-color: #FEF3C7; color: #92400E; }
+    .red { background-color: #FDE8E8; color: #9B1C1C; }
+    .blue { background-color: #DBEAFE; color: #1E40AF; }
+    
+    .grade-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .progress-bar {
+        height: 8px;
+        background-color: #E5E7EB;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- En-tête -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">
+                Bonjour, {{ student.user.first_name }} ! 👋
+            </h1>
+            <p class="text-gray-600 mt-2">
+                {% if current_class %}
+                    Classe {{ current_class.name }} • {{ current_class.academic_year.name }}
+                {% else %}
+                    Aucune classe assignée
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Statistiques principales -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Moyenne générale -->
+            <div class="stat-card">
+                <div class="stat-number text-blue-600">
+                    {% if average_grade %}{{ average_grade }}/20{% else %}--{% endif %}
+                </div>
+                <div class="stat-label">Moyenne générale</div>
+            </div>
+            
+            <!-- Taux de présence -->
+            <div class="stat-card">
+                <div class="stat-number text-green-600">
+                    {{ monthly_attendances.attendance_rate|default:"0" }}%
+                </div>
+                <div class="stat-label">Présence ce mois</div>
+                <div class="progress-bar mt-2">
+                    <div class="progress-fill bg-green-500" style="width: {{ monthly_attendances.attendance_rate|default:"0" }}%"></div>
+                </div>
+            </div>
+            
+            <!-- Factures en attente -->
+            <div class="stat-card">
+                <div class="stat-number text-red-600">
+                    {{ pending_invoices.count }}
+                </div>
+                <div class="stat-label">Factures en attente</div>
+                {% if total_pending_amount %}
+                    <div class="text-sm text-gray-500 mt-1">{{ total_pending_amount|floatformat:0 }} FCFA</div>
+                {% endif %}
+            </div>
+            
+            <!-- Notes récentes -->
+            <div class="stat-card">
+                <div class="stat-number text-purple-600">
+                    {{ recent_grades.count }}
+                </div>
+                <div class="stat-label">Notes récentes</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Colonne principale -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Notes récentes -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">📊 Notes récentes</h2>
+                    </div>
+                    <div class="p-6">
+                        {% if recent_grades %}
+                            <div class="space-y-4">
+                                {% for grade in recent_grades %}
+                                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                        <div>
+                                            <h3 class="font-medium text-gray-900">{{ grade.subject.name }}</h3>
+                                            <p class="text-sm text-gray-500">{{ grade.evaluation_type }} • {{ grade.teacher.user.full_name }}</p>
+                                            <p class="text-xs text-gray-400">{{ grade.created_at|date:"d M Y" }}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="grade-badge {% if grade.score >= 12 %}bg-green-100 text-green-800{% elif grade.score >= 10 %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                                {{ grade.score }}/20
+                                            </span>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-8">
+                                <div class="text-gray-400 text-4xl mb-4">📝</div>
+                                <p class="text-gray-500">Aucune note disponible pour le moment</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Emploi du temps -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">📅 Prochains cours</h2>
+                    </div>
+                    <div class="p-6">
+                        {% if next_classes %}
+                            <div class="space-y-3">
+                                {% for class in next_classes %}
+                                    <div class="flex items-center p-3 bg-blue-50 rounded-lg">
+                                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                            <span class="text-blue-600 font-bold text-sm">{{ class.start_time|time:"H:i" }}</span>
+                                        </div>
+                                        <div class="flex-1">
+                                            <h4 class="font-medium text-gray-900">{{ class.subject.name }}</h4>
+                                            <p class="text-sm text-gray-500">{{ class.teacher.user.full_name }} • Salle {{ class.classroom.room_number|default:"--" }}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="text-sm text-gray-400">{{ class.get_weekday_display }}</span>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-8">
+                                <div class="text-gray-400 text-4xl mb-4">⏰</div>
+                                <p class="text-gray-500">Emploi du temps non disponible</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Colonne latérale -->
+            <div class="space-y-6">
+                <!-- Présences du mois -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">✅ Présences du mois</h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Présent</span>
+                                <span class="font-semibold text-green-600">{{ monthly_attendances.present }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Absent</span>
+                                <span class="font-semibold text-red-600">{{ monthly_attendances.absent }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">En retard</span>
+                                <span class="font-semibold text-yellow-600">{{ monthly_attendances.late }}</span>
+                            </div>
+                            <hr class="my-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-900">Total</span>
+                                <span class="font-bold text-gray-900">{{ monthly_attendances.total }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Factures en attente -->
+                {% if pending_invoices %}
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">💳 Factures en attente</h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-3">
+                            {% for invoice in pending_invoices %}
+                                <div class="p-3 bg-red-50 rounded-lg border border-red-200">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <h4 class="font-medium text-gray-900">{{ invoice.invoice_number }}</h4>
+                                            <p class="text-sm text-gray-500">Échéance: {{ invoice.due_date|date:"d M Y" }}</p>
+                                        </div>
+                                        <span class="font-bold text-red-600">{{ invoice.total_amount|floatformat:0 }} FCFA</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <a href="#" class="mt-4 block w-full text-center bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                            Voir toutes les factures
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Activités récentes -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">🕒 Activités récentes</h2>
+                    </div>
+                    <div class="divide-y divide-gray-200">
+                        {% if recent_activities %}
+                            {% for activity in recent_activities %}
+                                <div class="activity-item">
+                                    <div class="activity-icon {{ activity.color }}">
+                                        {% if activity.type == 'grade' %}📊{% elif activity.type == 'payment' %}💳{% else %}📋{% endif %}
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="font-medium text-gray-900">{{ activity.title }}</h4>
+                                        <p class="text-sm text-gray-500">{{ activity.description }}</p>
+                                        <p class="text-xs text-gray-400">{{ activity.date|date:"d M Y H:i" }}</p>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="p-6 text-center">
+                                <div class="text-gray-400 text-4xl mb-4">📝</div>
+                                <p class="text-gray-500">Aucune activité récente</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions rapides -->
+        <div class="mt-8 bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">🚀 Actions rapides</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <a href="#" class="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                    <div class="text-2xl mb-2">📚</div>
+                    <span class="text-sm font-medium text-gray-900">Mes notes</span>
+                </a>
+                <a href="#" class="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                    <div class="text-2xl mb-2">📅</div>
+                    <span class="text-sm font-medium text-gray-900">Emploi du temps</span>
+                </a>
+                <a href="#" class="flex flex-col items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
+                    <div class="text-2xl mb-2">💬</div>
+                    <span class="text-sm font-medium text-gray-900">Messages</span>
+                </a>
+                <a href="#" class="flex flex-col items-center p-4 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors">
+                    <div class="text-2xl mb-2">📋</div>
+                    <span class="text-sm font-medium text-gray-900">Devoirs</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
