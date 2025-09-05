@@ -31,4 +31,11 @@ urlpatterns = [
     path('notifications/', views.notification_list, name='notification_list'),
     path('notifications/<int:notification_id>/mark-read/', views.notification_mark_read, name='notification_mark_read'),
     path('notifications/mark-all-read/', views.notification_mark_all_read, name='notification_mark_all_read'),
+    
+    # Forum
+    path('forum/', views.forum_index, name='forum_index'),
+    path('forum/classroom/<int:classroom_id>/', views.forum_classroom, name='forum_classroom'),
+    path('forum/topic/<int:topic_id>/', views.forum_topic_detail, name='forum_topic_detail'),
+    path('forum/classroom/<int:classroom_id>/topic/create/', views.forum_topic_create, name='forum_topic_create'),
+    path('forum/topic/<int:topic_id>/post/', views.forum_post_create, name='forum_post_create'),
 ]

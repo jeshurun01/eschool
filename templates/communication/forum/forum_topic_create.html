@@ -1,0 +1,347 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Nouveau Sujet - {{ classroom.name }} - Forum - École{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 800px;
+    }
+    
+    .preview-content {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        min-height: 200px;
+    }
+    
+    .tab-active {
+        background: #3b82f6;
+        color: white;
+    }
+    
+    .tab-inactive {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+    
+    .markdown-help {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="form-container mx-auto">
+        <!-- Navigation -->
+        <nav class="flex mb-6" aria-label="Breadcrumb">
+            <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                <li class="inline-flex items-center">
+                    <a href="{% url 'communication:forum_index' %}" class="text-gray-700 hover:text-blue-600">
+                        <i class="fas fa-home mr-2"></i>Forum
+                    </a>
+                </li>
+                <li>
+                    <div class="flex items-center">
+                        <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                        <a href="{% url 'communication:forum_classroom' classroom.id %}" 
+                           class="text-gray-700 hover:text-blue-600">{{ classroom.name }}</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="flex items-center">
+                        <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                        <span class="text-gray-500">Nouveau sujet</span>
+                    </div>
+                </li>
+            </ol>
+        </nav>
+
+        <!-- En-tête -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg p-6 mb-8">
+            <div class="flex items-center">
+                <i class="fas fa-plus-circle text-3xl mr-4"></i>
+                <div>
+                    <h1 class="text-2xl font-bold mb-2">Créer un nouveau sujet</h1>
+                    <p class="text-blue-100">{{ classroom.name }} - {{ classroom.subject.name }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulaire -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="bg-gray-50 px-6 py-4 border-b">
+                <h2 class="text-lg font-semibold text-gray-800">Informations du sujet</h2>
+            </div>
+            
+            <form method="post" class="p-6">
+                {% csrf_token %}
+                
+                <!-- Titre du sujet -->
+                <div class="mb-6">
+                    <label for="title" class="block text-sm font-medium text-gray-700 mb-2">
+                        Titre du sujet <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="title" id="title" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Saisissez un titre descriptif pour votre sujet..."
+                           value="{{ form.title.value|default:'' }}">
+                    {% if form.title.errors %}
+                        <div class="mt-1 text-red-600 text-sm">{{ form.title.errors.0 }}</div>
+                    {% endif %}
+                    <div class="mt-1 text-gray-500 text-sm">
+                        Choisissez un titre clair et descriptif qui résume bien votre sujet.
+                    </div>
+                </div>
+
+                <!-- Contenu du sujet -->
+                <div class="mb-6">
+                    <label for="content" class="block text-sm font-medium text-gray-700 mb-2">
+                        Contenu du sujet <span class="text-red-500">*</span>
+                    </label>
+                    
+                    <!-- Onglets pour édition/prévisualisation -->
+                    <div class="border-b border-gray-200 mb-4">
+                        <nav class="-mb-px flex space-x-8">
+                            <button type="button" id="edit-tab" 
+                                    class="tab-active py-2 px-4 border-b-2 border-transparent font-medium text-sm rounded-t-md transition duration-300">
+                                <i class="fas fa-edit mr-2"></i>Édition
+                            </button>
+                            <button type="button" id="preview-tab" 
+                                    class="tab-inactive py-2 px-4 border-b-2 border-transparent font-medium text-sm rounded-t-md transition duration-300">
+                                <i class="fas fa-eye mr-2"></i>Aperçu
+                            </button>
+                        </nav>
+                    </div>
+                    
+                    <!-- Zone d'édition -->
+                    <div id="edit-area">
+                        <textarea name="content" id="content" rows="10" required
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="Décrivez votre sujet de discussion en détail...">{{ form.content.value|default:'' }}</textarea>
+                    </div>
+                    
+                    <!-- Zone de prévisualisation -->
+                    <div id="preview-area" class="hidden">
+                        <div class="preview-content" id="preview-content">
+                            <p class="text-gray-500">Aucun contenu à prévisualiser</p>
+                        </div>
+                    </div>
+                    
+                    {% if form.content.errors %}
+                        <div class="mt-1 text-red-600 text-sm">{{ form.content.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Aide pour le formatage -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <h3 class="text-sm font-medium text-blue-800 mb-2">
+                        <i class="fas fa-info-circle mr-2"></i>Conseils de rédaction
+                    </h3>
+                    <div class="markdown-help text-blue-700">
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>Soyez clair et précis dans votre titre</li>
+                            <li>Développez votre question ou sujet dans le contenu</li>
+                            <li>Utilisez des paragraphes pour structurer votre message</li>
+                            <li>Restez respectueux et constructif</li>
+                            <li>Vérifiez l'orthographe avant de publier</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Options du sujet (pour les enseignants) -->
+                {% if user.role == 'TEACHER' %}
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                    <h3 class="text-sm font-medium text-yellow-800 mb-3">
+                        <i class="fas fa-cog mr-2"></i>Options d'enseignant
+                    </h3>
+                    <div class="space-y-3">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="is_pinned" value="true" 
+                                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-yellow-700">
+                                <i class="fas fa-thumbtack mr-1"></i>
+                                Épingler ce sujet (apparaîtra en haut de la liste)
+                            </span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="is_announcement" value="true" 
+                                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-yellow-700">
+                                <i class="fas fa-bullhorn mr-1"></i>
+                                Marquer comme annonce importante
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Boutons d'action -->
+                <div class="flex justify-between items-center pt-6 border-t border-gray-200">
+                    <a href="{% url 'communication:forum_classroom' classroom.id %}" 
+                       class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition duration-300">
+                        <i class="fas fa-arrow-left mr-2"></i>Retour au forum
+                    </a>
+                    
+                    <div class="flex space-x-4">
+                        <button type="button" id="save-draft" 
+                                class="px-4 py-2 text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 transition duration-300">
+                            <i class="fas fa-save mr-2"></i>Sauvegarder le brouillon
+                        </button>
+                        <button type="submit" 
+                                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">
+                            <i class="fas fa-paper-plane mr-2"></i>Publier le sujet
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Règles du forum -->
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mt-8">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                <i class="fas fa-gavel mr-2"></i>Règles du forum
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-600">
+                <div>
+                    <h4 class="font-medium text-gray-800 mb-2">À faire :</h4>
+                    <ul class="list-disc list-inside space-y-1">
+                        <li>Utiliser un titre descriptif</li>
+                        <li>Rester dans le sujet de la classe</li>
+                        <li>Être respectueux envers les autres</li>
+                        <li>Vérifier l'orthographe et la grammaire</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-medium text-gray-800 mb-2">À éviter :</h4>
+                    <ul class="list-disc list-inside space-y-1">
+                        <li>Créer des doublons de sujets</li>
+                        <li>Utiliser un langage inapproprié</li>
+                        <li>Poster du contenu hors-sujet</li>
+                        <li>Spammer ou faire du trolling</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Gestion des onglets
+    $('#edit-tab').click(function() {
+        $(this).removeClass('tab-inactive').addClass('tab-active');
+        $('#preview-tab').removeClass('tab-active').addClass('tab-inactive');
+        $('#edit-area').removeClass('hidden');
+        $('#preview-area').addClass('hidden');
+    });
+    
+    $('#preview-tab').click(function() {
+        $(this).removeClass('tab-inactive').addClass('tab-active');
+        $('#edit-tab').removeClass('tab-active').addClass('tab-inactive');
+        $('#edit-area').addClass('hidden');
+        $('#preview-area').removeClass('hidden');
+        
+        // Mettre à jour l'aperçu
+        const content = $('#content').val();
+        if (content.trim()) {
+            // Simulation de formatage (ici on affiche juste le texte avec des retours à la ligne)
+            $('#preview-content').html(content.replace(/\n/g, '<br>'));
+        } else {
+            $('#preview-content').html('<p class="text-gray-500">Aucun contenu à prévisualiser</p>');
+        }
+    });
+    
+    // Compteur de caractères en temps réel
+    $('#title').on('input', function() {
+        const length = $(this).val().length;
+        const maxLength = 200; // Limite suggérée
+        
+        if (length > maxLength) {
+            $(this).addClass('border-red-500');
+        } else {
+            $(this).removeClass('border-red-500');
+        }
+    });
+    
+    // Sauvegarde automatique en brouillon (simulation)
+    let autoSaveInterval;
+    $('#content').on('input', function() {
+        clearTimeout(autoSaveInterval);
+        autoSaveInterval = setTimeout(function() {
+            // Ici on pourrait implémenter une vraie sauvegarde automatique
+            console.log('Auto-sauvegarde...');
+        }, 10000); // 10 secondes après la dernière frappe
+    });
+    
+    // Bouton de sauvegarde manuelle
+    $('#save-draft').click(function() {
+        const title = $('#title').val();
+        const content = $('#content').val();
+        
+        if (title.trim() && content.trim()) {
+            // Simulation de sauvegarde
+            $(this).html('<i class="fas fa-check mr-2"></i>Brouillon sauvegardé !');
+            setTimeout(() => {
+                $(this).html('<i class="fas fa-save mr-2"></i>Sauvegarder le brouillon');
+            }, 2000);
+        } else {
+            alert('Veuillez remplir au moins le titre et le contenu avant de sauvegarder.');
+        }
+    });
+    
+    // Validation avant soumission
+    $('form').on('submit', function(e) {
+        const title = $('#title').val().trim();
+        const content = $('#content').val().trim();
+        
+        if (!title) {
+            e.preventDefault();
+            alert('Veuillez saisir un titre pour votre sujet.');
+            $('#title').focus();
+            return false;
+        }
+        
+        if (!content) {
+            e.preventDefault();
+            alert('Veuillez saisir le contenu de votre sujet.');
+            $('#content').focus();
+            return false;
+        }
+        
+        if (title.length < 5) {
+            e.preventDefault();
+            alert('Le titre doit contenir au moins 5 caractères.');
+            $('#title').focus();
+            return false;
+        }
+        
+        if (content.length < 20) {
+            e.preventDefault();
+            alert('Le contenu doit contenir au moins 20 caractères.');
+            $('#content').focus();
+            return false;
+        }
+        
+        // Désactiver le bouton pour éviter les doublons
+        $('button[type="submit"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i>Publication...');
+    });
+    
+    // Animation d'entrée
+    $('.form-container').css({
+        'opacity': '0',
+        'transform': 'translateY(20px)'
+    }).animate({
+        'opacity': '1'
+    }, 500).css({
+        'transform': 'translateY(0)'
+    });
+});
+</script>
+{% endblock %}

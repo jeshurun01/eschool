@@ -1,0 +1,364 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ topic.title }} - Forum - École{% endblock %}
+
+{% block extra_css %}
+<style>
+    .post-content {
+        line-height: 1.7;
+    }
+    
+    .post-item {
+        transition: all 0.3s ease;
+    }
+    
+    .post-item:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .author-badge {
+        font-size: 0.7rem;
+        padding: 2px 6px;
+    }
+    
+    .avatar-lg {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .quote-block {
+        background: #f8f9fa;
+        border-left: 4px solid #6366f1;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 0 0.5rem 0.5rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-6xl">
+    <!-- Navigation -->
+    <nav class="flex mb-6" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+            <li class="inline-flex items-center">
+                <a href="{% url 'communication:forum_index' %}" class="text-gray-700 hover:text-blue-600">
+                    <i class="fas fa-home mr-2"></i>Forum
+                </a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                    <a href="{% url 'communication:forum_classroom' topic.classroom.id %}" 
+                       class="text-gray-700 hover:text-blue-600">{{ topic.classroom.name }}</a>
+                </div>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                    <span class="text-gray-500">{{ topic.title|truncatewords:5 }}</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    <!-- En-tête du sujet -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6">
+            <div class="flex justify-between items-start">
+                <div class="flex-1">
+                    <div class="flex items-center mb-2">
+                        {% if topic.is_pinned %}
+                        <i class="fas fa-thumbtack text-yellow-300 mr-2"></i>
+                        {% endif %}
+                        {% if topic.is_locked %}
+                        <i class="fas fa-lock text-red-300 mr-2"></i>
+                        {% endif %}
+                        <h1 class="text-2xl font-bold">{{ topic.title }}</h1>
+                    </div>
+                    <div class="flex items-center text-indigo-200">
+                        <img src="{% if topic.author.avatar %}{{ topic.author.avatar.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}" 
+                             alt="{{ topic.author.get_full_name }}" 
+                             class="avatar-lg rounded-full mr-3">
+                        <div>
+                            <div class="font-medium">{{ topic.author.get_full_name|default:topic.author.username }}</div>
+                            <div class="text-sm">{{ topic.created_at|date:"d M Y à H:i" }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% if can_reply %}
+                <div>
+                    <a href="#reply-form" 
+                       class="bg-white text-indigo-600 font-medium py-2 px-4 rounded-md hover:bg-indigo-50 transition duration-300">
+                        <i class="fas fa-reply mr-2"></i>Répondre
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <div class="post-content text-gray-700">
+                {{ topic.content|linebreaks }}
+            </div>
+            
+            <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
+                <div class="flex items-center space-x-4 text-sm text-gray-500">
+                    <span><i class="fas fa-comments mr-1"></i>{{ posts.count }} réponse{{ posts.count|pluralize }}</span>
+                    <span><i class="fas fa-eye mr-1"></i>{{ topic.views }} vue{{ topic.views|pluralize }}</span>
+                </div>
+                
+                {% if user == topic.author or user.role == 'TEACHER' or user.is_staff %}
+                <div class="flex space-x-2">
+                    <button class="text-gray-500 hover:text-blue-600 px-2 py-1 rounded transition duration-300" 
+                            title="Modifier">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    {% if user.role == 'TEACHER' or user.is_staff %}
+                    <button class="text-gray-500 hover:text-yellow-600 px-2 py-1 rounded transition duration-300" 
+                            title="{% if topic.is_pinned %}Détacher{% else %}Épingler{% endif %}">
+                        <i class="fas fa-thumbtack"></i>
+                    </button>
+                    <button class="text-gray-500 hover:text-red-600 px-2 py-1 rounded transition duration-300" 
+                            title="{% if topic.is_locked %}Déverrouiller{% else %}Verrouiller{% endif %}">
+                        <i class="fas fa-lock"></i>
+                    </button>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages/Réponses -->
+    <div class="space-y-6">
+        {% for post in posts %}
+        <div class="post-item bg-white rounded-lg shadow-md overflow-hidden" id="post-{{ post.id }}">
+            <div class="flex p-6">
+                <!-- Informations de l'auteur -->
+                <div class="flex-shrink-0 mr-6">
+                    <div class="text-center">
+                        <img src="{% if post.author.avatar %}{{ post.author.avatar.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}" 
+                             alt="{{ post.author.get_full_name }}" 
+                             class="avatar-lg rounded-full mx-auto mb-2">
+                        <div class="text-sm font-medium text-gray-800">
+                            {{ post.author.get_full_name|default:post.author.username }}
+                        </div>
+                        <div class="text-xs text-gray-500 mb-2">
+                            {% if post.author.role == 'TEACHER' %}
+                                <span class="author-badge bg-blue-100 text-blue-800 rounded-full">Enseignant</span>
+                            {% elif post.author.role == 'STUDENT' %}
+                                <span class="author-badge bg-green-100 text-green-800 rounded-full">Élève</span>
+                            {% elif post.author.role == 'PARENT' %}
+                                <span class="author-badge bg-purple-100 text-purple-800 rounded-full">Parent</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-xs text-gray-400">
+                            {{ post.author.posts.count }} message{{ post.author.posts.count|pluralize }}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contenu du message -->
+                <div class="flex-1">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="text-sm text-gray-500">
+                            <i class="fas fa-clock mr-1"></i>
+                            {{ post.created_at|date:"d M Y à H:i" }}
+                            {% if post.updated_at != post.created_at %}
+                            <span class="ml-2 text-xs">(modifié le {{ post.updated_at|date:"d M Y à H:i" }})</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex space-x-2">
+                            <a href="#post-{{ post.id }}" class="text-gray-400 hover:text-blue-600 text-sm">
+                                #{{ forloop.counter }}
+                            </a>
+                            {% if user == post.author or user.role == 'TEACHER' or user.is_staff %}
+                            <button class="text-gray-400 hover:text-blue-600 text-sm" title="Modifier">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            {% endif %}
+                            {% if user.role == 'TEACHER' or user.is_staff %}
+                            <button class="text-gray-400 hover:text-red-600 text-sm" title="Supprimer">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if post.parent %}
+                    <div class="quote-block mb-4">
+                        <div class="text-xs text-gray-600 mb-1">
+                            <i class="fas fa-quote-left mr-1"></i>
+                            {{ post.parent.author.get_full_name|default:post.parent.author.username }} a écrit :
+                        </div>
+                        <div class="text-sm text-gray-700">
+                            {{ post.parent.content|truncatewords:20|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="post-content text-gray-700">
+                        {{ post.content|linebreaks }}
+                    </div>
+                    
+                    {% if can_reply and not topic.is_locked %}
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <button class="text-blue-600 hover:text-blue-800 text-sm font-medium reply-btn" 
+                                data-post-id="{{ post.id }}" 
+                                data-author="{{ post.author.get_full_name|default:post.author.username }}">
+                            <i class="fas fa-reply mr-1"></i>Citer et répondre
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="bg-white rounded-lg shadow-md p-8 text-center">
+            <div class="text-gray-400 mb-4">
+                <i class="fas fa-comments text-4xl"></i>
+            </div>
+            <h3 class="text-lg font-medium text-gray-600 mb-2">Aucune réponse</h3>
+            <p class="text-gray-400">Soyez le premier à répondre à ce sujet !</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if posts.has_other_pages %}
+    <div class="flex justify-center mt-8">
+        <nav class="flex items-center space-x-2">
+            {% if posts.has_previous %}
+                <a href="?page={{ posts.previous_page_number }}" 
+                   class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            {% endif %}
+            
+            {% for num in posts.paginator.page_range %}
+                {% if num == posts.number %}
+                    <span class="px-3 py-2 bg-blue-600 text-white rounded-md">{{ num }}</span>
+                {% else %}
+                    <a href="?page={{ num }}" 
+                       class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md">
+                        {{ num }}
+                    </a>
+                {% endif %}
+            {% endfor %}
+            
+            {% if posts.has_next %}
+                <a href="?page={{ posts.next_page_number }}" 
+                   class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+
+    <!-- Formulaire de réponse -->
+    {% if can_reply and not topic.is_locked %}
+    <div class="bg-white rounded-lg shadow-md overflow-hidden mt-8" id="reply-form">
+        <div class="bg-gray-50 px-6 py-4 border-b">
+            <h3 class="text-lg font-semibold text-gray-800">
+                <i class="fas fa-reply mr-2"></i>Répondre au sujet
+            </h3>
+        </div>
+        
+        <form method="post" action="{% url 'communication:forum_post_create' topic.id %}" class="p-6">
+            {% csrf_token %}
+            <div id="quote-content" class="hidden mb-4">
+                <div class="quote-block">
+                    <div class="text-xs text-gray-600 mb-1" id="quote-author"></div>
+                    <div class="text-sm text-gray-700" id="quote-text"></div>
+                </div>
+            </div>
+            
+            <input type="hidden" id="parent-post" name="parent" value="">
+            
+            <div class="mb-4">
+                <label for="content" class="block text-sm font-medium text-gray-700 mb-2">Votre message</label>
+                <textarea name="content" id="content" rows="6" required
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Écrivez votre réponse..."></textarea>
+            </div>
+            
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-gray-500">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Soyez respectueux et constructif dans vos échanges.
+                </div>
+                <div class="flex space-x-4">
+                    <button type="button" id="cancel-reply" class="hidden px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition duration-300">
+                        Annuler
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">
+                        <i class="fas fa-paper-plane mr-2"></i>Publier la réponse
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    {% elif topic.is_locked %}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mt-8 text-center">
+        <i class="fas fa-lock text-yellow-600 text-2xl mb-2"></i>
+        <h3 class="text-lg font-medium text-yellow-800 mb-2">Sujet verrouillé</h3>
+        <p class="text-yellow-700">Ce sujet a été verrouillé par un modérateur. Aucune nouvelle réponse ne peut être ajoutée.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Gestion des citations
+    $('.reply-btn').click(function() {
+        const postId = $(this).data('post-id');
+        const author = $(this).data('author');
+        const postContent = $(this).closest('.post-item').find('.post-content').text().trim();
+        
+        // Afficher la zone de citation
+        $('#quote-content').removeClass('hidden');
+        $('#quote-author').html('<i class="fas fa-quote-left mr-1"></i>' + author + ' a écrit :');
+        $('#quote-text').text(postContent.substring(0, 200) + (postContent.length > 200 ? '...' : ''));
+        
+        // Définir le parent du post
+        $('#parent-post').val(postId);
+        
+        // Afficher le bouton d'annulation
+        $('#cancel-reply').removeClass('hidden');
+        
+        // Faire défiler vers le formulaire
+        $('html, body').animate({
+            scrollTop: $('#reply-form').offset().top - 100
+        }, 500);
+        
+        // Focus sur le textarea
+        $('#content').focus();
+    });
+    
+    // Annuler la citation
+    $('#cancel-reply').click(function() {
+        $('#quote-content').addClass('hidden');
+        $('#parent-post').val('');
+        $(this).addClass('hidden');
+        $('#content').val('');
+    });
+    
+    // Animation d'entrée pour les posts
+    $('.post-item').each(function(index) {
+        $(this).css({
+            'opacity': '0',
+            'transform': 'translateY(20px)'
+        }).delay(index * 100).animate({
+            'opacity': '1'
+        }, 500).css({
+            'transform': 'translateY(0)'
+        });
+    });
+});
+</script>
+{% endblock %}

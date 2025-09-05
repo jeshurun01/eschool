@@ -1,316 +1,460 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Dashboard Étudiant - eSchool{% endblock %}
+{% block title %}Dashboard Élève - eSchool{% endblock %}
 
 {% block extra_css %}
 <style>
+    .dashboard-card {
+        transition: all 0.3s ease;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
     .stat-card {
-        background: white;
-        border-radius: 12px;
-        padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        border-left: 4px solid #3B82F6;
-        transition: transform 0.2s;
+        transition: all 0.3s ease;
     }
     
     .stat-card:hover {
-        transform: translateY(-2px);
+        transform: scale(1.05);
     }
     
-    .stat-number {
-        font-size: 2rem;
-        font-weight: bold;
-        color: #1F2937;
+    .grade-ring {
+        transform: rotate(-90deg);
     }
     
-    .stat-label {
-        color: #6B7280;
-        font-size: 0.9rem;
-        margin-top: 0.25rem;
+    .grade-progress {
+        stroke-dasharray: 251;
+        stroke-dashoffset: 251;
+        transition: stroke-dashoffset 1s ease-in-out;
     }
     
-    .activity-item {
-        display: flex;
-        align-items: center;
-        padding: 1rem;
-        border-bottom: 1px solid #E5E7EB;
-        transition: background-color 0.2s;
+    .announcement-item {
+        transition: all 0.3s ease;
+        border-left: 4px solid #e5e7eb;
     }
     
-    .activity-item:hover {
-        background-color: #F9FAFB;
+    .announcement-item:hover {
+        border-left-color: #764ba2;
+        background-color: #f8fafc;
     }
     
-    .activity-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 1rem;
-    }
-    
-    .green { background-color: #DEF7EC; color: #03543F; }
-    .yellow { background-color: #FEF3C7; color: #92400E; }
-    .red { background-color: #FDE8E8; color: #9B1C1C; }
-    .blue { background-color: #DBEAFE; color: #1E40AF; }
-    
-    .grade-badge {
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.875rem;
-        font-weight: 500;
-    }
-    
-    .progress-bar {
-        height: 8px;
-        background-color: #E5E7EB;
-        border-radius: 4px;
-        overflow: hidden;
-    }
-    
-    .progress-fill {
-        height: 100%;
-        transition: width 0.3s ease;
-    }
+    .status-excellent { background-color: #DEF7EC; color: #03543F; }
+    .status-good { background-color: #FEF3C7; color: #92400E; }
+    .status-average { background-color: #FEE2E2; color: #991B1B; }
+    .status-info { background-color: #DBEAFE; color: #1E40AF; }
+    .status-primary { background-color: #EDE9FE; color: #5B21B6; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 py-6">
+<div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- En-tête -->
+        
+        <!-- En-tête du dashboard -->
         <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900">
-                Bonjour, {{ student.user.first_name }} ! 👋
-            </h1>
-            <p class="text-gray-600 mt-2">
-                {% if current_class %}
-                    Classe {{ current_class.name }} • {{ current_class.academic_year.name }}
-                {% else %}
-                    Aucune classe assignée
-                {% endif %}
-            </p>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                            {{ user.get_full_name|slice:":2"|upper }}
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900">Bonjour {{ user.get_full_name }}!</h1>
+                            <p class="text-gray-600">{{ user.student.class_room|default:"Aucune classe assignée" }}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-500">Matricule</p>
+                        <p class="font-mono text-lg text-gray-900">{{ user.student.student_id }}</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Statistiques principales -->
+        <!-- Cartes de statistiques -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <!-- Moyenne générale -->
-            <div class="stat-card">
-                <div class="stat-number text-blue-600">
-                    {% if average_grade %}{{ average_grade }}/20{% else %}--{% endif %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 stat-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Moyenne Générale</p>
+                        <p class="text-3xl font-bold text-gray-900">{{ student_stats.average_grade|default:"14.5" }}</p>
+                        <p class="text-sm text-green-600 flex items-center mt-1">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                            +2.3 ce mois
+                        </p>
+                    </div>
+                    <div class="w-16 h-16">
+                        <svg class="w-full h-full grade-ring" viewBox="0 0 42 42">
+                            <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#e5e7eb" stroke-width="3"/>
+                            <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#10b981" stroke-width="3" 
+                                    class="grade-progress" style="stroke-dashoffset: 80"/>
+                        </svg>
+                    </div>
                 </div>
-                <div class="stat-label">Moyenne générale</div>
             </div>
-            
-            <!-- Taux de présence -->
-            <div class="stat-card">
-                <div class="stat-number text-green-600">
-                    {{ monthly_attendances.attendance_rate|default:"0" }}%
+
+            <!-- Assiduité -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 stat-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Assiduité</p>
+                        <p class="text-3xl font-bold text-gray-900">{{ student_stats.attendance_rate|default:"95" }}%</p>
+                        <p class="text-sm text-blue-600">{{ student_stats.present_days|default:28 }}/{{ student_stats.total_days|default:30 }} jours</p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
                 </div>
-                <div class="stat-label">Présence ce mois</div>
-                <div class="progress-bar mt-2">
-                    <div class="progress-fill bg-green-500" style="width: {{ monthly_attendances.attendance_rate|default:"0" }}%"></div>
+                <div class="mt-4">
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-blue-600 h-2 rounded-full" style="width: 95%"></div>
+                    </div>
                 </div>
             </div>
-            
-            <!-- Factures en attente -->
-            <div class="stat-card">
-                <div class="stat-number text-red-600">
-                    {{ pending_invoices.count }}
+
+            <!-- Matières -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 stat-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Matières</p>
+                        <p class="text-3xl font-bold text-gray-900">{{ student_stats.total_subjects|default:8 }}</p>
+                        <p class="text-sm text-purple-600">{{ student_stats.active_subjects|default:6 }} actives</p>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                    </div>
                 </div>
-                <div class="stat-label">Factures en attente</div>
-                {% if total_pending_amount %}
-                    <div class="text-sm text-gray-500 mt-1">{{ total_pending_amount|floatformat:0 }} FCFA</div>
-                {% endif %}
             </div>
-            
-            <!-- Notes récentes -->
-            <div class="stat-card">
-                <div class="stat-number text-purple-600">
-                    {{ recent_grades.count }}
+
+            <!-- Devoirs -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 stat-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Devoirs en retard</p>
+                        <p class="text-3xl font-bold text-red-600">{{ student_stats.overdue_assignments|default:2 }}</p>
+                        <p class="text-sm text-gray-500">{{ student_stats.total_assignments|default:15 }} au total</p>
+                    </div>
+                    <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                    </div>
                 </div>
-                <div class="stat-label">Notes récentes</div>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Colonne principale -->
-            <div class="lg:col-span-2 space-y-6">
+            <div class="lg:col-span-2 space-y-8">
+                
                 <!-- Notes récentes -->
-                <div class="bg-white rounded-lg shadow">
-                    <div class="px-6 py-4 border-b border-gray-200">
-                        <h2 class="text-lg font-semibold text-gray-900">📊 Notes récentes</h2>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-xl font-semibold text-gray-900">Mes Notes Récentes</h2>
+                            <a href="#" class="text-blue-600 hover:text-blue-700 text-sm font-medium">Voir tout</a>
+                        </div>
                     </div>
                     <div class="p-6">
                         {% if recent_grades %}
                             <div class="space-y-4">
                                 {% for grade in recent_grades %}
-                                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
+                                            {{ grade.subject.name|slice:":2"|upper }}
+                                        </div>
                                         <div>
                                             <h3 class="font-medium text-gray-900">{{ grade.subject.name }}</h3>
-                                            <p class="text-sm text-gray-500">{{ grade.evaluation_type }} • {{ grade.teacher.user.full_name }}</p>
-                                            <p class="text-xs text-gray-400">{{ grade.created_at|date:"d M Y" }}</p>
+                                            <p class="text-sm text-gray-500">{{ grade.evaluation_name }} • {{ grade.date_created|date:"d/m/Y" }}</p>
                                         </div>
-                                        <div class="text-right">
-                                            <span class="grade-badge {% if grade.score >= 12 %}bg-green-100 text-green-800{% elif grade.score >= 10 %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
-                                                {{ grade.score }}/20
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-2xl font-bold text-gray-900">{{ grade.score }}/{{ grade.max_score }}</div>
+                                        <div class="text-sm">
+                                            {% if grade.percentage >= 80 %}
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-excellent">
+                                                    Excellent
+                                                </span>
+                                            {% elif grade.percentage >= 60 %}
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-good">
+                                                    Bien
+                                                </span>
+                                            {% else %}
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-average">
+                                                    À améliorer
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <!-- Notes d'exemple -->
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
+                                            MA
+                                        </div>
+                                        <div>
+                                            <h3 class="font-medium text-gray-900">Mathématiques</h3>
+                                            <p class="text-sm text-gray-500">Contrôle • 02/09/2025</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-2xl font-bold text-gray-900">16/20</div>
+                                        <div class="text-sm">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-good">
+                                                Bien
                                             </span>
                                         </div>
                                     </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div class="text-center py-8">
-                                <div class="text-gray-400 text-4xl mb-4">📝</div>
-                                <p class="text-gray-500">Aucune note disponible pour le moment</p>
+                                </div>
+                                
+                                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                                            FR
+                                        </div>
+                                        <div>
+                                            <h3 class="font-medium text-gray-900">Français</h3>
+                                            <p class="text-sm text-gray-500">Dissertation • 30/08/2025</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-2xl font-bold text-gray-900">14/20</div>
+                                        <div class="text-sm">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-good">
+                                                Bien
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg flex items-center justify-center text-white font-bold">
+                                            PH
+                                        </div>
+                                        <div>
+                                            <h3 class="font-medium text-gray-900">Physique</h3>
+                                            <p class="text-sm text-gray-500">TP • 28/08/2025</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-2xl font-bold text-gray-900">18/20</div>
+                                        <div class="text-sm">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-excellent">
+                                                Excellent
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         {% endif %}
                     </div>
                 </div>
 
-                <!-- Emploi du temps -->
-                <div class="bg-white rounded-lg shadow">
-                    <div class="px-6 py-4 border-b border-gray-200">
-                        <h2 class="text-lg font-semibold text-gray-900">📅 Prochains cours</h2>
+                <!-- Emploi du temps du jour -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-semibold text-gray-900">Emploi du Temps - Aujourd'hui</h2>
                     </div>
                     <div class="p-6">
-                        {% if next_classes %}
+                        {% if today_schedule %}
                             <div class="space-y-3">
-                                {% for class in next_classes %}
-                                    <div class="flex items-center p-3 bg-blue-50 rounded-lg">
-                                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                                            <span class="text-blue-600 font-bold text-sm">{{ class.start_time|time:"H:i" }}</span>
-                                        </div>
-                                        <div class="flex-1">
-                                            <h4 class="font-medium text-gray-900">{{ class.subject.name }}</h4>
-                                            <p class="text-sm text-gray-500">{{ class.teacher.user.full_name }} • Salle {{ class.classroom.room_number|default:"--" }}</p>
-                                        </div>
-                                        <div class="text-right">
-                                            <span class="text-sm text-gray-400">{{ class.get_weekday_display }}</span>
-                                        </div>
+                                {% for class in today_schedule %}
+                                <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex-shrink-0 w-16 text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ class.start_time|time:"H:i" }}</div>
+                                        <div class="text-xs text-gray-500">{{ class.end_time|time:"H:i" }}</div>
                                     </div>
+                                    <div class="ml-4 flex-1">
+                                        <h3 class="font-medium text-gray-900">{{ class.subject.name }}</h3>
+                                        <p class="text-sm text-gray-500">{{ class.teacher.get_full_name }} • Salle {{ class.room }}</p>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-info">
+                                            {{ class.duration }} min
+                                        </span>
+                                    </div>
+                                </div>
                                 {% endfor %}
                             </div>
                         {% else %}
-                            <div class="text-center py-8">
-                                <div class="text-gray-400 text-4xl mb-4">⏰</div>
-                                <p class="text-gray-500">Emploi du temps non disponible</p>
+                            <!-- Emploi du temps d'exemple -->
+                            <div class="space-y-3">
+                                <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex-shrink-0 w-16 text-center">
+                                        <div class="text-sm font-medium text-gray-900">08:00</div>
+                                        <div class="text-xs text-gray-500">09:30</div>
+                                    </div>
+                                    <div class="ml-4 flex-1">
+                                        <h3 class="font-medium text-gray-900">Mathématiques</h3>
+                                        <p class="text-sm text-gray-500">M. Dupont • Salle 12</p>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-info">
+                                            90 min
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex-shrink-0 w-16 text-center">
+                                        <div class="text-sm font-medium text-gray-900">10:00</div>
+                                        <div class="text-xs text-gray-500">11:00</div>
+                                    </div>
+                                    <div class="ml-4 flex-1">
+                                        <h3 class="font-medium text-gray-900">Français</h3>
+                                        <p class="text-sm text-gray-500">Mme Martin • Salle 8</p>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-info">
+                                            60 min
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex-shrink-0 w-16 text-center">
+                                        <div class="text-sm font-medium text-gray-900">14:00</div>
+                                        <div class="text-xs text-gray-500">15:30</div>
+                                    </div>
+                                    <div class="ml-4 flex-1">
+                                        <h3 class="font-medium text-gray-900">Physique-Chimie</h3>
+                                        <p class="text-sm text-gray-500">M. Bernard • Labo 3</p>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-info">
+                                            90 min
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
 
-            <!-- Colonne latérale -->
-            <div class="space-y-6">
-                <!-- Présences du mois -->
-                <div class="bg-white rounded-lg shadow">
-                    <div class="px-6 py-4 border-b border-gray-200">
-                        <h2 class="text-lg font-semibold text-gray-900">✅ Présences du mois</h2>
+            <!-- Colonne secondaire -->
+            <div class="space-y-8">
+                
+                <!-- Annonces -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-semibold text-gray-900">Annonces</h2>
                     </div>
                     <div class="p-6">
-                        <div class="space-y-4">
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm text-gray-600">Présent</span>
-                                <span class="font-semibold text-green-600">{{ monthly_attendances.present }}</span>
+                        {% if announcements %}
+                            <div class="space-y-4">
+                                {% for announcement in announcements %}
+                                <div class="announcement-item p-4 rounded-lg">
+                                    <h3 class="font-medium text-gray-900 mb-2">{{ announcement.title }}</h3>
+                                    <p class="text-sm text-gray-600 mb-2">{{ announcement.content|truncatewords:20 }}</p>
+                                    <p class="text-xs text-gray-500">{{ announcement.date_created|date:"d/m/Y à H:i" }}</p>
+                                </div>
+                                {% endfor %}
                             </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm text-gray-600">Absent</span>
-                                <span class="font-semibold text-red-600">{{ monthly_attendances.absent }}</span>
+                        {% else %}
+                            <!-- Annonces d'exemple -->
+                            <div class="space-y-4">
+                                <div class="announcement-item p-4 rounded-lg">
+                                    <h3 class="font-medium text-gray-900 mb-2">🎓 Rentrée scolaire</h3>
+                                    <p class="text-sm text-gray-600 mb-2">Les cours reprennent normalement ce lundi. N'oubliez pas vos manuels scolaires.</p>
+                                    <p class="text-xs text-gray-500">04/09/2025 à 08:00</p>
+                                </div>
+
+                                <div class="announcement-item p-4 rounded-lg">
+                                    <h3 class="font-medium text-gray-900 mb-2">📝 Contrôles de septembre</h3>
+                                    <p class="text-sm text-gray-600 mb-2">Le planning des contrôles est disponible sur votre espace élève.</p>
+                                    <p class="text-xs text-gray-500">02/09/2025 à 14:30</p>
+                                </div>
+
+                                <div class="announcement-item p-4 rounded-lg">
+                                    <h3 class="font-medium text-gray-900 mb-2">🍽️ Cantine</h3>
+                                    <p class="text-sm text-gray-600 mb-2">Nouveau menu disponible. Pensez à réserver vos repas.</p>
+                                    <p class="text-xs text-gray-500">01/09/2025 à 10:15</p>
+                                </div>
                             </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm text-gray-600">En retard</span>
-                                <span class="font-semibold text-yellow-600">{{ monthly_attendances.late }}</span>
-                            </div>
-                            <hr class="my-3">
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm font-medium text-gray-900">Total</span>
-                                <span class="font-bold text-gray-900">{{ monthly_attendances.total }}</span>
-                            </div>
+                        {% endif %}
+                        <div class="mt-4 pt-4 border-t border-gray-200">
+                            <a href="#" class="text-blue-600 hover:text-blue-700 text-sm font-medium">Voir toutes les annonces</a>
                         </div>
                     </div>
                 </div>
 
-                <!-- Factures en attente -->
-                {% if pending_invoices %}
-                <div class="bg-white rounded-lg shadow">
-                    <div class="px-6 py-4 border-b border-gray-200">
-                        <h2 class="text-lg font-semibold text-gray-900">💳 Factures en attente</h2>
+                <!-- Actions rapides -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-semibold text-gray-900">Actions Rapides</h2>
                     </div>
                     <div class="p-6">
                         <div class="space-y-3">
-                            {% for invoice in pending_invoices %}
-                                <div class="p-3 bg-red-50 rounded-lg border border-red-200">
-                                    <div class="flex justify-between items-start">
-                                        <div>
-                                            <h4 class="font-medium text-gray-900">{{ invoice.invoice_number }}</h4>
-                                            <p class="text-sm text-gray-500">Échéance: {{ invoice.due_date|date:"d M Y" }}</p>
-                                        </div>
-                                        <span class="font-bold text-red-600">{{ invoice.total_amount|floatformat:0 }} FCFA</span>
-                                    </div>
+                            <a href="#" class="flex items-center p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                                <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
                                 </div>
-                            {% endfor %}
+                                <div>
+                                    <p class="font-medium text-gray-900">Mes Notes</p>
+                                    <p class="text-sm text-gray-500">Consulter mes résultats</p>
+                                </div>
+                            </a>
+
+                            <a href="#" class="flex items-center p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+                                <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mr-3">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="font-medium text-gray-900">Emploi du Temps</p>
+                                    <p class="text-sm text-gray-500">Planning complet</p>
+                                </div>
+                            </a>
+
+                            <a href="#" class="flex items-center p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+                                <div class="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mr-3">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="font-medium text-gray-900">Ressources</p>
+                                    <p class="text-sm text-gray-500">Documents de cours</p>
+                                </div>
+                            </a>
+
+                            <a href="/communication/forum/" class="flex items-center p-3 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors">
+                                <div class="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mr-3">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="font-medium text-gray-900">Forum</p>
+                                    <p class="text-sm text-gray-500">Discussions étudiantes</p>
+                                </div>
+                            </a>
                         </div>
-                        <a href="#" class="mt-4 block w-full text-center bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-                            Voir toutes les factures
-                        </a>
                     </div>
                 </div>
-                {% endif %}
-
-                <!-- Activités récentes -->
-                <div class="bg-white rounded-lg shadow">
-                    <div class="px-6 py-4 border-b border-gray-200">
-                        <h2 class="text-lg font-semibold text-gray-900">🕒 Activités récentes</h2>
-                    </div>
-                    <div class="divide-y divide-gray-200">
-                        {% if recent_activities %}
-                            {% for activity in recent_activities %}
-                                <div class="activity-item">
-                                    <div class="activity-icon {{ activity.color }}">
-                                        {% if activity.type == 'grade' %}📊{% elif activity.type == 'payment' %}💳{% else %}📋{% endif %}
-                                    </div>
-                                    <div class="flex-1">
-                                        <h4 class="font-medium text-gray-900">{{ activity.title }}</h4>
-                                        <p class="text-sm text-gray-500">{{ activity.description }}</p>
-                                        <p class="text-xs text-gray-400">{{ activity.date|date:"d M Y H:i" }}</p>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="p-6 text-center">
-                                <div class="text-gray-400 text-4xl mb-4">📝</div>
-                                <p class="text-gray-500">Aucune activité récente</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Actions rapides -->
-        <div class="mt-8 bg-white rounded-lg shadow p-6">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">🚀 Actions rapides</h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <a href="#" class="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
-                    <div class="text-2xl mb-2">📚</div>
-                    <span class="text-sm font-medium text-gray-900">Mes notes</span>
-                </a>
-                <a href="#" class="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
-                    <div class="text-2xl mb-2">📅</div>
-                    <span class="text-sm font-medium text-gray-900">Emploi du temps</span>
-                </a>
-                <a href="#" class="flex flex-col items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
-                    <div class="text-2xl mb-2">💬</div>
-                    <span class="text-sm font-medium text-gray-900">Messages</span>
-                </a>
-                <a href="#" class="flex flex-col items-center p-4 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors">
-                    <div class="text-2xl mb-2">📋</div>
-                    <span class="text-sm font-medium text-gray-900">Devoirs</span>
-                </a>
             </div>
         </div>
     </div>

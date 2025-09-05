@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ message.subject }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- En-tête -->
+        <div class="mb-6">
+            <nav class="flex mb-4" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                    <li class="inline-flex items-center">
+                        <a href="{% url 'communication:message_list' %}" class="text-gray-700 hover:text-blue-600">
+                            Messages
+                        </a>
+                    </li>
+                    <li>
+                        <div class="flex items-center">
+                            <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                            <span class="text-gray-500">{{ message.subject|truncatechars:50 }}</span>
+                        </div>
+                    </li>
+                </ol>
+            </nav>
+        </div>
+
+        <!-- Message principal -->
+        <div class="bg-white shadow rounded-lg overflow-hidden mb-6">
+            <!-- En-tête du message -->
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <h1 class="text-xl font-bold text-gray-900 mb-2">{{ message.subject }}</h1>
+                        
+                        <!-- Métadonnées -->
+                        <div class="flex flex-wrap items-center text-sm text-gray-600 space-x-6">
+                            <div class="flex items-center">
+                                <i class="fas fa-user mr-2"></i>
+                                <span><strong>De :</strong> {{ message.sender.first_name }} {{ message.sender.last_name }}</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-user-friends mr-2"></i>
+                                <span><strong>À :</strong> {{ message.recipient.first_name }} {{ message.recipient.last_name }}</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-clock mr-2"></i>
+                                <span>{{ message.sent_date|date:"d F Y à H:i" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Statut de lecture -->
+                    <div class="ml-4">
+                        {% if message.is_read %}
+                            <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                                <i class="fas fa-check mr-1"></i>Lu
+                            </span>
+                        {% else %}
+                            <span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
+                                <i class="fas fa-envelope mr-1"></i>Non lu
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenu du message -->
+            <div class="px-6 py-8">
+                <div class="prose prose-lg max-w-none">
+                    {{ message.content|linebreaks }}
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                <div class="flex justify-between items-center">
+                    <a href="{% url 'communication:message_list' %}" 
+                       class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Retour aux messages
+                    </a>
+                    
+                    {% if can_reply %}
+                    <a href="{% url 'communication:message_reply' message.id %}" 
+                       class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                        <i class="fas fa-reply mr-2"></i>
+                        Répondre
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Réponses (si il y en a) -->
+        {% if replies %}
+        <div class="space-y-4">
+            <h2 class="text-lg font-medium text-gray-900">Réponses ({{ replies.count }})</h2>
+            
+            {% for reply in replies %}
+            <div class="bg-white shadow rounded-lg overflow-hidden ml-8">
+                <!-- En-tête de la réponse -->
+                <div class="px-6 py-3 border-b border-gray-200 bg-blue-50">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <i class="fas fa-reply text-blue-600"></i>
+                            <div>
+                                <span class="text-sm font-medium text-gray-900">
+                                    {{ reply.sender.first_name }} {{ reply.sender.last_name }}
+                                </span>
+                                <span class="text-sm text-gray-600 ml-2">
+                                    {{ reply.sent_date|date:"d F Y à H:i" }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        {% if reply.is_read %}
+                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
+                                Lu
+                            </span>
+                        {% else %}
+                            <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-medium">
+                                Non lu
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Contenu de la réponse -->
+                <div class="px-6 py-4">
+                    <div class="prose max-w-none">
+                        {{ reply.content|linebreaks }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

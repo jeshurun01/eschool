@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Annonces{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- En-tête -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Annonces</h1>
+                <p class="text-gray-600 mt-1">{{ total_announcements }} annonce{{ total_announcements|pluralize }} au total</p>
+            </div>
+            {% if user.role == 'TEACHER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
+            <a href="{% url 'communication:announcement_create' %}" 
+               class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition">
+                <i class="fas fa-plus mr-2"></i>Nouvelle annonce
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Statistiques -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-100 mr-4">
+                        <i class="fas fa-bullhorn text-blue-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-900">{{ total_announcements }}</p>
+                        <p class="text-gray-600">Total annonces</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-orange-100 mr-4">
+                        <i class="fas fa-envelope text-orange-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-900">{{ unread_count }}</p>
+                        <p class="text-gray-600">Non lues</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-100 mr-4">
+                        <i class="fas fa-check text-green-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-900">{{ total_announcements|add:"-"|add:unread_count }}</p>
+                        <p class="text-gray-600">Lues</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Liste des annonces -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-medium text-gray-900">Liste des annonces</h2>
+            </div>
+            
+            {% if announcements %}
+                <div class="divide-y divide-gray-200">
+                    {% for announcement in announcements %}
+                    <div class="px-6 py-4 hover:bg-gray-50 transition">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center mb-2">
+                                    <!-- Indicateur de lecture -->
+                                    {% if announcement.id not in read_announcements %}
+                                        <span class="w-3 h-3 bg-blue-500 rounded-full mr-3 flex-shrink-0"></span>
+                                    {% else %}
+                                        <span class="w-3 h-3 bg-gray-300 rounded-full mr-3 flex-shrink-0"></span>
+                                    {% endif %}
+                                    
+                                    <!-- Titre -->
+                                    <h3 class="text-lg font-medium text-gray-900 mr-3">
+                                        <a href="{% url 'communication:announcement_detail' announcement.id %}" 
+                                           class="hover:text-blue-600 transition">
+                                            {{ announcement.title }}
+                                        </a>
+                                    </h3>
+                                    
+                                    <!-- Badge de priorité -->
+                                    {% if announcement.priority == 3 %}
+                                        <span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                                            Urgent
+                                        </span>
+                                    {% elif announcement.priority == 2 %}
+                                        <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                                            Important
+                                        </span>
+                                    {% endif %}
+                                    
+                                    <!-- Badge épinglé -->
+                                    {% if announcement.is_pinned %}
+                                        <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded ml-2">
+                                            <i class="fas fa-thumbtack mr-1"></i>Épinglé
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Contenu (extrait) -->
+                                <p class="text-gray-600 mb-2">
+                                    {{ announcement.content|truncatewords:20 }}
+                                </p>
+                                
+                                <!-- Métadonnées -->
+                                <div class="flex items-center text-sm text-gray-500 space-x-4">
+                                    <span>
+                                        <i class="fas fa-user mr-1"></i>
+                                        {{ announcement.author.first_name }} {{ announcement.author.last_name }}
+                                    </span>
+                                    <span>
+                                        <i class="fas fa-calendar mr-1"></i>
+                                        {{ announcement.publish_date|date:"d M Y" }}
+                                    </span>
+                                    <span>
+                                        <i class="fas fa-users mr-1"></i>
+                                        {% if announcement.audience == 'ALL' %}Tous
+                                        {% elif announcement.audience == 'STUDENTS' %}Étudiants
+                                        {% elif announcement.audience == 'TEACHERS' %}Enseignants
+                                        {% elif announcement.audience == 'PARENTS' %}Parents
+                                        {% elif announcement.audience == 'STAFF' %}Personnel
+                                        {% endif %}
+                                    </span>
+                                    <span>
+                                        <i class="fas fa-tag mr-1"></i>
+                                        {% if announcement.type == 'GENERAL' %}Général
+                                        {% elif announcement.type == 'ACADEMIC' %}Académique
+                                        {% elif announcement.type == 'EVENT' %}Événement
+                                        {% elif announcement.type == 'URGENT' %}Urgent
+                                        {% elif announcement.type == 'ADMINISTRATIVE' %}Administratif
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="flex items-center space-x-2 ml-4">
+                                {% if announcement.id not in read_announcements %}
+                                    <button onclick="markAsRead({{ announcement.id }})" 
+                                            class="text-blue-600 hover:text-blue-800 transition"
+                                            title="Marquer comme lu">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                {% endif %}
+                                <a href="{% url 'communication:announcement_detail' announcement.id %}" 
+                                   class="text-gray-600 hover:text-gray-800 transition"
+                                   title="Voir les détails">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Pagination -->
+                {% if announcements.has_other_pages %}
+                <div class="px-6 py-4 border-t border-gray-200">
+                    <nav class="flex items-center justify-between">
+                        <div class="flex-1 flex justify-between sm:hidden">
+                            {% if announcements.has_previous %}
+                                <a href="?page={{ announcements.previous_page_number }}" 
+                                   class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Précédent
+                                </a>
+                            {% endif %}
+                            {% if announcements.has_next %}
+                                <a href="?page={{ announcements.next_page_number }}" 
+                                   class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Suivant
+                                </a>
+                            {% endif %}
+                        </div>
+                        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-sm text-gray-700">
+                                    Affichage <span class="font-medium">{{ announcements.start_index }}</span>
+                                    à <span class="font-medium">{{ announcements.end_index }}</span>
+                                    sur <span class="font-medium">{{ announcements.paginator.count }}</span> résultats
+                                </p>
+                            </div>
+                            <div>
+                                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                    {% if announcements.has_previous %}
+                                        <a href="?page={{ announcements.previous_page_number }}" 
+                                           class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    {% endif %}
+                                    {% for num in announcements.paginator.page_range %}
+                                        {% if num == announcements.number %}
+                                            <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600">
+                                                {{ num }}
+                                            </span>
+                                        {% else %}
+                                            <a href="?page={{ num }}" 
+                                               class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                                {{ num }}
+                                            </a>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if announcements.has_next %}
+                                        <a href="?page={{ announcements.next_page_number }}" 
+                                           class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    {% endif %}
+                                </nav>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="px-6 py-12 text-center">
+                    <i class="fas fa-bullhorn text-gray-400 text-6xl mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune annonce</h3>
+                    <p class="text-gray-600">Il n'y a aucune annonce disponible pour le moment.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function markAsRead(announcementId) {
+    fetch(`/communication/announcements/${announcementId}/mark-read/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
+{% endblock %}

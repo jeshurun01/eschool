@@ -328,3 +328,155 @@ class EmailLog(models.Model):
 
     def __str__(self):
         return f"E-mail à {self.recipient_email} - {self.status}"
+
+
+# MODÈLES FORUM DE CLASSE
+
+class ForumTopic(models.Model):
+    """Sujet de discussion dans le forum d'une classe"""
+    
+    # Contenu
+    title = models.CharField(max_length=200, verbose_name='Titre')
+    content = models.TextField(verbose_name='Contenu')
+    
+    # Relations
+    classroom = models.ForeignKey('academic.ClassRoom', on_delete=models.CASCADE, related_name='forum_topics', verbose_name='Classe')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='forum_topics', verbose_name='Auteur')
+    
+    # Statut
+    is_pinned = models.BooleanField(default=False, verbose_name='Épinglé')
+    is_locked = models.BooleanField(default=False, verbose_name='Verrouillé')
+    is_approved = models.BooleanField(default=True, verbose_name='Approuvé')
+    
+    # Métadonnées
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Créé le')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Modifié le')
+    views_count = models.PositiveIntegerField(default=0, verbose_name='Nombre de vues')
+    
+    class Meta:
+        verbose_name = 'Sujet de forum'
+        verbose_name_plural = 'Sujets de forum'
+        ordering = ['-is_pinned', '-updated_at']
+        permissions = [
+            ('can_moderate_forum', 'Peut modérer le forum'),
+            ('can_pin_topics', 'Peut épingler des sujets'),
+            ('can_lock_topics', 'Peut verrouiller des sujets'),
+        ]
+
+    def __str__(self):
+        return f"{self.classroom.name} - {self.title}"
+
+    @property
+    def posts_count(self):
+        """Nombre total de posts (incluant le topic lui-même)"""
+        return self.forum_posts.count() + 1
+
+    @property
+    def last_post(self):
+        """Dernier post du topic"""
+        return self.forum_posts.order_by('-created_at').first()
+
+    @property
+    def last_activity(self):
+        """Date de la dernière activité"""
+        last_post = self.last_post
+        if last_post:
+            return last_post.created_at
+        return self.created_at
+
+    def can_user_access(self, user):
+        """Vérifie si un utilisateur peut accéder à ce topic"""
+        if user.role in ['ADMIN', 'SUPER_ADMIN']:
+            return True
+        elif user.role == 'TEACHER':
+            return user in self.classroom.teachers.all()
+        elif user.role == 'STUDENT':
+            return hasattr(user, 'student_profile') and user.student_profile.current_class == self.classroom
+        elif user.role == 'PARENT':
+            if hasattr(user, 'parent_profile'):
+                children_classes = [child.current_class for child in user.parent_profile.children.all() if child.current_class]
+                return self.classroom in children_classes
+        return False
+
+    def increment_views(self):
+        """Incrémenter le compteur de vues"""
+        self.views_count += 1
+        self.save(update_fields=['views_count'])
+
+
+class ForumPost(models.Model):
+    """Réponse à un sujet de forum"""
+    
+    # Relations
+    topic = models.ForeignKey(ForumTopic, on_delete=models.CASCADE, related_name='forum_posts', verbose_name='Sujet')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='forum_posts', verbose_name='Auteur')
+    parent_post = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True, related_name='replies', verbose_name='Réponse à')
+    
+    # Contenu
+    content = models.TextField(verbose_name='Contenu')
+    
+    # Statut
+    is_approved = models.BooleanField(default=True, verbose_name='Approuvé')
+    is_edited = models.BooleanField(default=False, verbose_name='Modifié')
+    edited_at = models.DateTimeField(blank=True, null=True, verbose_name='Modifié le')
+    
+    # Métadonnées
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Créé le')
+    
+    class Meta:
+        verbose_name = 'Post de forum'
+        verbose_name_plural = 'Posts de forum'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Post de {self.author.full_name} dans {self.topic.title}"
+
+    def can_user_edit(self, user):
+        """Vérifie si un utilisateur peut modifier ce post"""
+        if user == self.author:
+            return True
+        if user.role in ['ADMIN', 'SUPER_ADMIN']:
+            return True
+        if user.role == 'TEACHER' and user in self.topic.classroom.teachers.all():
+            return True
+        return False
+
+    def can_user_delete(self, user):
+        """Vérifie si un utilisateur peut supprimer ce post"""
+        return self.can_user_edit(user)
+
+
+class ForumModeration(models.Model):
+    """Modération des forums"""
+    
+    ACTION_CHOICES = [
+        ('EDIT', 'Modification'),
+        ('DELETE', 'Suppression'),
+        ('LOCK', 'Verrouillage'),
+        ('UNLOCK', 'Déverrouillage'),
+        ('PIN', 'Épinglage'),
+        ('UNPIN', 'Désépinglage'),
+        ('APPROVE', 'Approbation'),
+        ('REJECT', 'Rejet'),
+    ]
+    
+    # Relations
+    moderator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='forum_moderations', verbose_name='Modérateur')
+    topic = models.ForeignKey(ForumTopic, on_delete=models.CASCADE, blank=True, null=True, related_name='moderations', verbose_name='Sujet')
+    post = models.ForeignKey(ForumPost, on_delete=models.CASCADE, blank=True, null=True, related_name='moderations', verbose_name='Post')
+    
+    # Action
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES, verbose_name='Action')
+    reason = models.TextField(blank=True, verbose_name='Raison')
+    
+    # Métadonnées
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Date')
+    
+    class Meta:
+        verbose_name = 'Modération de forum'
+        verbose_name_plural = 'Modérations de forum'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        target = self.topic.title if self.topic else self.post
+        return f"{self.action} par {self.moderator.full_name} - {target}"

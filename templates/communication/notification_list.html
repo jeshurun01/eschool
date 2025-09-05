@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- En-tête -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Notifications</h1>
+                <p class="text-gray-600 mt-1">{{ total_count }} notification{{ total_count|pluralize }} au total</p>
+            </div>
+            {% if unread_count > 0 %}
+            <button onclick="markAllAsRead()" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition">
+                <i class="fas fa-check-double mr-2"></i>Tout marquer comme lu
+            </button>
+            {% endif %}
+        </div>
+
+        <!-- Statistiques -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-100 mr-4">
+                        <i class="fas fa-bell text-blue-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-900">{{ total_count }}</p>
+                        <p class="text-gray-600">Total notifications</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-orange-100 mr-4">
+                        <i class="fas fa-exclamation-circle text-orange-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-900">{{ unread_count }}</p>
+                        <p class="text-gray-600">Non lues</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Liste des notifications -->
+        <div class="bg-white shadow rounded-lg">
+            {% if notifications %}
+                <div class="divide-y divide-gray-200">
+                    {% for notification in notifications %}
+                    <div class="px-6 py-4 hover:bg-gray-50 transition {% if not notification.is_read %}bg-blue-50{% endif %}">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start space-x-3 flex-1">
+                                <!-- Icône du type de notification -->
+                                <div class="flex-shrink-0 mt-1">
+                                    {% if notification.type == 'MESSAGE' %}
+                                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-envelope text-blue-600 text-sm"></i>
+                                        </div>
+                                    {% elif notification.type == 'ANNOUNCEMENT' %}
+                                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-bullhorn text-green-600 text-sm"></i>
+                                        </div>
+                                    {% elif notification.type == 'ACADEMIC' %}
+                                        <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-graduation-cap text-purple-600 text-sm"></i>
+                                        </div>
+                                    {% elif notification.type == 'FINANCE' %}
+                                        <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-euro-sign text-yellow-600 text-sm"></i>
+                                        </div>
+                                    {% elif notification.type == 'SYSTEM' %}
+                                        <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-cog text-gray-600 text-sm"></i>
+                                        </div>
+                                    {% else %}
+                                        <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-info text-gray-600 text-sm"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="flex-1 min-w-0">
+                                    <!-- Titre -->
+                                    <h3 class="text-base font-medium text-gray-900 {% if not notification.is_read %}font-semibold{% endif %}">
+                                        {% if notification.link_url %}
+                                            <a href="{{ notification.link_url }}" class="hover:text-blue-600 transition">
+                                                {{ notification.title }}
+                                            </a>
+                                        {% else %}
+                                            {{ notification.title }}
+                                        {% endif %}
+                                    </h3>
+                                    
+                                    <!-- Message -->
+                                    {% if notification.message %}
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        {{ notification.message }}
+                                    </p>
+                                    {% endif %}
+                                    
+                                    <!-- Date et type -->
+                                    <div class="flex items-center mt-2 space-x-4">
+                                        <span class="text-xs text-gray-500">
+                                            <i class="fas fa-clock mr-1"></i>
+                                            {{ notification.created_at|timesince }}
+                                        </span>
+                                        <span class="text-xs text-gray-500">
+                                            <i class="fas fa-tag mr-1"></i>
+                                            {% if notification.type == 'MESSAGE' %}Message
+                                            {% elif notification.type == 'ANNOUNCEMENT' %}Annonce
+                                            {% elif notification.type == 'ACADEMIC' %}Académique
+                                            {% elif notification.type == 'FINANCE' %}Finance
+                                            {% elif notification.type == 'SYSTEM' %}Système
+                                            {% else %}Info
+                                            {% endif %}
+                                        </span>
+                                        {% if notification.is_read %}
+                                            <span class="text-xs text-green-600">
+                                                <i class="fas fa-check mr-1"></i>
+                                                Lu le {{ notification.read_date|date:"d/m/Y à H:i" }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="flex items-center space-x-2 ml-4">
+                                {% if not notification.is_read %}
+                                    <button onclick="markAsRead({{ notification.id }})" 
+                                            class="text-blue-600 hover:text-blue-800 transition"
+                                            title="Marquer comme lu">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                {% endif %}
+                                {% if notification.link_url %}
+                                    <a href="{{ notification.link_url }}" 
+                                       class="text-gray-600 hover:text-gray-800 transition"
+                                       title="Voir les détails">
+                                        <i class="fas fa-external-link-alt"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Pagination -->
+                {% if notifications.has_other_pages %}
+                <div class="px-6 py-4 border-t border-gray-200">
+                    <nav class="flex items-center justify-between">
+                        <div class="flex-1 flex justify-between sm:hidden">
+                            {% if notifications.has_previous %}
+                                <a href="?page={{ notifications.previous_page_number }}" 
+                                   class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Précédent
+                                </a>
+                            {% endif %}
+                            {% if notifications.has_next %}
+                                <a href="?page={{ notifications.next_page_number }}" 
+                                   class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Suivant
+                                </a>
+                            {% endif %}
+                        </div>
+                        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-sm text-gray-700">
+                                    Affichage <span class="font-medium">{{ notifications.start_index }}</span>
+                                    à <span class="font-medium">{{ notifications.end_index }}</span>
+                                    sur <span class="font-medium">{{ notifications.paginator.count }}</span> résultats
+                                </p>
+                            </div>
+                            <div>
+                                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                    {% if notifications.has_previous %}
+                                        <a href="?page={{ notifications.previous_page_number }}" 
+                                           class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    {% endif %}
+                                    {% for num in notifications.paginator.page_range %}
+                                        {% if num == notifications.number %}
+                                            <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600">
+                                                {{ num }}
+                                            </span>
+                                        {% else %}
+                                            <a href="?page={{ num }}" 
+                                               class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                                {{ num }}
+                                            </a>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if notifications.has_next %}
+                                        <a href="?page={{ notifications.next_page_number }}" 
+                                           class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    {% endif %}
+                                </nav>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="px-6 py-12 text-center">
+                    <i class="fas fa-bell-slash text-gray-400 text-6xl mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune notification</h3>
+                    <p class="text-gray-600">Vous n'avez aucune notification pour le moment.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function markAsRead(notificationId) {
+    fetch(`/communication/notifications/${notificationId}/mark-read/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function markAllAsRead() {
+    fetch('/communication/notifications/mark-all-read/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
+{% endblock %}

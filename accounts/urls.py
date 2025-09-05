@@ -13,6 +13,8 @@ urlpatterns = [
     # Dashboard principal
     path('', views.dashboard, name='dashboard'),
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
+    path('teacher-dashboard/', views.teacher_dashboard, name='teacher_dashboard'),
+    path('parent-dashboard/', views.parent_dashboard, name='parent_dashboard'),
     
     # Profil utilisateur
     path('profile/', views.profile_view, name='profile'),

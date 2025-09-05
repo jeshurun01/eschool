@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ announcement.title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- En-tête -->
+        <div class="mb-6">
+            <nav class="flex mb-4" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                    <li class="inline-flex items-center">
+                        <a href="{% url 'communication:announcement_list' %}" class="text-gray-700 hover:text-blue-600">
+                            Annonces
+                        </a>
+                    </li>
+                    <li>
+                        <div class="flex items-center">
+                            <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                            <span class="text-gray-500">{{ announcement.title|truncatechars:50 }}</span>
+                        </div>
+                    </li>
+                </ol>
+            </nav>
+        </div>
+
+        <!-- Annonce -->
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <!-- En-tête de l'annonce -->
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center mb-2">
+                            <h1 class="text-2xl font-bold text-gray-900 mr-4">{{ announcement.title }}</h1>
+                            
+                            <!-- Badges -->
+                            {% if announcement.priority == 3 %}
+                                <span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                                    Urgent
+                                </span>
+                            {% elif announcement.priority == 2 %}
+                                <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                                    Important
+                                </span>
+                            {% endif %}
+                            
+                            {% if announcement.is_pinned %}
+                                <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded ml-2">
+                                    <i class="fas fa-thumbtack mr-1"></i>Épinglé
+                                </span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Métadonnées -->
+                        <div class="flex flex-wrap items-center text-sm text-gray-600 space-x-6">
+                            <div class="flex items-center">
+                                <i class="fas fa-user mr-2"></i>
+                                <span>{{ announcement.author.first_name }} {{ announcement.author.last_name }}</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-calendar mr-2"></i>
+                                <span>{{ announcement.publish_date|date:"d F Y à H:i" }}</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-users mr-2"></i>
+                                <span>
+                                    {% if announcement.audience == 'ALL' %}Tous
+                                    {% elif announcement.audience == 'STUDENTS' %}Étudiants
+                                    {% elif announcement.audience == 'TEACHERS' %}Enseignants
+                                    {% elif announcement.audience == 'PARENTS' %}Parents
+                                    {% elif announcement.audience == 'STAFF' %}Personnel
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-tag mr-2"></i>
+                                <span>
+                                    {% if announcement.type == 'GENERAL' %}Général
+                                    {% elif announcement.type == 'ACADEMIC' %}Académique
+                                    {% elif announcement.type == 'EVENT' %}Événement
+                                    {% elif announcement.type == 'URGENT' %}Urgent
+                                    {% elif announcement.type == 'ADMINISTRATIVE' %}Administratif
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="flex items-center space-x-2 ml-4">
+                        {% if not is_read %}
+                            <button onclick="markAsRead({{ announcement.id }})" 
+                                    class="bg-blue-100 text-blue-800 px-3 py-1 rounded-lg text-sm font-medium hover:bg-blue-200 transition">
+                                <i class="fas fa-check mr-1"></i>Marquer comme lu
+                            </button>
+                        {% else %}
+                            <span class="bg-green-100 text-green-800 px-3 py-1 rounded-lg text-sm font-medium">
+                                <i class="fas fa-check mr-1"></i>Lu
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenu -->
+            <div class="px-6 py-8">
+                <div class="prose prose-lg max-w-none">
+                    {{ announcement.content|linebreaks }}
+                </div>
+            </div>
+
+            <!-- Date d'expiration -->
+            {% if announcement.expiry_date %}
+            <div class="px-6 py-4 bg-yellow-50 border-t border-yellow-200">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
+                    <span class="text-sm text-yellow-800">
+                        Cette annonce expire le {{ announcement.expiry_date|date:"d F Y" }}
+                    </span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Bouton retour -->
+        <div class="mt-6">
+            <a href="{% url 'communication:announcement_list' %}" 
+               class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Retour aux annonces
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+function markAsRead(announcementId) {
+    fetch(`/communication/announcements/${announcementId}/mark-read/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
+{% endblock %}

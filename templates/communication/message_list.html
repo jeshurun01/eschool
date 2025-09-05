@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Messages{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- En-tête -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Messages</h1>
+                <p class="text-gray-600 mt-1">Gérez vos conversations</p>
+            </div>
+            <a href="{% url 'communication:message_compose' %}" 
+               class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition">
+                <i class="fas fa-edit mr-2"></i>Nouveau message
+            </a>
+        </div>
+
+        <!-- Statistiques -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-100 mr-4">
+                        <i class="fas fa-inbox text-blue-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-900">{{ total_received }}</p>
+                        <p class="text-gray-600">Messages reçus</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-orange-100 mr-4">
+                        <i class="fas fa-envelope text-orange-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-900">{{ unread_count }}</p>
+                        <p class="text-gray-600">Non lus</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-100 mr-4">
+                        <i class="fas fa-paper-plane text-green-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-900">{{ total_sent }}</p>
+                        <p class="text-gray-600">Messages envoyés</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglets -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex">
+                    <a href="?tab=received" 
+                       class="{% if current_tab == 'received' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm">
+                        <i class="fas fa-inbox mr-2"></i>
+                        Reçus ({{ total_received }})
+                    </a>
+                    <a href="?tab=sent" 
+                       class="{% if current_tab == 'sent' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm">
+                        <i class="fas fa-paper-plane mr-2"></i>
+                        Envoyés ({{ total_sent }})
+                    </a>
+                    <a href="?tab=all" 
+                       class="{% if current_tab == 'all' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm">
+                        <i class="fas fa-comments mr-2"></i>
+                        Tous
+                    </a>
+                </nav>
+            </div>
+            
+            <!-- Liste des messages -->
+            {% if messages %}
+                <div class="divide-y divide-gray-200">
+                    {% for message in messages %}
+                    <div class="px-6 py-4 hover:bg-gray-50 transition">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start space-x-3 flex-1">
+                                <!-- Indicateur de lecture -->
+                                {% if current_tab == 'received' and not message.is_read %}
+                                    <span class="w-3 h-3 bg-blue-500 rounded-full mt-2 flex-shrink-0"></span>
+                                {% else %}
+                                    <span class="w-3 h-3 bg-gray-300 rounded-full mt-2 flex-shrink-0"></span>
+                                {% endif %}
+                                
+                                <div class="flex-1 min-w-0">
+                                    <!-- En-tête du message -->
+                                    <div class="flex items-center justify-between mb-1">
+                                        <div class="flex items-center space-x-3">
+                                            {% if current_tab == 'sent' %}
+                                                <span class="text-sm font-medium text-gray-900">
+                                                    À: {{ message.recipient.first_name }} {{ message.recipient.last_name }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-sm font-medium text-gray-900">
+                                                    De: {{ message.sender.first_name }} {{ message.sender.last_name }}
+                                                </span>
+                                            {% endif %}
+                                            <span class="text-xs text-gray-500">
+                                                {{ message.sent_date|timesince }} 
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            {% if current_tab == 'received' and not message.is_read %}
+                                                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                                                    Nouveau
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Sujet -->
+                                    <h3 class="text-base font-medium text-gray-900 mb-1">
+                                        <a href="{% url 'communication:message_detail' message.id %}" 
+                                           class="hover:text-blue-600 transition">
+                                            {{ message.subject }}
+                                        </a>
+                                    </h3>
+                                    
+                                    <!-- Aperçu du contenu -->
+                                    <p class="text-sm text-gray-600 line-clamp-2">
+                                        {{ message.content|truncatewords:20 }}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="flex items-center space-x-2 ml-4">
+                                <a href="{% url 'communication:message_detail' message.id %}" 
+                                   class="text-gray-600 hover:text-gray-800 transition"
+                                   title="Lire le message">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if current_tab == 'received' %}
+                                <a href="{% url 'communication:message_reply' message.id %}" 
+                                   class="text-blue-600 hover:text-blue-800 transition"
+                                   title="Répondre">
+                                    <i class="fas fa-reply"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Pagination -->
+                {% if messages.has_other_pages %}
+                <div class="px-6 py-4 border-t border-gray-200">
+                    <nav class="flex items-center justify-between">
+                        <div class="flex-1 flex justify-between sm:hidden">
+                            {% if messages.has_previous %}
+                                <a href="?page={{ messages.previous_page_number }}&tab={{ current_tab }}" 
+                                   class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Précédent
+                                </a>
+                            {% endif %}
+                            {% if messages.has_next %}
+                                <a href="?page={{ messages.next_page_number }}&tab={{ current_tab }}" 
+                                   class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Suivant
+                                </a>
+                            {% endif %}
+                        </div>
+                        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-sm text-gray-700">
+                                    Affichage <span class="font-medium">{{ messages.start_index }}</span>
+                                    à <span class="font-medium">{{ messages.end_index }}</span>
+                                    sur <span class="font-medium">{{ messages.paginator.count }}</span> résultats
+                                </p>
+                            </div>
+                            <div>
+                                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                    {% if messages.has_previous %}
+                                        <a href="?page={{ messages.previous_page_number }}&tab={{ current_tab }}" 
+                                           class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    {% endif %}
+                                    {% for num in messages.paginator.page_range %}
+                                        {% if num == messages.number %}
+                                            <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600">
+                                                {{ num }}
+                                            </span>
+                                        {% else %}
+                                            <a href="?page={{ num }}&tab={{ current_tab }}" 
+                                               class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                                {{ num }}
+                                            </a>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if messages.has_next %}
+                                        <a href="?page={{ messages.next_page_number }}&tab={{ current_tab }}" 
+                                           class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    {% endif %}
+                                </nav>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="px-6 py-12 text-center">
+                    <i class="fas fa-envelope-open text-gray-400 text-6xl mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun message</h3>
+                    <p class="text-gray-600 mb-4">
+                        {% if current_tab == 'received' %}
+                            Vous n'avez reçu aucun message.
+                        {% elif current_tab == 'sent' %}
+                            Vous n'avez envoyé aucun message.
+                        {% else %}
+                            Vous n'avez aucun message.
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'communication:message_compose' %}" 
+                       class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                        <i class="fas fa-edit mr-2"></i>
+                        Composer un message
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
