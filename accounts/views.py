@@ -232,9 +232,7 @@ def student_dashboard(request):
             student=student
         ).select_related('subject', 'teacher').order_by('-created_at')[:5]
         
-        # Ajouter le pourcentage pour chaque note
-        for grade in recent_grades:
-            grade.percentage = (grade.score / grade.max_score * 100) if grade.max_score > 0 else 0
+        # Le pourcentage est calculé automatiquement par la propriété @percentage du modèle Grade
         
         # Moyenne générale
         student_grades = Grade.objects.filter(student=student)

@@ -158,7 +158,7 @@
                                  alt="{{ topic.author.get_full_name }}" 
                                  class="avatar-sm rounded-full mr-2">
                             <div class="text-sm">
-                                <div class="font-medium text-gray-800">{{ topic.author.get_full_name|default:topic.author.username }}</div>
+                                <div class="font-medium text-gray-800">{{ topic.author.get_full_name|default:topic.author.email }}</div>
                                 <div class="text-gray-500">{{ topic.created_at|date:"d/m/Y" }}</div>
                             </div>
                         </div>
@@ -170,7 +170,7 @@
                     <div class="col-span-2 text-center">
                         {% if topic.last_post %}
                         <div class="text-sm">
-                            <div class="font-medium text-gray-800">{{ topic.last_post.author.get_full_name|default:topic.last_post.author.username }}</div>
+                            <div class="font-medium text-gray-800">{{ topic.last_post.author.get_full_name|default:topic.last_post.author.email }}</div>
                             <div class="text-gray-500">{{ topic.last_post.created_at|timesince }}</div>
                         </div>
                         {% else %}
@@ -208,7 +208,7 @@
                                  alt="{{ topic.author.get_full_name }}" 
                                  class="avatar-sm rounded-full mr-2">
                             <div class="text-sm">
-                                <div class="font-medium text-gray-800">{{ topic.author.get_full_name|default:topic.author.username }}</div>
+                                <div class="font-medium text-gray-800">{{ topic.author.get_full_name|default:topic.author.email }}</div>
                                 <div class="text-gray-500">{{ topic.created_at|date:"d/m/Y" }}</div>
                             </div>
                         </div>
@@ -220,7 +220,7 @@
                     <div class="col-span-2 text-center">
                         {% if topic.last_post %}
                         <div class="text-sm">
-                            <div class="font-medium text-gray-800">{{ topic.last_post.author.get_full_name|default:topic.last_post.author.username }}</div>
+                            <div class="font-medium text-gray-800">{{ topic.last_post.author.get_full_name|default:topic.last_post.author.email }}</div>
                             <div class="text-gray-500">{{ topic.last_post.created_at|timesince }}</div>
                         </div>
                         {% else %}

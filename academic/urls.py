@@ -20,6 +20,8 @@ urlpatterns = [
     path('classes/', views.classroom_list, name='classroom_list'),
     path('classes/create/', views.classroom_create, name='classroom_create'),
     path('classes/<int:classroom_id>/', views.classroom_detail, name='classroom_detail'),
+    path('classes/<int:classroom_id>/edit/', views.classroom_edit, name='classroom_edit'),
+    path('classes/<int:classroom_id>/enrollments/', views.enrollment_manage, name='enrollment_manage'),
     path('classes/<int:classroom_id>/students/', views.classroom_students, name='classroom_students'),
     path('classes/<int:classroom_id>/timetable/', views.classroom_timetable, name='classroom_timetable'),
     

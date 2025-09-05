@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Créer une Classe - eSchool{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- En-tête -->
+        <div class="mb-8">
+            <nav class="flex mb-4" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                    <li class="inline-flex items-center">
+                        <a href="{% url 'academic:classroom_list' %}" class="text-gray-700 hover:text-blue-600">
+                            <i class="fas fa-chalkboard-teacher mr-2"></i>Classes
+                        </a>
+                    </li>
+                    <li>
+                        <div class="flex items-center">
+                            <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                            <span class="text-gray-500">Créer une classe</span>
+                        </div>
+                    </li>
+                </ol>
+            </nav>
+            <h1 class="text-3xl font-bold text-gray-900">Créer une nouvelle classe</h1>
+        </div>
+
+        <!-- Formulaire -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-medium text-gray-900">Informations de la classe</h2>
+            </div>
+            
+            <form method="post" class="px-6 py-6 space-y-6">
+                {% csrf_token %}
+                
+                <!-- Informations de base -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Nom de la classe -->
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+                            Nom de la classe <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" 
+                               id="name" 
+                               name="name" 
+                               required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Ex: 6ème A, CM2 B, TS1...">
+                        <p class="mt-1 text-sm text-gray-500">
+                            Nom unique pour identifier la classe
+                        </p>
+                    </div>
+                    
+                    <!-- Capacité -->
+                    <div>
+                        <label for="capacity" class="block text-sm font-medium text-gray-700 mb-2">
+                            Capacité maximale
+                        </label>
+                        <input type="number" 
+                               id="capacity" 
+                               name="capacity" 
+                               value="30"
+                               min="1" 
+                               max="100"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <p class="mt-1 text-sm text-gray-500">
+                            Nombre maximum d'élèves dans la classe
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Niveau et année -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Niveau -->
+                    <div>
+                        <label for="create-level" class="block text-sm font-medium text-gray-700 mb-2">
+                            Niveau <span class="text-red-500">*</span>
+                        </label>
+                        <select id="create-level" 
+                                name="level" 
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Sélectionnez un niveau</option>
+                            {% for level in levels %}
+                                <option value="{{ level.id }}">{{ level.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Année académique -->
+                    <div>
+                        <label for="create-academic-year" class="block text-sm font-medium text-gray-700 mb-2">
+                            Année académique <span class="text-red-500">*</span>
+                        </label>
+                        <select id="create-academic-year" 
+                                name="academic_year" 
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Sélectionnez une année</option>
+                            {% for year in academic_years %}
+                                <option value="{{ year.id }}" {% if year.is_current %}selected{% endif %}>
+                                    {{ year.name }}
+                                    {% if year.is_current %} (Année courante){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Professeur principal et salle -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Professeur principal -->
+                    <div>
+                        <label for="head_teacher" class="block text-sm font-medium text-gray-700 mb-2">
+                            Professeur principal
+                        </label>
+                        <select id="head_teacher" 
+                                name="head_teacher"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Aucun (à assigner plus tard)</option>
+                            {% for teacher in teachers %}
+                                <option value="{{ teacher.id }}">
+                                    {{ teacher.user.first_name }} {{ teacher.user.last_name }}
+                                    {% if teacher.specialization %} - {{ teacher.specialization }}{% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Enseignant responsable de la classe
+                        </p>
+                    </div>
+                    
+                    <!-- Numéro de salle -->
+                    <div>
+                        <label for="room_number" class="block text-sm font-medium text-gray-700 mb-2">
+                            Numéro de salle
+                        </label>
+                        <input type="text" 
+                               id="room_number" 
+                               name="room_number"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Ex: A101, B25, Lab Info...">
+                        <p class="mt-1 text-sm text-gray-500">
+                            Salle habituelle de la classe (optionnel)
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Informations supplémentaires -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle text-blue-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-blue-800">
+                                Informations importantes
+                            </h3>
+                            <div class="mt-2 text-sm text-blue-700">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>Le nom de la classe doit être unique pour le niveau et l'année sélectionnés</li>
+                                    <li>Vous pourrez ajouter des élèves et assigner des enseignants après la création</li>
+                                    <li>Les matières seront assignées selon le niveau choisi</li>
+                                    <li>La capacité peut être modifiée ultérieurement</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                    <a href="{% url 'academic:classroom_list' %}" 
+                       class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Annuler
+                    </a>
+                    <button type="submit"
+                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <i class="fas fa-save mr-2"></i>
+                        Créer la classe
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validation côté client
+    const form = document.querySelector('form');
+    const nameInput = document.getElementById('name');
+    const levelSelect = document.getElementById('level');
+    const academicYearSelect = document.getElementById('academic_year');
+    
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Vérifier les champs obligatoires
+        if (!nameInput.value.trim()) {
+            isValid = false;
+            nameInput.classList.add('border-red-500');
+        } else {
+            nameInput.classList.remove('border-red-500');
+        }
+        
+        if (!levelSelect.value) {
+            isValid = false;
+            levelSelect.classList.add('border-red-500');
+        } else {
+            levelSelect.classList.remove('border-red-500');
+        }
+        
+        if (!academicYearSelect.value) {
+            isValid = false;
+            academicYearSelect.classList.add('border-red-500');
+        } else {
+            academicYearSelect.classList.remove('border-red-500');
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Veuillez remplir tous les champs obligatoires.');
+        }
+    });
+    
+    // Retirer la bordure rouge quand l'utilisateur commence à taper
+    [nameInput, levelSelect, academicYearSelect].forEach(input => {
+        input.addEventListener('change', function() {
+            this.classList.remove('border-red-500');
+        });
+    });
+});
+</script>
+{% endblock %}

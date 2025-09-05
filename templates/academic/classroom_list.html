@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestion des Classes - eSchool{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- En-tête -->
+    <div class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Gestion des Classes</h1>
+                    <p class="text-gray-600 mt-1">{{ total_classrooms }} classe{{ total_classrooms|pluralize }} au total</p>
+                </div>
+                {% if user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
+                <a href="{% url 'academic:classroom_create' %}" 
+                   class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition">
+                    <i class="fas fa-plus mr-2"></i>Nouvelle Classe
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Filtres et recherche -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Recherche -->
+                <div>
+                    <label for="classroom-search" class="block text-sm font-medium text-gray-700 mb-2">
+                        Rechercher
+                    </label>
+                    <input type="text" 
+                           id="classroom-search" 
+                           name="search" 
+                           value="{{ search }}"
+                           placeholder="Nom de classe, niveau, enseignant..."
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <!-- Année académique -->
+                <div>
+                    <label for="academic_year" class="block text-sm font-medium text-gray-700 mb-2">
+                        Année académique
+                    </label>
+                    <select id="academic_year" 
+                            name="academic_year"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Toutes les années</option>
+                        {% for year in academic_years %}
+                            <option value="{{ year.id }}" {% if year.id|stringformat:"s" == current_academic_year %}selected{% endif %}>
+                                {{ year.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Niveau -->
+                <div>
+                    <label for="level" class="block text-sm font-medium text-gray-700 mb-2">
+                        Niveau
+                    </label>
+                    <select id="level" 
+                            name="level"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Tous les niveaux</option>
+                        {% for level in levels %}
+                            <option value="{{ level.id }}" {% if level.id|stringformat:"s" == current_level %}selected{% endif %}>
+                                {{ level.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Bouton de filtrage -->
+                <div class="flex items-end">
+                    <button type="submit" 
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition">
+                        <i class="fas fa-search mr-2"></i>Filtrer
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Liste des classes -->
+        {% if classrooms %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for classroom in classrooms %}
+                <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                    <!-- En-tête de la carte -->
+                    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="text-lg font-bold">{{ classroom.name }}</h3>
+                                <p class="text-blue-100">{{ classroom.level.name }}</p>
+                            </div>
+                            <span class="bg-white bg-opacity-20 px-2 py-1 rounded text-sm">
+                                {{ classroom.academic_year.name }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Contenu de la carte -->
+                    <div class="p-4">
+                        <!-- Professeur principal -->
+                        {% if classroom.head_teacher %}
+                        <div class="flex items-center mb-3">
+                            <i class="fas fa-user-tie text-gray-400 mr-2"></i>
+                            <span class="text-sm text-gray-600">
+                                {{ classroom.head_teacher.user.first_name }} {{ classroom.head_teacher.user.last_name }}
+                            </span>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Statistiques -->
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div class="text-center">
+                                <div class="text-lg font-bold text-blue-600">{{ classroom.student_count }}</div>
+                                <div class="text-xs text-gray-500">Élèves</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-lg font-bold text-green-600">{{ classroom.capacity }}</div>
+                                <div class="text-xs text-gray-500">Capacité</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Barre de progression de capacité -->
+                        <div class="mb-4">
+                            <div class="flex justify-between text-xs text-gray-600 mb-1">
+                                <span>Occupation</span>
+                                <span>{{ classroom.student_count }}/{{ classroom.capacity }}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                {% with usage=classroom.student_count|floatformat:0 capacity=classroom.capacity|floatformat:0 %}
+                                {% if capacity != "0" %}
+                                    {% widthratio usage capacity 100 as percentage %}
+                                    <div class="h-2 rounded-full {% if percentage > 90 %}bg-red-500{% elif percentage > 75 %}bg-yellow-500{% else %}bg-green-500{% endif %}" 
+                                         style="width: {{ percentage }}%"></div>
+                                {% endif %}
+                                {% endwith %}
+                            </div>
+                        </div>
+                        
+                        <!-- Salle -->
+                        {% if classroom.room_number %}
+                        <div class="flex items-center mb-3">
+                            <i class="fas fa-door-open text-gray-400 mr-2"></i>
+                            <span class="text-sm text-gray-600">Salle {{ classroom.room_number }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="bg-gray-50 px-4 py-3 flex justify-between items-center">
+                        <a href="{% url 'academic:classroom_detail' classroom.pk %}" 
+                           class="text-blue-600 hover:text-blue-800 font-medium text-sm">
+                            <i class="fas fa-eye mr-1"></i>Voir détails
+                        </a>
+                        {% if user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
+                        <div class="flex space-x-2">
+                            <a href="{% url 'academic:classroom_edit' classroom.pk %}" 
+                               class="text-gray-600 hover:text-gray-800 text-sm">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'academic:enrollment_manage' classroom.pk %}" 
+                               class="text-green-600 hover:text-green-800 text-sm">
+                                <i class="fas fa-users"></i>
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if classrooms.has_other_pages %}
+            <div class="flex justify-center mt-8">
+                <nav class="flex items-center space-x-2">
+                    {% if classrooms.has_previous %}
+                        <a href="?page={{ classrooms.previous_page_number }}&search={{ search }}&academic_year={{ current_academic_year }}&level={{ current_level }}" 
+                           class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    {% endif %}
+                    
+                    {% for num in classrooms.paginator.page_range %}
+                        {% if num == classrooms.number %}
+                            <span class="px-3 py-2 bg-blue-600 text-white rounded-md">{{ num }}</span>
+                        {% else %}
+                            <a href="?page={{ num }}&search={{ search }}&academic_year={{ current_academic_year }}&level={{ current_level }}" 
+                               class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md">
+                                {{ num }}
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if classrooms.has_next %}
+                        <a href="?page={{ classrooms.next_page_number }}&search={{ search }}&academic_year={{ current_academic_year }}&level={{ current_level }}" 
+                           class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    {% endif %}
+                </nav>
+            </div>
+            {% endif %}
+            
+        {% else %}
+            <div class="bg-white rounded-lg shadow-md p-12 text-center">
+                <i class="fas fa-chalkboard-teacher text-gray-400 text-6xl mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune classe trouvée</h3>
+                <p class="text-gray-600 mb-6">
+                    {% if search or current_academic_year or current_level %}
+                        Aucune classe ne correspond à vos critères de recherche.
+                    {% else %}
+                        Il n'y a aucune classe créée pour le moment.
+                    {% endif %}
+                </p>
+                {% if user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
+                <a href="{% url 'academic:classroom_create' %}" 
+                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                    <i class="fas fa-plus mr-2"></i>
+                    Créer la première classe
+                </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

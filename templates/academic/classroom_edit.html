@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Modifier la classe {{ classroom.name }} - eSchool{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center space-x-4">
+                    <a href="{% url 'academic:classroom_list' %}" 
+                       class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Modifier la classe</h1>
+                        <p class="text-gray-600">{{ classroom.name }} - {{ classroom.academic_year }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'academic:classroom_detail' classroom.pk %}" 
+                       class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-eye mr-2"></i>Voir les détails
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">
+                    <i class="fas fa-edit text-blue-600 mr-2"></i>
+                    Informations de la classe
+                </h2>
+                <p class="text-gray-600 mt-1">Modifiez les informations de la classe</p>
+            </div>
+
+            <form method="post" class="p-6">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Nom de la classe -->
+                    <div>
+                        <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-tag text-gray-400 mr-1"></i>
+                            Nom de la classe *
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="mt-1 text-sm text-red-600">
+                                {% for error in form.name.errors %}
+                                    <p><i class="fas fa-exclamation-circle mr-1"></i>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Niveau -->
+                    <div>
+                        <label for="{{ form.level.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-layer-group text-gray-400 mr-1"></i>
+                            Niveau *
+                        </label>
+                        {{ form.level }}
+                        {% if form.level.errors %}
+                            <div class="mt-1 text-sm text-red-600">
+                                {% for error in form.level.errors %}
+                                    <p><i class="fas fa-exclamation-circle mr-1"></i>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Année académique -->
+                    <div>
+                        <label for="{{ form.academic_year.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-calendar-alt text-gray-400 mr-1"></i>
+                            Année académique *
+                        </label>
+                        {{ form.academic_year }}
+                        {% if form.academic_year.errors %}
+                            <div class="mt-1 text-sm text-red-600">
+                                {% for error in form.academic_year.errors %}
+                                    <p><i class="fas fa-exclamation-circle mr-1"></i>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Capacité maximale -->
+                    <div>
+                        <label for="{{ form.max_capacity.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-users text-gray-400 mr-1"></i>
+                            Capacité maximale
+                        </label>
+                        {{ form.max_capacity }}
+                        {% if form.max_capacity.errors %}
+                            <div class="mt-1 text-sm text-red-600">
+                                {% for error in form.max_capacity.errors %}
+                                    <p><i class="fas fa-exclamation-circle mr-1"></i>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="mt-6">
+                    <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-align-left text-gray-400 mr-1"></i>
+                        Description
+                    </label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                        <div class="mt-1 text-sm text-red-600">
+                            {% for error in form.description.errors %}
+                                <p><i class="fas fa-exclamation-circle mr-1"></i>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Actions -->
+                <div class="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
+                    <a href="{% url 'academic:classroom_detail' classroom.pk %}" 
+                       class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-times mr-2"></i>Annuler
+                    </a>
+                    <button type="submit" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-save mr-2"></i>Enregistrer les modifications
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Informations additionnelles -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-start">
+                <i class="fas fa-info-circle text-blue-600 mt-0.5 mr-3"></i>
+                <div>
+                    <h3 class="text-sm font-medium text-blue-800">Informations importantes</h3>
+                    <div class="text-sm text-blue-700 mt-1">
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>La modification du nom ou du niveau peut affecter les rapports existants</li>
+                            <li>Les élèves déjà inscrits resteront dans la classe après modification</li>
+                            <li>Les enseignants assignés conserveront leurs affectations</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Styles pour les champs du formulaire */
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+        @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors;
+    }
+
+    textarea {
+        @apply h-24 resize-none;
+    }
+
+    /* Styles pour les états d'erreur */
+    .errorlist {
+        @apply hidden;
+    }
+
+    input.error,
+    select.error,
+    textarea.error {
+        @apply border-red-300 focus:ring-red-500 focus:border-red-500;
+    }
+</style>
+{% endblock %}

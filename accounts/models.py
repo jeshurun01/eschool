@@ -78,6 +78,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
 
+    def get_full_name(self):
+        """Django method for full name"""
+        return f"{self.first_name} {self.last_name}"
+
     def get_role_display_verbose(self):
         return dict(self.ROLE_CHOICES).get(self.role, self.role)
 
