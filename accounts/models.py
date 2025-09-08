@@ -3,6 +3,18 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.base_user import BaseUserManager
 
+# Import des managers RBAC
+from .managers import StudentManager, TeacherManager, ParentManager
+
+# Helper functions for default values
+def get_current_date():
+    """Retourne la date actuelle (sans heure)"""
+    return timezone.now().date()
+
+def get_current_datetime():
+    """Retourne la date et heure actuelles avec timezone"""
+    return timezone.now()
+
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -54,7 +66,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     is_active = models.BooleanField(default=True, verbose_name='Actif')
     is_staff = models.BooleanField(default=False, verbose_name='Membre du personnel')
-    date_joined = models.DateTimeField(default=timezone.now, verbose_name='Date d\'inscription')
+    date_joined = models.DateTimeField(default=get_current_datetime, verbose_name='Date d\'inscription')
     last_login = models.DateTimeField(blank=True, null=True, verbose_name='Dernière connexion')
     email_verified = models.BooleanField(default=False, verbose_name='E-mail vérifié')
     
@@ -84,6 +96,11 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def get_role_display_verbose(self):
         return dict(self.ROLE_CHOICES).get(self.role, self.role)
+    
+    @property
+    def is_admin(self):
+        """Vérifier si l'utilisateur est administrateur"""
+        return self.role in ['ADMIN', 'SUPER_ADMIN']
 
 
 class Profile(models.Model):
@@ -109,7 +126,7 @@ class Student(models.Model):
     """Modèle spécifique pour les élèves"""
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
     matricule = models.CharField(max_length=20, unique=True, verbose_name='Matricule')
-    enrollment_date = models.DateField(default=timezone.now, verbose_name='Date d\'inscription')
+    enrollment_date = models.DateField(default=get_current_date, verbose_name='Date d\'inscription')
     
     # Relations avec parents
     parents = models.ManyToManyField('Parent', related_name='children', blank=True, verbose_name='Parents/Tuteurs')
@@ -124,6 +141,9 @@ class Student(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # Manager RBAC
+    objects = StudentManager()
 
     class Meta:
         verbose_name = 'Élève'
@@ -169,6 +189,9 @@ class Parent(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Manager RBAC
+    objects = ParentManager()
+
     class Meta:
         verbose_name = 'Parent/Tuteur'
         verbose_name_plural = 'Parents/Tuteurs'
@@ -181,7 +204,7 @@ class Teacher(models.Model):
     """Modèle spécifique pour les enseignants"""
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='teacher_profile')
     employee_id = models.CharField(max_length=20, unique=True, verbose_name='ID Employé')
-    hire_date = models.DateField(default=timezone.now, verbose_name='Date d\'embauche')
+    hire_date = models.DateField(default=get_current_date, verbose_name='Date d\'embauche')
     salary = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name='Salaire')
     
     # Spécialités/Matières enseignées
@@ -198,6 +221,9 @@ class Teacher(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # Manager RBAC
+    objects = TeacherManager()
 
     class Meta:
         verbose_name = 'Enseignant'

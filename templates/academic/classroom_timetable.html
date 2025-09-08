@@ -1,0 +1,361 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Emploi du temps - {{ classroom.name }} - eSchool{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- En-tête -->
+    <div class="bg-gradient-to-r from-indigo-600 to-purple-700 text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <nav class="flex mb-4" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                    <li class="inline-flex items-center">
+                        <a href="{% url 'academic:classroom_list' %}" class="text-indigo-200 hover:text-white transition-colors">
+                            <i class="fas fa-chalkboard-teacher mr-2"></i>Classes
+                        </a>
+                    </li>
+                    <li>
+                        <div class="flex items-center">
+                            <i class="fas fa-chevron-right text-indigo-300 mx-2"></i>
+                            <a href="{% url 'academic:classroom_detail' classroom.pk %}" class="text-indigo-200 hover:text-white transition-colors">
+                                {{ classroom.name }}
+                            </a>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex items-center">
+                            <i class="fas fa-chevron-right text-indigo-300 mx-2"></i>
+                            <span class="text-indigo-100">Emploi du temps</span>
+                        </div>
+                    </li>
+                </ol>
+            </nav>
+            
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-4xl font-bold mb-2">📅 Emploi du temps</h1>
+                    <div class="flex items-center space-x-6 text-indigo-100">
+                        <span class="flex items-center">
+                            <i class="fas fa-graduation-cap mr-2"></i>
+                            <strong>{{ classroom.name }}</strong>
+                        </span>
+                        <span class="flex items-center">
+                            <i class="fas fa-layer-group mr-2"></i>
+                            {{ classroom.level.name }}
+                        </span>
+                        <span class="flex items-center">
+                            <i class="fas fa-calendar mr-2"></i>
+                            {{ classroom.academic_year.name }}
+                        </span>
+                        {% if classroom.room_number %}
+                        <span class="flex items-center">
+                            <i class="fas fa-door-open mr-2"></i>
+                            Salle {{ classroom.room_number }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="flex space-x-3">
+                    <a href="{% url 'academic:classroom_detail' classroom.pk %}" 
+                       class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg transition-all duration-200 flex items-center">
+                        <i class="fas fa-arrow-left mr-2"></i>Retour aux détails
+                    </a>
+                    {% if user.is_admin %}
+                    <a href="#" 
+                       class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg transition-all duration-200 flex items-center">
+                        <i class="fas fa-plus mr-2"></i>Ajouter un cours
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Statistiques de l'emploi du temps -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-book text-blue-600 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total cours</dt>
+                            <dd class="text-2xl font-bold text-gray-900">{{ stats.total_courses }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-clock text-green-600 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Heures/semaine</dt>
+                            <dd class="text-2xl font-bold text-gray-900">{{ stats.total_weekly_hours|floatformat:1 }}h</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-graduation-cap text-purple-600 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Matières</dt>
+                            <dd class="text-2xl font-bold text-gray-900">{{ stats.total_subjects }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-chalkboard-teacher text-orange-600 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Enseignants</dt>
+                            <dd class="text-2xl font-bold text-gray-900">{{ stats.total_teachers }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Emploi du temps hebdomadaire -->
+        <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 mb-8">
+            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+                <h2 class="text-xl font-bold text-white flex items-center">
+                    <i class="fas fa-calendar-week mr-3"></i>
+                    Emploi du temps hebdomadaire
+                </h2>
+            </div>
+            
+            {% if timetables %}
+            <div class="overflow-x-auto">
+                <div class="grid grid-cols-1 lg:grid-cols-7 gap-4 p-6">
+                    {% for day_name, day_data in weekly_schedule.items %}
+                    <div class="border border-gray-200 rounded-lg overflow-hidden">
+                        <!-- En-tête du jour -->
+                        <div class="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b">
+                            <h3 class="font-semibold text-gray-800 text-center">{{ day_name }}</h3>
+                            {% if day_data.total_hours > 0 %}
+                            <p class="text-xs text-gray-600 text-center mt-1">{{ day_data.total_hours|floatformat:1 }}h</p>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Cours du jour -->
+                        <div class="p-3 space-y-2 min-h-40">
+                            {% for course in day_data.courses %}
+                            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-r-lg p-3 shadow-sm hover:shadow-md transition-all duration-200">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-1 rounded-full">
+                                        {{ course.start_time|time:"H:i" }} - {{ course.end_time|time:"H:i" }}
+                                    </span>
+                                </div>
+                                
+                                <h4 class="font-semibold text-gray-900 text-sm mb-1" style="color: {{ course.subject.color }}">
+                                    {{ course.subject.name }}
+                                </h4>
+                                
+                                <div class="flex items-center text-xs text-gray-600 mb-1">
+                                    <i class="fas fa-user-tie mr-1"></i>
+                                    <span class="truncate">{{ course.teacher.user.full_name }}</span>
+                                </div>
+                                
+                                {% if course.room %}
+                                <div class="flex items-center text-xs text-gray-600">
+                                    <i class="fas fa-door-open mr-1"></i>
+                                    <span>{{ course.room }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% empty %}
+                            <div class="text-center text-gray-400 py-8">
+                                <i class="fas fa-calendar-times text-2xl mb-2"></i>
+                                <p class="text-sm">Pas de cours</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <!-- Aucun cours configuré -->
+            <div class="text-center py-16">
+                <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                    <i class="fas fa-calendar-times text-gray-400 text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Aucun cours configuré</h3>
+                <p class="text-gray-600 mb-8 max-w-md mx-auto">
+                    L'emploi du temps de cette classe n'a pas encore été configuré. 
+                    {% if user.is_admin %}
+                    Contactez un administrateur pour ajouter des cours.
+                    {% else %}
+                    Les cours seront bientôt disponibles.
+                    {% endif %}
+                </p>
+                {% if user.is_admin %}
+                <a href="#" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-all duration-200">
+                    <i class="fas fa-plus mr-2"></i>
+                    Configurer l'emploi du temps
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Liste des enseignants assignés -->
+        {% if assignments %}
+        <div class="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
+            <div class="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4">
+                <h2 class="text-xl font-bold text-white flex items-center">
+                    <i class="fas fa-users mr-3"></i>
+                    Enseignants assignés à la classe
+                </h2>
+            </div>
+            
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for assignment in assignments %}
+                    <div class="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200">
+                        <div class="flex items-center mb-4">
+                            {% if assignment.teacher.user.avatar %}
+                                <img class="h-12 w-12 rounded-full object-cover border-2 border-gray-300" src="{{ assignment.teacher.user.avatar.url }}" alt="{{ assignment.teacher.user.full_name }}">
+                            {% else %}
+                                <div class="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                                    <span class="text-lg font-bold text-white">{{ assignment.teacher.user.first_name.0 }}{{ assignment.teacher.user.last_name.0 }}</span>
+                                </div>
+                            {% endif %}
+                            <div class="ml-4">
+                                <h3 class="text-lg font-semibold text-gray-900">{{ assignment.teacher.user.full_name }}</h3>
+                                <p class="text-sm text-gray-600">{{ assignment.teacher.employee_id }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white" style="background-color: {{ assignment.subject.color }}">
+                                    {{ assignment.subject.name }}
+                                </span>
+                            </div>
+                            
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-clock mr-2"></i>
+                                <span>{{ assignment.hours_per_week }}h par semaine</span>
+                            </div>
+                            
+                            {% if assignment.teacher.user.email %}
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-envelope mr-2"></i>
+                                <a href="mailto:{{ assignment.teacher.user.email }}" class="text-blue-600 hover:text-blue-800 transition-colors">
+                                    {{ assignment.teacher.user.email }}
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Animation au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des cartes de cours
+    const courseCards = document.querySelectorAll('[class*="from-blue-50"]');
+    courseCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease-out';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+    
+    // Animation des statistiques
+    const statCards = document.querySelectorAll('[class*="border-l-4"]');
+    statCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.9)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            card.style.opacity = '1';
+            card.style.transform = 'scale(1)';
+        }, index * 150);
+    });
+});
+
+// Effet de survol amélioré pour les cours
+document.querySelectorAll('[class*="from-blue-50"]').forEach(card => {
+    card.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-4px) scale(1.02)';
+        this.style.transition = 'all 0.3s ease-out';
+    });
+    
+    card.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0) scale(1)';
+    });
+});
+</script>
+
+<style>
+.transition-all {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Animation pour les heures */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.animate-pulse-custom {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Effets de survol */
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Couleurs personnalisées pour les matières */
+.subject-card {
+    transition: all 0.3s ease;
+}
+
+.subject-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+</style>
+{% endblock %}

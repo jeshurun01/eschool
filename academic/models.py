@@ -3,7 +3,19 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 
+# Import des managers RBAC
+from .managers import GradeManager, ClassRoomManager, EnrollmentManager
+
 User = get_user_model()
+
+# Helper functions for default values
+def get_current_date():
+    """Retourne la date actuelle (sans heure)"""
+    return timezone.now().date()
+
+def get_current_datetime():
+    """Retourne la date et heure actuelles avec timezone"""
+    return timezone.now()
 
 
 class AcademicYear(models.Model):
@@ -91,6 +103,9 @@ class ClassRoom(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Manager RBAC
+    objects = ClassRoomManager()
+
     class Meta:
         verbose_name = 'Classe'
         verbose_name_plural = 'Classes'
@@ -137,17 +152,27 @@ class Enrollment(models.Model):
     classroom = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, related_name='enrollments', verbose_name='Classe')
     academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE, verbose_name='Année scolaire')
     
-    enrollment_date = models.DateField(default=timezone.now, verbose_name='Date d\'inscription')
+    enrollment_date = models.DateField(default=get_current_date, verbose_name='Date d\'inscription')
     withdrawal_date = models.DateField(blank=True, null=True, verbose_name='Date de retrait')
     is_active = models.BooleanField(default=True, verbose_name='Inscription active')
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Manager RBAC
+    objects = EnrollmentManager()
+
     class Meta:
         verbose_name = 'Inscription'
         verbose_name_plural = 'Inscriptions'
-        unique_together = ['student', 'academic_year']  # Un élève ne peut être inscrit qu'une fois par année
+        # Permettre les inscriptions multiples mais pas d'inscription active multiple
+        constraints = [
+            models.UniqueConstraint(
+                fields=['student', 'academic_year'],
+                condition=models.Q(is_active=True),
+                name='unique_active_enrollment_per_year'
+            )
+        ]
 
     def __str__(self):
         return f"{self.student.user.full_name} - {self.classroom.name} ({self.academic_year.name})"
@@ -251,6 +276,9 @@ class Grade(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # Manager RBAC
+    objects = GradeManager()
 
     class Meta:
         verbose_name = 'Note'

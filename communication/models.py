@@ -4,6 +4,15 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+# Helper functions for default values
+def get_current_date():
+    """Retourne la date actuelle (sans heure)"""
+    return timezone.now().date()
+
+def get_current_datetime():
+    """Retourne la date et heure actuelles avec timezone"""
+    return timezone.now()
+
 
 class Announcement(models.Model):
     """Annonce publique ou privée"""
@@ -79,7 +88,7 @@ class AnnouncementRead(models.Model):
     """Suivi de lecture des annonces"""
     announcement = models.ForeignKey(Announcement, on_delete=models.CASCADE, related_name='read_status', verbose_name='Annonce')
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Utilisateur')
-    read_date = models.DateTimeField(default=timezone.now, verbose_name='Date de lecture')
+    read_date = models.DateTimeField(default=get_current_datetime, verbose_name='Date de lecture')
 
     class Meta:
         verbose_name = 'Lecture d\'annonce'
@@ -109,7 +118,7 @@ class Message(models.Model):
     # Réponse
     parent_message = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True, related_name='replies', verbose_name='Message parent')
     
-    sent_date = models.DateTimeField(default=timezone.now, verbose_name='Date d\'envoi')
+    sent_date = models.DateTimeField(default=get_current_datetime, verbose_name='Date d\'envoi')
 
     class Meta:
         verbose_name = 'Message'
@@ -139,7 +148,7 @@ class GroupMessage(models.Model):
     target_levels = models.ManyToManyField('academic.Level', blank=True, verbose_name='Niveaux destinataires')
     target_users = models.ManyToManyField(User, blank=True, related_name='received_group_messages', verbose_name='Utilisateurs destinataires')
     
-    sent_date = models.DateTimeField(default=timezone.now, verbose_name='Date d\'envoi')
+    sent_date = models.DateTimeField(default=get_current_datetime, verbose_name='Date d\'envoi')
 
     class Meta:
         verbose_name = 'Message de groupe'
@@ -154,7 +163,7 @@ class GroupMessageRead(models.Model):
     """Suivi de lecture des messages de groupe"""
     group_message = models.ForeignKey(GroupMessage, on_delete=models.CASCADE, related_name='read_status', verbose_name='Message de groupe')
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Utilisateur')
-    read_date = models.DateTimeField(default=timezone.now, verbose_name='Date de lecture')
+    read_date = models.DateTimeField(default=get_current_datetime, verbose_name='Date de lecture')
 
     class Meta:
         verbose_name = 'Lecture de message de groupe'
@@ -218,7 +227,7 @@ class ResourceAccess(models.Model):
     """Suivi d'accès aux ressources"""
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE, related_name='access_logs', verbose_name='Ressource')
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Utilisateur')
-    access_date = models.DateTimeField(default=timezone.now, verbose_name='Date d\'accès')
+    access_date = models.DateTimeField(default=get_current_datetime, verbose_name='Date d\'accès')
     action = models.CharField(max_length=20, choices=[('VIEW', 'Consultation'), ('DOWNLOAD', 'Téléchargement')], verbose_name='Action')
 
     class Meta:
@@ -318,7 +327,7 @@ class EmailLog(models.Model):
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='PENDING', verbose_name='Statut')
     error_message = models.TextField(blank=True, verbose_name='Message d\'erreur')
     
-    sent_date = models.DateTimeField(default=timezone.now, verbose_name='Date d\'envoi')
+    sent_date = models.DateTimeField(default=get_current_datetime, verbose_name='Date d\'envoi')
     delivered_date = models.DateTimeField(blank=True, null=True, verbose_name='Date de livraison')
 
     class Meta:

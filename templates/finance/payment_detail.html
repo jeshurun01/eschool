@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Détails du Paiement{{ payment.payment_reference }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Navigation -->
+        <nav class="flex mb-8" aria-label="Breadcrumb">
+            <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                <li class="inline-flex items-center">
+                    <a href="{% url 'finance:payment_list' %}" class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600">
+                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"/>
+                        </svg>
+                        Paiements
+                    </a>
+                </li>
+                <li>
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2">{{ payment.payment_reference }}</span>
+                    </div>
+                </li>
+            </ol>
+        </nav>
+
+        <!-- En-tête -->
+        <div class="bg-white shadow rounded-lg mb-6">
+            <div class="px-4 py-5 sm:px-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">{{ payment.payment_reference }}</h1>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Paiement effectué le {{ payment.payment_date|date:"d/m/Y à H:i" }}
+                        </p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        {% if payment.status == 'COMPLETED' %}
+                            <span class="px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-800">
+                                {{ payment.get_status_display }}
+                            </span>
+                        {% elif payment.status == 'PENDING' %}
+                            <span class="px-3 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                {{ payment.get_status_display }}
+                            </span>
+                        {% elif payment.status == 'FAILED' %}
+                            <span class="px-3 py-1 text-sm font-semibold rounded-full bg-red-100 text-red-800">
+                                {{ payment.get_status_display }}
+                            </span>
+                        {% else %}
+                            <span class="px-3 py-1 text-sm font-semibold rounded-full bg-gray-100 text-gray-800">
+                                {{ payment.get_status_display }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Informations principales -->
+            <div class="lg:col-span-2">
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Informations du Paiement</h3>
+                        
+                        <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Référence</dt>
+                                <dd class="mt-1 text-sm text-gray-900 font-mono">{{ payment.payment_reference }}</dd>
+                            </div>
+                            
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Montant</dt>
+                                <dd class="mt-1 text-lg font-semibold text-gray-900">{{ payment.amount }} €</dd>
+                            </div>
+                            
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Méthode de paiement</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ payment.payment_method.name }}</dd>
+                            </div>
+                            
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Date de paiement</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ payment.payment_date|date:"d/m/Y à H:i" }}</dd>
+                            </div>
+                            
+                            {% if payment.transaction_id %}
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">ID de transaction</dt>
+                                <dd class="mt-1 text-sm text-gray-900 font-mono">{{ payment.transaction_id }}</dd>
+                            </div>
+                            {% endif %}
+                            
+                            {% if payment.processed_date %}
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Date de traitement</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ payment.processed_date|date:"d/m/Y à H:i" }}</dd>
+                            </div>
+                            {% endif %}
+                        </dl>
+                        
+                        {% if payment.notes %}
+                        <div class="mt-6">
+                            <dt class="text-sm font-medium text-gray-500">Notes</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ payment.notes }}</dd>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations de la facture -->
+            <div>
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Facture Associée</h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Numéro de facture</dt>
+                                <dd class="mt-1 text-sm text-gray-900 font-mono">
+                                    <a href="{% url 'finance:invoice_detail' payment.invoice.id %}" class="text-blue-600 hover:text-blue-800 hover:underline">
+                                        {{ payment.invoice.invoice_number }}
+                                    </a>
+                                </dd>
+                            </div>
+                            
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Élève</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ payment.invoice.student.user.get_full_name }}</dd>
+                            </div>
+                            
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Montant total de la facture</dt>
+                                <dd class="mt-1 text-sm text-gray-900 font-semibold">{{ payment.invoice.total_amount }} €</dd>
+                            </div>
+                            
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Date d'échéance</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ payment.invoice.due_date|date:"d/m/Y" }}</dd>
+                            </div>
+                            
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Statut de la facture</dt>
+                                <dd class="mt-1">
+                                    {% if payment.invoice.status == 'PAID' %}
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                            {{ payment.invoice.get_status_display }}
+                                        </span>
+                                    {% elif payment.invoice.status == 'OVERDUE' %}
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                            {{ payment.invoice.get_status_display }}
+                                        </span>
+                                    {% else %}
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                            {{ payment.invoice.get_status_display }}
+                                        </span>
+                                    {% endif %}
+                                </dd>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <a href="{% url 'finance:invoice_detail' payment.invoice.id %}" class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                Voir la facture
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="bg-white shadow rounded-lg mt-6">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Historique</h3>
+                        
+                        <div class="flow-root">
+                            <ul class="-mb-8">
+                                <li>
+                                    <div class="relative pb-8">
+                                        <div class="relative flex space-x-3">
+                                            <div>
+                                                <span class="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center ring-8 ring-white">
+                                                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"/>
+                                                    </svg>
+                                                </span>
+                                            </div>
+                                            <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                                <div>
+                                                    <p class="text-sm text-gray-500">Paiement créé</p>
+                                                </div>
+                                                <div class="text-right text-sm whitespace-nowrap text-gray-500">
+                                                    {{ payment.created_at|date:"d/m/Y H:i" }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+                                
+                                {% if payment.processed_date %}
+                                <li>
+                                    <div class="relative">
+                                        <div class="relative flex space-x-3">
+                                            <div>
+                                                <span class="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center ring-8 ring-white">
+                                                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                    </svg>
+                                                </span>
+                                            </div>
+                                            <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                                <div>
+                                                    <p class="text-sm text-gray-500">Paiement traité</p>
+                                                </div>
+                                                <div class="text-right text-sm whitespace-nowrap text-gray-500">
+                                                    {{ payment.processed_date|date:"d/m/Y H:i" }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

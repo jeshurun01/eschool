@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+
+{% block title %}Notes de {{ student.user.full_name }} - eSchool{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <div class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="py-6">
+                <!-- En-tête -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <nav class="flex items-center space-x-2 text-sm text-gray-500 mb-4">
+                            <a href="{% url 'accounts:dashboard' %}" class="hover:text-gray-700">Dashboard</a>
+                            <span>›</span>
+                            <a href="{% url 'academic:grade_list' %}" class="hover:text-gray-700">Notes</a>
+                            <span>›</span>
+                            <span class="text-gray-900">{{ student.user.full_name }}</span>
+                        </nav>
+                        
+                        <div class="flex items-center space-x-4">
+                            <div class="flex-shrink-0">
+                                {% if student.user.avatar %}
+                                    <img src="{{ student.user.avatar.url }}" alt="{{ student.user.full_name }}" 
+                                         class="w-16 h-16 rounded-full border-4 border-white shadow-lg">
+                                {% else %}
+                                    <div class="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center border-4 border-white shadow-lg">
+                                        <span class="text-2xl font-bold text-white">
+                                            {{ student.user.first_name.0 }}{{ student.user.last_name.0 }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h1 class="text-3xl font-bold text-gray-900">{{ student.user.full_name }}</h1>
+                                <p class="text-lg text-gray-600">Matricule: {{ student.matricule }}</p>
+                                {% if student.current_class %}
+                                    <p class="text-sm text-gray-500">Classe: {{ student.current_class.name }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Statistiques rapides -->
+                    <div class="text-right">
+                        <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-4 rounded-xl shadow-lg">
+                            <div class="text-2xl font-bold">{{ general_average|floatformat:1 }}%</div>
+                            <div class="text-sm opacity-90">Moyenne générale</div>
+                        </div>
+                        <div class="mt-2 text-sm text-gray-500">
+                            {{ total_grades }} note{{ total_grades|pluralize }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Filtres -->
+        <div class="bg-white rounded-xl shadow-sm border mb-8">
+            <div class="p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Filtres</h2>
+                <form method="get" class="flex flex-wrap gap-4">
+                    <div class="flex-1 min-w-48">
+                        <label for="subject" class="block text-sm font-medium text-gray-700 mb-2">Matière</label>
+                        <select name="subject" id="subject" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Toutes les matières</option>
+                            {% for subject in subjects %}
+                                <option value="{{ subject.id }}" {% if request.GET.subject == subject.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ subject.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="flex-1 min-w-48">
+                        <label for="period" class="block text-sm font-medium text-gray-700 mb-2">Période</label>
+                        <select name="period" id="period" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Toute l'année</option>
+                            <option value="trimester1" {% if request.GET.period == 'trimester1' %}selected{% endif %}>1er Trimestre</option>
+                            <option value="trimester2" {% if request.GET.period == 'trimester2' %}selected{% endif %}>2ème Trimestre</option>
+                            <option value="trimester3" {% if request.GET.period == 'trimester3' %}selected{% endif %}>3ème Trimestre</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex items-end">
+                        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            Filtrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Statistiques par matière -->
+        {% if subjects_stats %}
+        <div class="bg-white rounded-xl shadow-sm border mb-8">
+            <div class="p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-6">Moyennes par matière</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% for subject_name, stats in subjects_stats.items %}
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="font-medium text-gray-900">{{ subject_name }}</h3>
+                                <span class="text-2xl font-bold {% if stats.average >= 70 %}text-green-600{% elif stats.average >= 50 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                                    {{ stats.average|floatformat:1 }}%
+                                </span>
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                {{ stats.count }} évaluation{{ stats.count|pluralize }}
+                            </div>
+                            <div class="mt-2">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="h-2 rounded-full {% if stats.average >= 70 %}bg-green-500{% elif stats.average >= 50 %}bg-yellow-500{% else %}bg-red-500{% endif %}" 
+                                         style="width: {{ stats.average }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Liste des notes -->
+        <div class="bg-white rounded-xl shadow-sm border">
+            <div class="p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-6">Détail des notes</h2>
+                
+                {% if grades %}
+                    <div class="space-y-4">
+                        {% for grade in grades %}
+                            <div class="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center space-x-4">
+                                            <div class="flex-shrink-0">
+                                                <div class="w-12 h-12 rounded-lg {% if grade.percentage >= 70 %}bg-green-100 text-green-800{% elif grade.percentage >= 50 %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %} flex items-center justify-center font-bold">
+                                                    {{ grade.percentage|floatformat:0 }}%
+                                                </div>
+                                            </div>
+                                            <div class="flex-1">
+                                                <h4 class="font-medium text-gray-900">{{ grade.evaluation_name }}</h4>
+                                                <div class="flex items-center space-x-4 text-sm text-gray-500 mt-1">
+                                                    <span class="font-medium">{{ grade.subject.name }}</span>
+                                                    <span>•</span>
+                                                    <span>{{ grade.get_evaluation_type_display }}</span>
+                                                    <span>•</span>
+                                                    <span>{{ grade.date|date:"d M Y" }}</span>
+                                                    <span>•</span>
+                                                    <span>Prof. {{ grade.teacher.user.full_name }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xl font-bold text-gray-900">
+                                            {{ grade.score }}/{{ grade.max_score }}
+                                        </div>
+                                        <div class="text-sm text-gray-500">
+                                            Coeff. {{ grade.coefficient }}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% if grade.comments %}
+                                    <div class="mt-3 pt-3 border-t border-gray-200">
+                                        <p class="text-sm text-gray-600 italic">
+                                            <strong>Commentaire:</strong> {{ grade.comments }}
+                                        </p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-12">
+                        <div class="w-24 h-24 mx-auto mb-4 text-gray-300">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune note trouvée</h3>
+                        <p class="text-gray-500">Aucune note ne correspond aux critères sélectionnés.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

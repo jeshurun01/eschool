@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Faire l'appel - eSchool{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- En-tête -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Faire l'appel</h1>
+            <p class="text-gray-600 mt-2">Enregistrer les présences et absences</p>
+        </div>
+        <div class="flex space-x-4">
+            <a href="{% url 'academic:attendance_list' %}" 
+               class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+                Voir la liste
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulaire de sélection -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border mb-8">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Sélectionner la classe et les paramètres</h3>
+        <form id="attendanceForm" method="post" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {% csrf_token %}
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Classe *</label>
+                <select name="classroom" id="classroomSelect" required 
+                        class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Sélectionner une classe</option>
+                    {% for classroom in classrooms %}
+                        <option value="{{ classroom.id }}">{{ classroom.name }} ({{ classroom.level.name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Matière</label>
+                <select name="subject" id="subjectSelect" 
+                        class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Sélectionner une matière</option>
+                    {% for subject in subjects %}
+                        <option value="{{ subject.id }}">{{ subject.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+                <input type="date" name="date" value="{{ today|date:'Y-m-d' }}" required 
+                       class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div class="md:col-span-3 flex justify-center">
+                <button type="button" id="loadStudents" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-colors">
+                    Charger les élèves
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Liste des élèves (cachée par défaut) -->
+    <div id="studentsSection" class="bg-white rounded-lg shadow-sm border hidden">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-medium text-gray-900">Liste des élèves</h3>
+                <div class="flex space-x-2">
+                    <button type="button" id="markAllPresent" 
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        Tous présents
+                    </button>
+                    <button type="button" id="markAllAbsent" 
+                            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        Tous absents
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="studentsContainer" class="divide-y divide-gray-200">
+            <!-- Les élèves seront chargés ici via JavaScript -->
+        </div>
+
+        <div class="p-6 border-t border-gray-200 bg-gray-50">
+            <div class="flex justify-end space-x-4">
+                <button type="button" id="cancelAttendance" 
+                        class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                    Annuler
+                </button>
+                <button type="submit" form="attendanceForm" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                    Enregistrer l'appel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message d'aide -->
+    <div id="helpMessage" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-8">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">Instructions</h3>
+                <div class="mt-2 text-sm text-blue-700">
+                    <ol class="list-decimal list-inside space-y-1">
+                        <li>Sélectionnez d'abord la classe pour laquelle vous voulez faire l'appel</li>
+                        <li>Choisissez la matière (optionnel) et la date</li>
+                        <li>Cliquez sur "Charger les élèves" pour afficher la liste</li>
+                        <li>Marquez le statut de chaque élève (Présent par défaut)</li>
+                        <li>Ajoutez des justifications si nécessaire pour les absences</li>
+                        <li>Cliquez sur "Enregistrer l'appel" pour finaliser</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loadStudentsBtn = document.getElementById('loadStudents');
+    const studentsSection = document.getElementById('studentsSection');
+    const studentsContainer = document.getElementById('studentsContainer');
+    const classroomSelect = document.getElementById('classroomSelect');
+    const markAllPresentBtn = document.getElementById('markAllPresent');
+    const markAllAbsentBtn = document.getElementById('markAllAbsent');
+    const cancelBtn = document.getElementById('cancelAttendance');
+    const helpMessage = document.getElementById('helpMessage');
+
+    loadStudentsBtn.addEventListener('click', function() {
+        const classroomId = classroomSelect.value;
+        if (!classroomId) {
+            alert('Veuillez sélectionner une classe');
+            return;
+        }
+
+        // Simuler le chargement des élèves (remplacer par un appel AJAX réel)
+        loadStudents(classroomId);
+    });
+
+    function loadStudents(classroomId) {
+        // Ici, vous devriez faire un appel AJAX pour récupérer les élèves
+        // Pour la démo, on simule avec des données statiques
+        const mockStudents = [
+            {id: 1, name: 'Dupont Jean', matricule: 'ETU001'},
+            {id: 2, name: 'Martin Sophie', matricule: 'ETU002'},
+            {id: 3, name: 'Moreau Pierre', matricule: 'ETU003'},
+            {id: 4, name: 'Leroy Emma', matricule: 'ETU004'},
+            {id: 5, name: 'Blanc Lucas', matricule: 'ETU005'},
+        ];
+
+        let html = '';
+        mockStudents.forEach(student => {
+            html += `
+                <div class="p-4 flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 h-10 w-10">
+                            <div class="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                                ${student.name.split(' ').map(n => n[0]).join('')}
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-900">${student.name}</div>
+                            <div class="text-sm text-gray-500">Matricule: ${student.matricule}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <div class="flex space-x-2">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="status_${student.id}" value="PRESENT" checked 
+                                       class="form-radio text-green-600 focus:ring-green-500">
+                                <span class="ml-2 text-sm text-green-700">Présent</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="status_${student.id}" value="ABSENT" 
+                                       class="form-radio text-red-600 focus:ring-red-500">
+                                <span class="ml-2 text-sm text-red-700">Absent</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="status_${student.id}" value="LATE" 
+                                       class="form-radio text-yellow-600 focus:ring-yellow-500">
+                                <span class="ml-2 text-sm text-yellow-700">Retard</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="status_${student.id}" value="EXCUSED" 
+                                       class="form-radio text-blue-600 focus:ring-blue-500">
+                                <span class="ml-2 text-sm text-blue-700">Excusé</span>
+                            </label>
+                        </div>
+                        
+                        <div class="w-64">
+                            <input type="text" name="justification_${student.id}" placeholder="Justification (optionnel)" 
+                                   class="w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        studentsContainer.innerHTML = html;
+        studentsSection.classList.remove('hidden');
+        helpMessage.classList.add('hidden');
+    }
+
+    markAllPresentBtn.addEventListener('click', function() {
+        const presentRadios = document.querySelectorAll('input[type="radio"][value="PRESENT"]');
+        presentRadios.forEach(radio => radio.checked = true);
+    });
+
+    markAllAbsentBtn.addEventListener('click', function() {
+        const absentRadios = document.querySelectorAll('input[type="radio"][value="ABSENT"]');
+        absentRadios.forEach(radio => radio.checked = true);
+    });
+
+    cancelBtn.addEventListener('click', function() {
+        studentsSection.classList.add('hidden');
+        helpMessage.classList.remove('hidden');
+        studentsContainer.innerHTML = '';
+        classroomSelect.value = '';
+        document.getElementById('subjectSelect').value = '';
+    });
+});
+</script>
+{% endblock %}

@@ -4,6 +4,7 @@
 {% block title %}Liste des Élèves - eSchool{% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
   <!-- En-tête de page -->
   <div class="mb-8">
@@ -287,7 +288,8 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                       </svg>
                     </a>
-                    <button onclick="toggleStudentStatus({{ student.id }}, {{ student.user.is_active|yesno:'false,true' }})" 
+                    {% if user.is_admin %}
+                    <button onclick="toggleStudentStatus({{ student.user.id }})" 
                             class="{% if student.user.is_active %}text-red-600 hover:text-red-900{% else %}text-green-600 hover:text-green-900{% endif %}" 
                             title="{% if student.user.is_active %}Désactiver{% else %}Activer{% endif %}">
                       {% if student.user.is_active %}
@@ -300,6 +302,7 @@
                         </svg>
                       {% endif %}
                     </button>
+                    {% endif %}
                   </div>
                 </td>
               </tr>
@@ -411,12 +414,19 @@
 </div>
 
 <script>
-function toggleStudentStatus(studentId, newStatus) {
-  if (confirm('Êtes-vous sûr de vouloir ' + (newStatus ? 'activer' : 'désactiver') + ' cet élève ?')) {
-    fetch(`/accounts/users/${studentId}/toggle-active/`, {
+function toggleStudentStatus(userId) {
+  if (confirm('Êtes-vous sûr de vouloir changer le statut de cet élève ?')) {
+    // Obtenir le token CSRF de manière plus robuste
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+      alert('Erreur: Token CSRF introuvable. Veuillez recharger la page.');
+      return;
+    }
+    
+    fetch(`/accounts/users/${userId}/toggle-active/`, {
       method: 'POST',
       headers: {
-        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        'X-CSRFToken': csrfToken.value,
         'Content-Type': 'application/json',
       },
     })
@@ -425,7 +435,7 @@ function toggleStudentStatus(studentId, newStatus) {
       if (data.success) {
         location.reload();
       } else {
-        alert('Erreur lors de la modification du statut');
+        alert('Erreur lors de la modification du statut: ' + (data.error || 'Erreur inconnue'));
       }
     })
     .catch(error => {

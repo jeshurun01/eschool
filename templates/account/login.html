@@ -54,7 +54,7 @@
 
         <!-- Champ email amélioré -->
         <div class="space-y-2">
-          <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700">
+          <label for="{{ form.email.id_for_label|default:'id_email' }}" class="block text-sm font-medium text-gray-700">
             Adresse email
           </label>
           <div class="relative">
@@ -64,8 +64,8 @@
               </svg>
             </div>
             <input type="email" 
-                   id="{{ form.email.id_for_label }}" 
-                   name="{{ form.email.name }}"
+                   id="{{ form.email.id_for_label|default:'id_email' }}" 
+                   name="{{ form.email.name|default:'email' }}"
                    value="{{ form.email.value|default_if_none:'' }}"
                    class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400" 
                    placeholder="votre@email.com"
@@ -83,7 +83,7 @@
 
         <!-- Champ mot de passe amélioré -->
         <div class="space-y-2">
-          <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-700">
+          <label for="{{ form.password.id_for_label|default:'id_password' }}" class="block text-sm font-medium text-gray-700">
             Mot de passe
           </label>
           <div class="relative">
@@ -93,8 +93,8 @@
               </svg>
             </div>
             <input type="password" 
-                   id="{{ form.password.id_for_label }}" 
-                   name="{{ form.password.name }}"
+                   id="{{ form.password.id_for_label|default:'id_password' }}" 
+                   name="{{ form.password.name|default:'password' }}"
                    class="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400" 
                    placeholder="••••••••"
                    required>
@@ -132,12 +132,12 @@
             </label>
           </div>
 
-          <div class="text-sm">
-            <a href="{% url 'account_reset_password' %}" 
+          <!-- <div class="text-sm">
+            <a href="#" 
                class="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200">
               Mot de passe oublié ?
             </a>
-          </div>
+          </div> -->
         </div>
 
         <!-- Bouton de connexion amélioré -->

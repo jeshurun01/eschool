@@ -1,277 +1,468 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load academic_extras %}
 
 {% block title %}Gestion des inscriptions - {{ classroom.name }} - eSchool{% endblock %}
 
-{% block extra_head %}
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-{% endblock %}
-
 {% block content %}
 <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <div class="bg-white shadow-sm border-b">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center py-6">
-                <div class="flex items-center space-x-4">
-                    <a href="{% url 'academic:classroom_detail' classroom.pk %}" 
-                       class="text-gray-400 hover:text-gray-600 transition-colors">
-                        <i class="fas fa-arrow-left text-xl"></i>
-                    </a>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-900">Gestion des inscriptions</h1>
-                        <p class="text-gray-600">{{ classroom.name }} - {{ classroom.academic_year }}</p>
+    <!-- En-tête amélioré -->
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <nav class="flex mb-4" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                    <li class="inline-flex items-center">
+                        <a href="{% url 'academic:classroom_list' %}" class="text-blue-200 hover:text-white transition-colors">
+                            <i class="fas fa-chalkboard-teacher mr-2"></i>Classes
+                        </a>
+                    </li>
+                    <li>
+                        <div class="flex items-center">
+                            <i class="fas fa-chevron-right text-blue-300 mx-2"></i>
+                            <a href="{% url 'academic:classroom_detail' classroom.pk %}" class="text-blue-200 hover:text-white transition-colors">
+                                {{ classroom.name }}
+                            </a>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex items-center">
+                            <i class="fas fa-chevron-right text-blue-300 mx-2"></i>
+                            <span class="text-blue-100">Gestion des inscriptions</span>
+                        </div>
+                    </li>
+                </ol>
+            </nav>
+            
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-4xl font-bold mb-2">👥 Gestion des inscriptions</h1>
+                    <div class="flex items-center space-x-6 text-blue-100">
+                        <span class="flex items-center">
+                            <i class="fas fa-graduation-cap mr-2"></i>
+                            <strong>{{ classroom.name }}</strong>
+                        </span>
+                        <span class="flex items-center">
+                            <i class="fas fa-layer-group mr-2"></i>
+                            {{ classroom.level.name }}
+                        </span>
+                        <span class="flex items-center">
+                            <i class="fas fa-calendar mr-2"></i>
+                            {{ classroom.academic_year.name }}
+                        </span>
+                        {% if classroom.room_number %}
+                        <span class="flex items-center">
+                            <i class="fas fa-door-open mr-2"></i>
+                            Salle {{ classroom.room_number }}
+                        </span>
+                        {% endif %}
                     </div>
                 </div>
-                <div class="flex items-center space-x-3">
-                    <span class="text-sm text-gray-500">
-                        {{ enrollments.count }} / {{ classroom.max_capacity|default:"∞" }} élèves
-                    </span>
+                
+                <div class="flex space-x-3">
+                    <a href="{% url 'academic:classroom_detail' classroom.pk %}" 
+                       class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg transition-all duration-200 flex items-center">
+                        <i class="fas fa-arrow-left mr-2"></i>Retour aux détails
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Liste des élèves inscrits -->
-            <div class="lg:col-span-2">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-                    <div class="p-6 border-b border-gray-200">
-                        <div class="flex justify-between items-center">
-                            <h2 class="text-lg font-semibold text-gray-900">
-                                <i class="fas fa-users text-blue-600 mr-2"></i>
-                                Élèves inscrits ({{ enrollments.count }})
-                            </h2>
-                            <div class="flex items-center space-x-2">
-                                <input type="text" 
-                                       id="searchEnrolled" 
-                                       placeholder="Rechercher un élève..."
-                                       class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
-                            </div>
+        
+        <!-- Messages Django -->
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} bg-{% if message.tags == 'error' %}red{% elif message.tags == 'success' %}green{% else %}blue{% endif %}-100 border border-{% if message.tags == 'error' %}red{% elif message.tags == 'success' %}green{% else %}blue{% endif %}-400 text-{% if message.tags == 'error' %}red{% elif message.tags == 'success' %}green{% else %}blue{% endif %}-700 px-4 py-3 rounded mb-4">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Statistiques des inscriptions -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-users text-blue-600 text-xl"></i>
                         </div>
                     </div>
-
-                    <div class="p-6">
-                        {% if enrollments %}
-                            <div class="space-y-3" id="enrolledList">
-                                {% for enrollment in enrollments %}
-                                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg enrolled-item">
-                                    <div class="flex items-center space-x-4">
-                                        <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                                            <span class="text-white font-medium text-sm">
-                                                {{ enrollment.student.first_name|first }}{{ enrollment.student.last_name|first }}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <h3 class="font-medium text-gray-900 student-name">
-                                                {{ enrollment.student.first_name }} {{ enrollment.student.last_name }}
-                                            </h3>
-                                            <p class="text-sm text-gray-600">{{ enrollment.student.email }}</p>
-                                            <p class="text-xs text-gray-500">
-                                                Inscrit le {{ enrollment.enrollment_date|date:"d/m/Y" }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center space-x-2">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                               {% if enrollment.status == 'ACTIVE' %}bg-green-100 text-green-800
-                                               {% elif enrollment.status == 'INACTIVE' %}bg-red-100 text-red-800
-                                               {% else %}bg-yellow-100 text-yellow-800{% endif %}">
-                                            {% if enrollment.status == 'ACTIVE' %}
-                                                <i class="fas fa-check-circle mr-1"></i>Actif
-                                            {% elif enrollment.status == 'INACTIVE' %}
-                                                <i class="fas fa-times-circle mr-1"></i>Inactif
-                                            {% else %}
-                                                <i class="fas fa-clock mr-1"></i>En attente
-                                            {% endif %}
-                                        </span>
-                                        <form method="post" class="inline">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="action" value="remove">
-                                            <input type="hidden" name="student_id" value="{{ enrollment.student.pk }}">
-                                            <button type="submit" 
-                                                    class="text-red-600 hover:text-red-800 transition-colors"
-                                                    onclick="return confirm('Êtes-vous sûr de vouloir désinscrire cet élève ?')">
-                                                <i class="fas fa-user-minus"></i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div class="text-center py-12">
-                                <i class="fas fa-user-friends text-gray-300 text-6xl mb-4"></i>
-                                <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun élève inscrit</h3>
-                                <p class="text-gray-600">Commencez par ajouter des élèves à cette classe</p>
-                            </div>
-                        {% endif %}
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Élèves inscrits</dt>
+                            <dd class="text-2xl font-bold text-gray-900">{{ enrollments.count }}</dd>
+                        </dl>
                     </div>
                 </div>
             </div>
 
-            <!-- Formulaire d'ajout d'élèves -->
-            <div>
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-                    <div class="p-6 border-b border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-900">
-                            <i class="fas fa-user-plus text-green-600 mr-2"></i>
-                            Ajouter des élèves
-                        </h3>
-                        <p class="text-gray-600 mt-1">Sélectionnez les élèves à inscrire</p>
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-user-plus text-green-600 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Disponibles</dt>
+                            <dd class="text-2xl font-bold text-gray-900">{{ available_students.count }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-percentage text-orange-600 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Taux d'occupation</dt>
+                            <dd class="text-2xl font-bold text-gray-900">{{ capacity_usage|floatformat:1 }}%</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-chair text-purple-600 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Places restantes</dt>
+                            <dd class="text-2xl font-bold text-gray-900">{{ classroom.capacity|subtract:enrollments.count }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <!-- Élèves inscrits -->
+            <div class="xl:col-span-2">
+                <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
+                    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-bold text-white flex items-center">
+                                <i class="fas fa-users mr-3"></i>
+                                Élèves inscrits ({{ enrollments.count }})
+                            </h2>
+                            <div class="flex items-center space-x-2">
+                                <div class="relative">
+                                    <input type="text" 
+                                           id="searchEnrolled" 
+                                           placeholder="Rechercher un élève..."
+                                           class="px-4 py-2 pr-10 text-sm border border-white/30 rounded-lg bg-white/10 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50">
+                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                        <i class="fas fa-search text-white/70"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="p-6">
-                        <!-- Recherche d'élèves -->
-                        <div class="mb-4">
-                            <input type="text" 
-                                   id="searchAvailable" 
-                                   placeholder="Rechercher des élèves..."
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
-                        </div>
-
-                        <!-- Liste des élèves disponibles -->
-                        <form method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="add">
-                            
-                            <div class="space-y-2 max-h-96 overflow-y-auto" id="availableList">
-                                {% for student in available_students %}
-                                <label class="flex items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer available-item">
-                                    <input type="checkbox" 
-                                           name="student_ids" 
-                                           value="{{ student.pk }}" 
-                                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                    <div class="ml-3 flex-1">
-                                        <div class="flex items-center space-x-3">
-                                            <div class="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center">
-                                                <span class="text-white font-medium text-xs">
-                                                    {{ student.first_name|first }}{{ student.last_name|first }}
-                                                </span>
-                                            </div>
-                                            <div>
-                                                <p class="text-sm font-medium text-gray-900 student-name">
-                                                    {{ student.first_name }} {{ student.last_name }}
-                                                </p>
-                                                <p class="text-xs text-gray-600">{{ student.email }}</p>
-                                            </div>
+                    {% if enrollments %}
+                    <div class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                        {% for enrollment in enrollments %}
+                        <div class="enrollment-item p-6 hover:bg-gray-50 transition-all duration-200" data-student-name="{{ enrollment.student.user.full_name|lower }}">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4">
+                                    <!-- Avatar de l'élève -->
+                                    {% if enrollment.student.user.avatar %}
+                                        <img class="h-12 w-12 rounded-full object-cover border-2 border-gray-300" src="{{ enrollment.student.user.avatar.url }}" alt="{{ enrollment.student.user.full_name }}">
+                                    {% else %}
+                                        <div class="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                                            <span class="text-lg font-bold text-white">{{ enrollment.student.user.first_name.0 }}{{ enrollment.student.user.last_name.0 }}</span>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900">
+                                            {{ enrollment.student.user.full_name }}
+                                        </h3>
+                                        <div class="flex items-center space-x-4 text-sm text-gray-600">
+                                            <span class="flex items-center">
+                                                <i class="fas fa-id-card mr-1"></i>
+                                                {{ enrollment.student.student_id }}
+                                            </span>
+                                            <span class="flex items-center">
+                                                <i class="fas fa-calendar mr-1"></i>
+                                                Inscrit le {{ enrollment.enrollment_date|date:"d/m/Y" }}
+                                            </span>
+                                            {% if enrollment.student.user.email %}
+                                            <span class="flex items-center">
+                                                <i class="fas fa-envelope mr-1"></i>
+                                                {{ enrollment.student.user.email }}
+                                            </span>
+                                            {% endif %}
                                         </div>
                                     </div>
-                                </label>
-                                {% empty %}
-                                <div class="text-center py-8">
-                                    <i class="fas fa-user-check text-gray-300 text-4xl mb-3"></i>
-                                    <p class="text-gray-600 text-sm">Tous les élèves sont déjà inscrits</p>
                                 </div>
-                                {% endfor %}
-                            </div>
-
-                            {% if available_students %}
-                            <div class="mt-6 pt-4 border-t border-gray-200">
-                                <button type="submit" 
-                                        class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
-                                    <i class="fas fa-user-plus mr-2"></i>
-                                    Inscrire les élèves sélectionnés
-                                </button>
-                            </div>
-                            {% endif %}
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Statistiques -->
-                <div class="mt-6 bg-white rounded-xl shadow-sm border border-gray-200">
-                    <div class="p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                            <i class="fas fa-chart-bar text-purple-600 mr-2"></i>
-                            Statistiques
-                        </h3>
-                        <div class="space-y-3">
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm text-gray-600">Élèves inscrits</span>
-                                <span class="font-medium text-gray-900">{{ enrollments.count }}</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm text-gray-600">Capacité maximale</span>
-                                <span class="font-medium text-gray-900">{{ classroom.max_capacity|default:"Illimitée" }}</span>
-                            </div>
-                            {% if classroom.max_capacity %}
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm text-gray-600">Places disponibles</span>
-                                <span class="font-medium text-green-600">{{ remaining_capacity }}</span>
-                            </div>
-                            {% endif %}
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm text-gray-600">Élèves actifs</span>
-                                <span class="font-medium text-green-600">{{ active_enrollments }}</span>
+                                
+                                {% if user.is_admin %}
+                                <div class="flex items-center space-x-2">
+                                    <a href="{% url 'accounts:student_detail' enrollment.student.pk %}" 
+                                       class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                                        <i class="fas fa-eye mr-1"></i>
+                                        Voir
+                                    </a>
+                                    <button type="button" 
+                                            onclick="confirmRemoveStudent('{{ enrollment.student.pk }}', '{{ enrollment.student.user.full_name|escapejs }}')"
+                                            class="inline-flex items-center px-3 py-2 border border-red-300 shadow-sm text-sm leading-4 font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 transition-colors">
+                                        <i class="fas fa-user-minus mr-1"></i>
+                                        Retirer
+                                    </button>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-16">
+                        <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                            <i class="fas fa-user-slash text-gray-400 text-3xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">Aucun élève inscrit</h3>
+                        <p class="text-gray-600 mb-8">Cette classe n'a pas encore d'élèves inscrits.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Panel d'ajout d'élèves -->
+            {% if user.is_admin %}
+            <div class="xl:col-span-1">
+                <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 sticky top-8">
+                    <div class="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4">
+                        <h2 class="text-xl font-bold text-white flex items-center">
+                            <i class="fas fa-user-plus mr-3"></i>
+                            Ajouter des élèves ({{ available_students.count }} disponibles)
+                        </h2>
+                    </div>
+
+                    <div class="p-6">
+                        <div class="mb-4">
+                            <div class="relative">
+                                <input type="text" 
+                                       id="searchAvailable" 
+                                       placeholder="Rechercher un élève disponible..."
+                                       class="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                    <i class="fas fa-search text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if available_students %}
+                        <div class="space-y-3 max-h-96 overflow-y-auto">
+                            {% for student in available_students %}
+                            <div class="available-student border border-gray-200 rounded-lg p-4 hover:border-green-500 hover:bg-green-50 transition-all duration-200 cursor-pointer" 
+                                 data-student-name="{{ student.user.full_name|lower }}"
+                                 onclick="selectStudent({{ student.pk }}, '{{ student.user.full_name|escapejs }}')">
+                                <div class="flex items-center space-x-3">
+                                    {% if student.user.avatar %}
+                                        <img class="h-10 w-10 rounded-full object-cover border-2 border-gray-300" src="{{ student.user.avatar.url }}" alt="{{ student.user.full_name }}">
+                                    {% else %}
+                                        <div class="h-10 w-10 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
+                                            <span class="text-sm font-bold text-white">{{ student.user.first_name.0 }}{{ student.user.last_name.0 }}</span>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="text-sm font-semibold text-gray-900 truncate">
+                                            {{ student.user.full_name }}
+                                        </h4>
+                                        <p class="text-xs text-gray-600">
+                                            <i class="fas fa-id-card mr-1"></i>{{ student.student_id }}
+                                        </p>
+                                    </div>
+                                    
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-plus-circle text-green-500"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-8">
+                            <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                <i class="fas fa-user-check text-gray-400 text-xl"></i>
+                            </div>
+                            <p class="text-sm text-gray-600">Tous les élèves disponibles sont déjà inscrits dans d'autres classes cette année.</p>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation pour retirer un élève -->
+<div id="removeStudentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+            </div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Retirer l'élève</h3>
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-500">
+                    Êtes-vous sûr de vouloir retirer <span id="studentNameToRemove" class="font-semibold"></span> de cette classe ?
+                </p>
+            </div>
+            <div class="items-center px-4 py-3">
+                <form method="post" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="remove">
+                    <input type="hidden" name="student_id" id="studentIdToRemove">
+                    <div class="flex space-x-3">
+                        <button type="button" 
+                                onclick="closeRemoveModal()"
+                                class="px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                            Annuler
+                        </button>
+                        <button type="submit" 
+                                class="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                            Retirer
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Formulaire caché pour ajouter un élève -->
+<form id="addStudentForm" method="post" class="hidden">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add">
+    <input type="hidden" name="student_id" id="selectedStudentId">
+</form>
+
 <script>
-// Fonction de recherche pour les élèves inscrits
-document.getElementById('searchEnrolled').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    const items = document.querySelectorAll('#enrolledList .enrolled-item');
-    
-    items.forEach(item => {
-        const name = item.querySelector('.student-name').textContent.toLowerCase();
-        if (name.includes(searchTerm)) {
-            item.style.display = 'flex';
-        } else {
-            item.style.display = 'none';
-        }
-    });
-});
-
-// Fonction de recherche pour les élèves disponibles
-document.getElementById('searchAvailable').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    const items = document.querySelectorAll('#availableList .available-item');
-    
-    items.forEach(item => {
-        const name = item.querySelector('.student-name').textContent.toLowerCase();
-        if (name.includes(searchTerm)) {
-            item.style.display = 'flex';
-        } else {
-            item.style.display = 'none';
-        }
-    });
-});
-
-// Sélection multiple avec Ctrl+Click
+// Animation au chargement
 document.addEventListener('DOMContentLoaded', function() {
-    const checkboxes = document.querySelectorAll('input[name="student_ids"]');
-    let lastChecked = null;
-
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('click', function(e) {
-            if (!lastChecked) {
-                lastChecked = this;
-                return;
-            }
-
-            if (e.shiftKey) {
-                const start = Array.from(checkboxes).indexOf(this);
-                const end = Array.from(checkboxes).indexOf(lastChecked);
-                const checkboxesToCheck = Array.from(checkboxes).slice(Math.min(start, end), Math.max(start, end) + 1);
-
-                checkboxesToCheck.forEach(cb => {
-                    cb.checked = lastChecked.checked;
-                });
-            }
-
-            lastChecked = this;
-        });
+    // Animation des cartes d'élèves
+    const enrollmentItems = document.querySelectorAll('.enrollment-item');
+    enrollmentItems.forEach((item, index) => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(-20px)';
+        
+        setTimeout(() => {
+            item.style.transition = 'all 0.5s ease-out';
+            item.style.opacity = '1';
+            item.style.transform = 'translateX(0)';
+        }, index * 100);
+    });
+    
+    // Animation des élèves disponibles
+    const availableStudents = document.querySelectorAll('.available-student');
+    availableStudents.forEach((item, index) => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            item.style.transition = 'all 0.5s ease-out';
+            item.style.opacity = '1';
+            item.style.transform = 'translateY(0)';
+        }, index * 50 + 300);
     });
 });
+
+// Recherche parmi les élèves inscrits
+document.getElementById('searchEnrolled').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const items = document.querySelectorAll('.enrollment-item');
+    
+    items.forEach(item => {
+        const studentName = item.dataset.studentName;
+        if (studentName.includes(searchTerm)) {
+            item.style.display = 'block';
+            item.style.animation = 'fadeIn 0.3s ease-in-out';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
+
+// Recherche parmi les élèves disponibles
+document.getElementById('searchAvailable').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const items = document.querySelectorAll('.available-student');
+    
+    items.forEach(item => {
+        const studentName = item.dataset.studentName;
+        if (studentName.includes(searchTerm)) {
+            item.style.display = 'block';
+            item.style.animation = 'fadeIn 0.3s ease-in-out';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
+
+// Sélectionner un élève pour l'inscription
+function selectStudent(studentId, studentName) {
+    if (confirm('Voulez-vous inscrire ' + studentName + ' dans cette classe ?')) {
+        document.getElementById('selectedStudentId').value = studentId;
+        document.getElementById('addStudentForm').submit();
+    }
+}
+
+// Modal de confirmation pour retirer un élève
+function confirmRemoveStudent(studentId, studentName) {
+    document.getElementById('studentIdToRemove').value = studentId;
+    document.getElementById('studentNameToRemove').textContent = studentName;
+    document.getElementById('removeStudentModal').classList.remove('hidden');
+}
+
+function closeRemoveModal() {
+    document.getElementById('removeStudentModal').classList.add('hidden');
+}
+
+// Fermer le modal en cliquant à l'extérieur
+document.getElementById('removeStudentModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeRemoveModal();
+    }
+});
+
+// Animations CSS personnalisées
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .available-student:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .enrollment-item:hover {
+        transform: translateX(4px);
+    }
+    
+    .transition-all {
+        transition: all 0.3s ease-in-out;
+    }
+`;
+document.head.appendChild(style);
 </script>
 {% endblock %}

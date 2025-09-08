@@ -39,4 +39,8 @@ urlpatterns = [
     path('reports/', views.financial_reports, name='financial_reports'),
     path('reports/revenue/', views.revenue_report, name='revenue_report'),
     path('reports/expenses/', views.expense_report, name='expense_report'),
+    path('reports/list/', views.report_list, name='report_list'),
+    
+    # URLs pour les dashboards
+    path('invoices/generate/', views.invoice_generate, name='invoice_generate'),
 ]

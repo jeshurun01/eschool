@@ -62,6 +62,9 @@ def announcement_list(request):
     # Marquer les annonces non lues
     read_announcements = AnnouncementRead.objects.filter(user=user).values_list('announcement_id', flat=True)
     
+    # Ordre pour la pagination
+    announcements = announcements.order_by('-created_at')
+    
     # Pagination
     paginator = Paginator(announcements, 10)
     page_number = request.GET.get('page')
@@ -391,7 +394,7 @@ def forum_classroom(request, classroom_id):
     topics = ForumTopic.objects.filter(
         classroom=classroom,
         is_approved=True
-    ).select_related('author').prefetch_related('forum_posts')
+    ).select_related('author').prefetch_related('forum_posts').order_by('-updated_at')
     
     # Pagination
     paginator = Paginator(topics, 20)

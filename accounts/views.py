@@ -85,7 +85,7 @@ def logout_view(request):
     """Vue de déconnexion"""
     logout(request)
     messages.info(request, 'Vous avez été déconnecté avec succès.')
-    return redirect('account_login')
+    return redirect('accounts:login')
 
 
 # Vues principales
@@ -798,6 +798,9 @@ def user_list(request):
     if role_filter:
         users = users.filter(role=role_filter)
     
+    # Ordre pour la pagination
+    users = users.order_by('last_name', 'first_name')
+    
     # Pagination
     paginator = Paginator(users, 20)
     page = request.GET.get('page')
@@ -873,7 +876,8 @@ def user_toggle_active(request, user_id):
     status = "activé" if user_obj.is_active else "désactivé"
     messages.success(request, f'Utilisateur {user_obj.full_name} {status}.')
     
-    if request.headers.get('HX-Request'):
+    # Retourner JSON pour les requêtes AJAX (fetch ou HTMX)
+    if request.headers.get('HX-Request') or request.headers.get('Content-Type') == 'application/json':
         return JsonResponse({
             'success': True,
             'is_active': user_obj.is_active,
@@ -885,7 +889,7 @@ def user_toggle_active(request, user_id):
 
 # Vues spécifiques par rôle
 
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_staff)
 def student_list(request):
     """Liste des élèves"""
     search_query = request.GET.get('search', '')
@@ -902,6 +906,9 @@ def student_list(request):
     
     if class_filter:
         students = students.filter(current_class_id=class_filter)
+    
+    # Ordre pour la pagination
+    students = students.order_by('user__last_name', 'user__first_name')
     
     # Pagination
     paginator = Paginator(students, 20)
@@ -926,11 +933,63 @@ def student_list(request):
 def student_create(request):
     return HttpResponse("Créer un élève - En cours de développement")
 
+@user_passes_test(is_admin_or_staff)
 def student_detail(request, student_id):
-    return HttpResponse(f"Détails de l'élève {student_id} - En cours de développement")
+    """Détail d'un élève"""
+    student = get_object_or_404(Student, id=student_id)
+    
+    context = {
+        'student': student,
+    }
+    return render(request, 'accounts/student_detail.html', context)
 
+@user_passes_test(is_admin_or_staff)
 def student_edit(request, student_id):
-    return HttpResponse(f"Modifier l'élève {student_id} - En cours de développement")
+    """Modifier un élève"""
+    student = get_object_or_404(Student, id=student_id)
+    user = student.user
+    
+    if request.method == 'POST':
+        # Données utilisateur de base
+        user.first_name = request.POST.get('first_name', user.first_name)
+        user.last_name = request.POST.get('last_name', user.last_name)
+        user.email = request.POST.get('email', user.email)
+        user.phone = request.POST.get('phone', user.phone)
+        user.address = request.POST.get('address', user.address)
+        user.date_of_birth = request.POST.get('date_of_birth') or user.date_of_birth
+        user.gender = request.POST.get('gender', user.gender)
+        
+        # Données spécifiques à l'élève
+        student.matricule = request.POST.get('matricule', student.matricule)
+        
+        # Assignation de classe si fournie
+        class_id = request.POST.get('current_class')
+        if class_id:
+            from academic.models import ClassRoom
+            try:
+                classroom = ClassRoom.objects.get(id=class_id)
+                student.current_class = classroom
+            except ClassRoom.DoesNotExist:
+                pass
+        
+        try:
+            user.save()
+            student.save()
+            messages.success(request, f'Élève {user.full_name} modifié avec succès.')
+            return redirect('accounts:student_list')
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la modification: {str(e)}')
+    
+    # Import ici pour éviter les imports circulaires
+    from academic.models import ClassRoom
+    classes = ClassRoom.objects.all()
+    
+    context = {
+        'student': student,
+        'user': user,
+        'classes': classes,
+    }
+    return render(request, 'accounts/student_edit.html', context)
 
 def parent_list(request):
     return HttpResponse("Liste des parents - En cours de développement")
@@ -944,14 +1003,166 @@ def parent_detail(request, parent_id):
 def parent_edit(request, parent_id):
     return HttpResponse(f"Modifier le parent {parent_id} - En cours de développement")
 
+@user_passes_test(is_admin_or_staff)
 def teacher_list(request):
-    return HttpResponse("Liste des enseignants - En cours de développement")
+    """Liste des enseignants avec recherche et filtres"""
+    from django.core.paginator import Paginator
+    from .models import Teacher
+    
+    # Récupérer tous les enseignants
+    teachers = Teacher.objects.select_related('user').prefetch_related('subjects')
+    
+    # Filtres de recherche
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    subject_filter = request.GET.get('subject', '')
+    
+    # Appliquer les filtres
+    if search_query:
+        teachers = teachers.filter(
+            Q(user__first_name__icontains=search_query) |
+            Q(user__last_name__icontains=search_query) |
+            Q(user__email__icontains=search_query) |
+            Q(employee_id__icontains=search_query)
+        )
+    
+    if status_filter == 'active':
+        teachers = teachers.filter(user__is_active=True, is_active_employee=True)
+    elif status_filter == 'inactive':
+        teachers = teachers.filter(
+            Q(user__is_active=False) | Q(is_active_employee=False)
+        )
+    
+    if subject_filter:
+        teachers = teachers.filter(subjects__id=subject_filter)
+    
+    # Tri
+    sort_by = request.GET.get('sort', 'user__last_name')
+    if sort_by in ['user__last_name', 'user__first_name', 'hire_date', 'employee_id']:
+        teachers = teachers.order_by(sort_by)
+    else:
+        teachers = teachers.order_by('user__last_name')
+    
+    # Pagination
+    paginator = Paginator(teachers, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Récupérer les matières pour le filtre
+    from academic.models import Subject
+    subjects = Subject.objects.all().order_by('name')
+    
+    context = {
+        'teachers': page_obj,
+        'subjects': subjects,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'subject_filter': subject_filter,
+        'sort_by': sort_by,
+        'page_obj': page_obj,
+    }
+    
+    return render(request, 'accounts/teacher_list.html', context)
 
+@user_passes_test(is_admin)
 def teacher_create(request):
-    return HttpResponse("Créer un enseignant - En cours de développement")
+    """Créer un nouvel enseignant"""
+    if request.method == 'POST':
+        # Créer l'utilisateur
+        user = User.objects.create_user(
+            email=request.POST.get('email'),
+            password='temp123456',  # Mot de passe temporaire
+            first_name=request.POST.get('first_name'),
+            last_name=request.POST.get('last_name'),
+            role='TEACHER',
+            phone=request.POST.get('phone', ''),
+            date_of_birth=request.POST.get('date_of_birth') or None,
+            gender=request.POST.get('gender', ''),
+            address=request.POST.get('address', ''),
+        )
+        
+        # Créer le profil enseignant
+        teacher = Teacher.objects.create(
+            user=user,
+            employee_id=request.POST.get('employee_id'),
+            hire_date=request.POST.get('hire_date') or timezone.now().date(),
+            education_level=request.POST.get('education_level', ''),
+            certifications=request.POST.get('certifications', ''),
+            is_head_teacher=request.POST.get('is_head_teacher') == 'on'
+        )
+        
+        # Assigner les matières
+        subject_ids = request.POST.getlist('subjects')
+        if subject_ids:
+            teacher.subjects.set(subject_ids)
+        
+        messages.success(request, f'L\'enseignant {user.full_name} a été créé avec succès. Mot de passe temporaire: temp123456')
+        return redirect('accounts:teacher_detail', teacher_id=teacher.pk)
+    
+    # Récupérer toutes les matières pour le formulaire
+    from academic.models import Subject
+    subjects = Subject.objects.all().order_by('name')
+    
+    # Générer un ID employé unique
+    import random
+    employee_id = f"EMP{random.randint(1000, 9999)}"
+    while Teacher.objects.filter(employee_id=employee_id).exists():
+        employee_id = f"EMP{random.randint(1000, 9999)}"
+    
+    context = {
+        'subjects': subjects,
+        'suggested_employee_id': employee_id,
+    }
+    return render(request, 'accounts/teacher_create.html', context)
 
+@user_passes_test(is_admin_or_staff)
 def teacher_detail(request, teacher_id):
-    return HttpResponse(f"Détails de l'enseignant {teacher_id} - En cours de développement")
+    """Détail d'un enseignant"""
+    teacher = get_object_or_404(Teacher, id=teacher_id)
+    
+    context = {
+        'teacher': teacher,
+    }
+    return render(request, 'accounts/teacher_detail.html', context)
 
+@user_passes_test(is_admin_or_staff)
 def teacher_edit(request, teacher_id):
-    return HttpResponse(f"Modifier l'enseignant {teacher_id} - En cours de développement")
+    """Modifier un enseignant"""
+    teacher = get_object_or_404(Teacher, id=teacher_id)
+    user = teacher.user
+    
+    if request.method == 'POST':
+        # Mise à jour des informations utilisateur
+        user.first_name = request.POST.get('first_name', user.first_name)
+        user.last_name = request.POST.get('last_name', user.last_name)
+        user.email = request.POST.get('email', user.email)
+        user.phone = request.POST.get('phone', user.phone)
+        user.date_of_birth = request.POST.get('date_of_birth') or user.date_of_birth
+        user.gender = request.POST.get('gender', user.gender)
+        user.address = request.POST.get('address', user.address)
+        user.save()
+        
+        # Mise à jour des informations enseignant
+        teacher.education_level = request.POST.get('education_level', teacher.education_level)
+        teacher.certifications = request.POST.get('certifications', teacher.certifications)
+        teacher.is_head_teacher = request.POST.get('is_head_teacher') == 'on'
+        teacher.save()
+        
+        # Mise à jour des matières
+        subject_ids = request.POST.getlist('subjects')
+        if subject_ids:
+            teacher.subjects.set(subject_ids)
+        
+        messages.success(request, f'Les informations de {user.full_name} ont été mises à jour.')
+        return redirect('accounts:teacher_detail', teacher_id=teacher.id)
+    
+    # Récupérer toutes les matières pour le formulaire
+    from academic.models import Subject
+    subjects = Subject.objects.all().order_by('name')
+    
+    context = {
+        'teacher': teacher,
+        'user': user,
+        'subjects': subjects,
+    }
+    return render(request, 'accounts/teacher_edit.html', context)

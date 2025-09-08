@@ -4,7 +4,19 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from decimal import Decimal
 
+# Import des managers RBAC
+from .managers import PaymentManager, InvoiceManager
+
 User = get_user_model()
+
+# Helper functions for default values
+def get_current_date():
+    """Retourne la date actuelle (sans heure)"""
+    return timezone.now().date()
+
+def get_current_datetime():
+    """Retourne la date et heure actuelles avec timezone"""
+    return timezone.now()
 
 
 class FeeType(models.Model):
@@ -61,7 +73,7 @@ class Invoice(models.Model):
     student = models.ForeignKey('accounts.Student', on_delete=models.CASCADE, related_name='invoices', verbose_name='Élève')
     parent = models.ForeignKey('accounts.Parent', on_delete=models.SET_NULL, null=True, blank=True, related_name='invoices', verbose_name='Parent responsable')
     
-    issue_date = models.DateField(default=timezone.now, verbose_name='Date d\'émission')
+    issue_date = models.DateField(default=get_current_date, verbose_name='Date d\'émission')
     due_date = models.DateField(verbose_name='Date d\'échéance')
     
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name='Sous-total')
@@ -73,6 +85,9 @@ class Invoice(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # Manager RBAC
+    objects = InvoiceManager()
 
     class Meta:
         verbose_name = 'Facture'
@@ -187,7 +202,7 @@ class Payment(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))], verbose_name='Montant')
     transaction_id = models.CharField(max_length=100, blank=True, verbose_name='ID de transaction')
     
-    payment_date = models.DateTimeField(default=timezone.now, verbose_name='Date de paiement')
+    payment_date = models.DateTimeField(default=get_current_datetime, verbose_name='Date de paiement')
     processed_date = models.DateTimeField(blank=True, null=True, verbose_name='Date de traitement')
     
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='PENDING', verbose_name='Statut')
@@ -198,6 +213,9 @@ class Payment(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # Manager RBAC
+    objects = PaymentManager()
 
     class Meta:
         verbose_name = 'Paiement'
@@ -276,7 +294,7 @@ class ScholarshipApplication(models.Model):
     scholarship = models.ForeignKey(Scholarship, on_delete=models.CASCADE, related_name='applications', verbose_name='Bourse')
     student = models.ForeignKey('accounts.Student', on_delete=models.CASCADE, related_name='scholarship_applications', verbose_name='Élève')
     
-    application_date = models.DateField(default=timezone.now, verbose_name='Date de demande')
+    application_date = models.DateField(default=get_current_date, verbose_name='Date de demande')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING', verbose_name='Statut')
     
     # Justification
@@ -317,7 +335,7 @@ class Expense(models.Model):
     description = models.CharField(max_length=200, verbose_name='Description')
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))], verbose_name='Montant')
     
-    expense_date = models.DateField(default=timezone.now, verbose_name='Date de dépense')
+    expense_date = models.DateField(default=get_current_date, verbose_name='Date de dépense')
     recorded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recorded_expenses', verbose_name='Enregistré par')
     
     # Documents justificatifs

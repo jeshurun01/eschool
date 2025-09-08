@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Connexion - eSchool{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-md w-full">
+    <!-- Logo et header améliorés -->
+    <div class="text-center mb-8">
+      <div class="mx-auto w-20 h-20 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg transform hover:scale-105 transition-transform duration-300">
+        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+        </svg>
+      </div>
+      <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+        eSchool
+      </h1>
+      <h2 class="text-2xl font-semibold text-gray-800 mb-2">
+        Bon retour parmi nous !
+      </h2>
+      <p class="text-gray-600">
+        Connectez-vous pour accéder à votre espace
+      </p>
+    </div>
+    
+    <!-- Formulaire de connexion amélioré -->
+    <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+      <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Messages d'erreur améliorés -->
+        {% if form.errors %}
+          <div class="rounded-lg bg-red-50 border border-red-200 p-4 animate-pulse">
+            <div class="flex items-start">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">
+                  Erreur de connexion
+                </h3>
+                <div class="mt-2 text-sm text-red-700">
+                  {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
+        <!-- Champ email amélioré -->
+        <div class="space-y-2">
+          <label for="{{ form.login.id_for_label }}" class="block text-sm font-medium text-gray-700">
+            {{ form.login.label }}
+          </label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path>
+              </svg>
+            </div>
+            {{ form.login }}
+          </div>
+          {% if form.login.errors %}
+            <div class="text-sm text-red-600 flex items-center">
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+              </svg>
+              {{ form.login.errors.0 }}
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Champ mot de passe amélioré -->
+        <div class="space-y-2">
+          <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-700">
+            {{ form.password.label }}
+          </label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+            </div>
+            {{ form.password }}
+            <button type="button" 
+                    class="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onclick="togglePassword('{{ form.password.id_for_label }}')">
+              <svg id="eye-open-{{ form.password.id_for_label }}" class="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+              </svg>
+              <svg id="eye-closed-{{ form.password.id_for_label }}" class="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-pointer hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
+              </svg>
+            </button>
+          </div>
+          {% if form.password.errors %}
+            <div class="text-sm text-red-600 flex items-center">
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+              </svg>
+              {{ form.password.errors.0 }}
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Options et bouton de connexion -->
+        <div class="flex items-center justify-between py-2">
+          <div class="flex items-center">
+            {{ form.remember }}
+            <label for="{{ form.remember.id_for_label }}" class="ml-2 block text-sm text-gray-700 cursor-pointer">
+              {{ form.remember.label }}
+            </label>
+          </div>
+
+          <div class="text-sm">
+            <a href="{% url 'account_reset_password' %}" 
+               class="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200">
+              Mot de passe oublié ?
+            </a>
+          </div>
+        </div>
+
+        <!-- Bouton de connexion amélioré -->
+        <button type="submit" 
+                class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transform transition-all duration-200 hover:scale-105 hover:shadow-lg">
+          <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+            <svg class="h-5 w-5 text-blue-300 group-hover:text-blue-200 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+          </span>
+          Se connecter
+        </button>
+      </form>
+    </div>
+
+    <!-- Liens supplémentaires -->
+    <div class="mt-6 text-center">
+      <p class="text-sm text-gray-600">
+        Nouveau dans notre école ?
+        <a href="{% url 'accounts:register' %}" class="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200">
+          Créer un compte
+        </a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+function togglePassword(fieldId) {
+  const passwordField = document.getElementById(fieldId);
+  const eyeOpen = document.getElementById(`eye-open-${fieldId}`);
+  const eyeClosed = document.getElementById(`eye-closed-${fieldId}`);
+  
+  if (passwordField.type === 'password') {
+    passwordField.type = 'text';
+    eyeOpen.classList.add('hidden');
+    eyeClosed.classList.remove('hidden');
+  } else {
+    passwordField.type = 'password';
+    eyeOpen.classList.remove('hidden');
+    eyeClosed.classList.add('hidden');
+  }
+}
+</script>
+{% endblock %}

@@ -1,8 +1,16 @@
 {% extends 'base.html' %}
 
-{% block title %}Accueil - eSchool{% endblock %}
-
-{% block page_title %}{% endblock %}
+{% block title %}Accueil - eSchool{% endblock %      <!-- Boutons d'action -->
+      <div class="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+        <a href="{% url 'accounts:login' %}" 
+           class="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
+          <span class="flex items-center justify-center">
+            <svg class="w-5 h-5 mr-2 group-hover:animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1"></path>
+            </svg>
+            Se connecter
+          </span>
+        </a> page_title %}{% endblock %}
 
 {% block content %}
 <!-- Hero Section avec arrière-plan moderne -->

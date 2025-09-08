@@ -75,6 +75,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    # RBAC Middleware - À activer après tests
+    # "core.middleware.rbac_middleware.RBACMiddleware",
 ]
 
 ROOT_URLCONF = "core.urls"
@@ -147,7 +149,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = config('LANGUAGE_CODE', default="fr")
 
-TIME_ZONE = config('TIME_ZONE', default="Africa/Kinshasa")
+TIME_ZONE = config('TIME_ZONE', default="Africa/Lubumbashi")
 
 USE_I18N = True
 
@@ -198,6 +200,17 @@ ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'none'  # Désactivé pour le développement
 ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_USER_MODEL_EMAIL_FIELD = 'email'
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/accounts/'
+LOGOUT_REDIRECT_URL = '/'
+
+# Adaptateur personnalisé - temporairement désactivé
+# ACCOUNT_ADAPTER = 'accounts.adapters.CustomAccountAdapter'
+# ACCOUNT_FORMS = {
+#     'login': 'accounts.adapters.CustomLoginForm',
+# }
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 ACCOUNT_LOGOUT_ON_GET = True
 

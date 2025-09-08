@@ -33,9 +33,6 @@ urlpatterns = [
     
     # API REST
     path('api/', include('core.api_urls')),
-    
-    # Authentification avec django-allauth
-    path('auth/', include('allauth.urls')),
 ]
 
 # Servir les fichiers médias en développement
