@@ -372,6 +372,15 @@ def teacher_dashboard(request):
     # Matières enseignées
     subjects = teacher.subjects.all()
     
+    # Cours de l'enseignant (TeacherAssignment) avec année courante
+    from academic.models import TeacherAssignment, AcademicYear
+    current_year = AcademicYear.objects.filter(is_current=True).first()
+    
+    teacher_courses = TeacherAssignment.objects.filter(
+        teacher=teacher,
+        academic_year=current_year if current_year else AcademicYear.objects.first()
+    ).select_related('classroom', 'subject', 'academic_year').order_by('classroom__name', 'subject__name')
+    
     # Notes récentes données par l'enseignant
     recent_grades = Grade.objects.filter(
         teacher=teacher
@@ -450,7 +459,7 @@ def teacher_dashboard(request):
             'icon': 'academic-cap',
             'title': f'Note attribuée en {grade.subject.name}',
             'description': f'{grade.student.user.first_name} {grade.student.user.last_name} - {grade.score}/20',
-            'date': grade.created_at,
+            'date': grade.created_at.date() if hasattr(grade.created_at, 'date') else grade.created_at,
             'color': 'blue'
         })
     
@@ -471,13 +480,20 @@ def teacher_dashboard(request):
             'type': 'attendance',
             'icon': 'user-check',
             'title': f'Présence enregistrée',
-            'description': f'{attendance.student.user.first_name} {attendance.student.user.last_name} - {attendance.get_status_display()}',
+            'description': f'{attendance.student.user.first_name} {attendance.student.user.last_name} - {attendance.status}',
             'date': attendance.date,
             'color': status_colors.get(attendance.status, 'gray')
         })
     
     # Tri par date décroissante
-    recent_activities.sort(key=lambda x: x['date'], reverse=True)
+    def get_date(activity):
+        date_value = activity['date']
+        # Convertir en date si c'est un datetime
+        if hasattr(date_value, 'date'):
+            return date_value.date()
+        return date_value
+    
+    recent_activities.sort(key=get_date, reverse=True)
     
     # Classes avec le plus d'absences cette semaine
     classes_with_absences = []
@@ -500,6 +516,7 @@ def teacher_dashboard(request):
         'teacher': teacher,
         'assigned_classes': assigned_classes,
         'subjects': subjects,
+        'teacher_courses': teacher_courses,
         'total_students': total_students,
         'recent_grades': recent_grades[:5],
         'attendance_stats': attendance_stats,
