@@ -299,6 +299,120 @@ class Grade(models.Model):
         return self.score * self.coefficient
 
 
+class Document(models.Model):
+    """Document pédagogique pour une matière"""
+    DOCUMENT_TYPE_CHOICES = [
+        ('COURSE', 'Cours'),
+        ('EXERCISE', 'Exercices'),
+        ('EXAM', 'Examen'),
+        ('CORRECTION', 'Correction'),
+        ('REFERENCE', 'Référence'),
+        ('OTHER', 'Autre'),
+    ]
+
+    title = models.CharField(max_length=200, verbose_name='Titre du document')
+    description = models.TextField(blank=True, verbose_name='Description')
+    document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPE_CHOICES, default='COURSE', verbose_name='Type de document')
+    
+    # Relations
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='documents', verbose_name='Matière')
+    teacher = models.ForeignKey('accounts.Teacher', on_delete=models.CASCADE, related_name='documents', verbose_name='Enseignant')
+    classroom = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, related_name='documents', blank=True, null=True, verbose_name='Classe spécifique')
+    
+    # Fichier
+    file = models.FileField(upload_to='documents/%Y/%m/', verbose_name='Fichier')
+    file_size = models.PositiveIntegerField(blank=True, null=True, verbose_name='Taille du fichier (bytes)')
+    file_type = models.CharField(max_length=50, blank=True, verbose_name='Type de fichier')
+    
+    # Paramètres de visibilité et d'accès
+    is_public = models.BooleanField(default=True, verbose_name='Visible par les étudiants')
+    is_downloadable = models.BooleanField(default=True, verbose_name='Téléchargeable')
+    access_date = models.DateTimeField(blank=True, null=True, verbose_name='Date de mise à disposition')
+    expiry_date = models.DateTimeField(blank=True, null=True, verbose_name='Date d\'expiration')
+    
+    # Statistiques
+    download_count = models.PositiveIntegerField(default=0, verbose_name='Nombre de téléchargements')
+    view_count = models.PositiveIntegerField(default=0, verbose_name='Nombre de vues')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Document'
+        verbose_name_plural = 'Documents'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} - {self.subject.name}"
+
+    def save(self, *args, **kwargs):
+        # Obtenir la taille et le type de fichier automatiquement
+        if self.file:
+            self.file_size = self.file.size
+            self.file_type = self.file.name.split('.')[-1].lower() if '.' in self.file.name else ''
+        
+        # Définir la date d'accès par défaut si non spécifiée
+        if not self.access_date:
+            self.access_date = timezone.now()
+            
+        super().save(*args, **kwargs)
+
+    @property
+    def file_size_mb(self):
+        """Taille du fichier en MB"""
+        if self.file_size:
+            return round(self.file_size / (1024 * 1024), 2)
+        return 0
+
+    @property
+    def is_accessible(self):
+        """Vérifie si le document est accessible maintenant"""
+        now = timezone.now()
+        if self.access_date and self.access_date > now:
+            return False
+        if self.expiry_date and self.expiry_date < now:
+            return False
+        return True
+
+    @property
+    def file_icon(self):
+        """Retourne l'icône appropriée selon le type de fichier"""
+        icons = {
+            'pdf': 'fas fa-file-pdf text-red-500',
+            'doc': 'fas fa-file-word text-blue-500',
+            'docx': 'fas fa-file-word text-blue-500',
+            'xls': 'fas fa-file-excel text-green-500',
+            'xlsx': 'fas fa-file-excel text-green-500',
+            'ppt': 'fas fa-file-powerpoint text-orange-500',
+            'pptx': 'fas fa-file-powerpoint text-orange-500',
+            'txt': 'fas fa-file-alt text-gray-500',
+            'jpg': 'fas fa-file-image text-purple-500',
+            'jpeg': 'fas fa-file-image text-purple-500',
+            'png': 'fas fa-file-image text-purple-500',
+            'gif': 'fas fa-file-image text-purple-500',
+            'zip': 'fas fa-file-archive text-yellow-500',
+            'rar': 'fas fa-file-archive text-yellow-500',
+        }
+        return icons.get(self.file_type, 'fas fa-file text-gray-400')
+
+
+class DocumentAccess(models.Model):
+    """Suivi des accès aux documents"""
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='accesses', verbose_name='Document')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Utilisateur')
+    access_type = models.CharField(max_length=20, choices=[('VIEW', 'Vue'), ('DOWNLOAD', 'Téléchargement')], verbose_name='Type d\'accès')
+    accessed_at = models.DateTimeField(auto_now_add=True, verbose_name='Date d\'accès')
+    ip_address = models.GenericIPAddressField(blank=True, null=True, verbose_name='Adresse IP')
+
+    class Meta:
+        verbose_name = 'Accès document'
+        verbose_name_plural = 'Accès documents'
+        ordering = ['-accessed_at']
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} - {self.document.title} - {self.get_access_type_display()}"
+
+
 class Period(models.Model):
     """Période d'évaluation (trimestre, semestre, etc.)"""
     name = models.CharField(max_length=50, verbose_name='Nom de la période')

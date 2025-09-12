@@ -1,0 +1,467 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Calendrier Académique - eSchool{% endblock %}
+
+{% block extra_css %}
+<style>
+    .calendar-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        background-color: #e5e7eb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .calendar-day {
+        background-color: white;
+        min-height: 120px;
+        padding: 8px;
+        position: relative;
+    }
+    
+    .calendar-day.other-month {
+        background-color: #f9fafb;
+        color: #9ca3af;
+    }
+    
+    .calendar-day.today {
+        background-color: #dbeafe;
+        border: 2px solid #3b82f6;
+    }
+    
+    .day-number {
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    
+    .event-item {
+        font-size: 0.75rem;
+        padding: 2px 4px;
+        margin-bottom: 2px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .event-item:hover {
+        transform: scale(1.02);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .event-exam {
+        background-color: #fee2e2;
+        color: #dc2626;
+        border-left: 3px solid #dc2626;
+    }
+    
+    .event-assignment {
+        background-color: #fef3c7;
+        color: #d97706;
+        border-left: 3px solid #d97706;
+    }
+    
+    .event-class {
+        background-color: #d1fae5;
+        color: #059669;
+        border-left: 3px solid #059669;
+    }
+    
+    .event-other {
+        background-color: #e0e7ff;
+        color: #4f46e5;
+        border-left: 3px solid #4f46e5;
+    }
+    
+    .calendar-header {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        background-color: #374151;
+        margin-bottom: 1px;
+    }
+    
+    .calendar-header-day {
+        background-color: #374151;
+        color: white;
+        padding: 12px 8px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+    
+    .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 24px;
+        padding: 16px;
+        background-color: #f8fafc;
+        border-radius: 8px;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.875rem;
+    }
+    
+    .legend-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        border-left: 4px solid;
+    }
+    
+    .events-list {
+        margin-top: 32px;
+    }
+    
+    .event-detail {
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .event-detail:hover {
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+        transition: all 0.2s;
+    }
+    
+    .filter-buttons {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+    }
+    
+    .filter-btn {
+        padding: 8px 16px;
+        border: 1px solid #d1d5db;
+        background-color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.875rem;
+    }
+    
+    .filter-btn:hover {
+        background-color: #f3f4f6;
+    }
+    
+    .filter-btn.active {
+        background-color: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calendar-container px-4 py-6">
+    <!-- Header avec navigation -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">📅 Calendrier Académique</h1>
+            <p class="text-gray-600 mt-1">Devoirs, examens et événements scolaires</p>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button onclick="window.history.back()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors">
+                ← Retour
+            </button>
+            <span class="text-lg font-semibold text-gray-700">{{ current_month }}</span>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+            <div class="flex items-center">
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-600">Examens à venir</p>
+                    <p class="text-2xl font-bold text-gray-900" id="exam-count">0</p>
+                </div>
+                <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                    <span class="text-red-600">📝</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-500">
+            <div class="flex items-center">
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-600">Devoirs</p>
+                    <p class="text-2xl font-bold text-gray-900" id="assignment-count">0</p>
+                </div>
+                <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <span class="text-yellow-600">📚</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
+            <div class="flex items-center">
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-600">Cours</p>
+                    <p class="text-2xl font-bold text-gray-900" id="class-count">0</p>
+                </div>
+                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <span class="text-green-600">🏫</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
+            <div class="flex items-center">
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-600">Total événements</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ events|length }}</p>
+                </div>
+                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span class="text-blue-600">📅</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Légende -->
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color bg-red-100 border-red-500"></div>
+            <span>Examens</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color bg-yellow-100 border-yellow-500"></div>
+            <span>Devoirs</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color bg-green-100 border-green-500"></div>
+            <span>Cours</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color bg-blue-100 border-blue-500"></div>
+            <span>Autres événements</span>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="filter-buttons">
+        <button class="filter-btn active" data-filter="all">Tous</button>
+        <button class="filter-btn" data-filter="exam">Examens</button>
+        <button class="filter-btn" data-filter="assignment">Devoirs</button>
+        <button class="filter-btn" data-filter="class">Cours</button>
+    </div>
+
+    <!-- Vue calendrier simplifiée -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+        <div class="calendar-header">
+            <div class="calendar-header-day">Lun</div>
+            <div class="calendar-header-day">Mar</div>
+            <div class="calendar-header-day">Mer</div>
+            <div class="calendar-header-day">Jeu</div>
+            <div class="calendar-header-day">Ven</div>
+            <div class="calendar-header-day">Sam</div>
+            <div class="calendar-header-day">Dim</div>
+        </div>
+        
+        <div class="calendar-grid" id="calendar-grid">
+            <!-- Généré par JavaScript -->
+        </div>
+    </div>
+
+    <!-- Liste détaillée des événements -->
+    <div class="events-list">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">📋 Événements à venir</h2>
+        
+        {% if events %}
+            <div id="events-container">
+                {% for event in events %}
+                <div class="event-detail" data-type="{{ event.type }}" data-date="{{ event.date|date:'Y-m-d' }}">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
+                                    {% if event.type == 'exam' %}bg-red-100 text-red-800
+                                    {% elif event.type == 'assignment' %}bg-yellow-100 text-yellow-800
+                                    {% elif event.type == 'class' %}bg-green-100 text-green-800
+                                    {% else %}bg-blue-100 text-blue-800{% endif %}">
+                                    {% if event.type == 'exam' %}📝 Examen
+                                    {% elif event.type == 'assignment' %}📚 Devoir
+                                    {% elif event.type == 'class' %}🏫 Cours
+                                    {% else %}📅 Événement{% endif %}
+                                </span>
+                                <span class="text-sm text-gray-500">{{ event.date|date:"l j F Y" }}</span>
+                                {% if event.time %}
+                                    <span class="text-sm text-gray-500">🕒 {{ event.time }}</span>
+                                {% endif %}
+                            </div>
+                            
+                            <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ event.title }}</h3>
+                            
+                            <div class="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                                <span>📖 {{ event.subject }}</span>
+                                {% if event.duration %}
+                                    <span>⏱️ {{ event.duration }} min</span>
+                                {% endif %}
+                                {% if event.importance %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium
+                                        {% if event.importance == 'high' %}bg-red-100 text-red-700
+                                        {% elif event.importance == 'medium' %}bg-yellow-100 text-yellow-700
+                                        {% else %}bg-green-100 text-green-700{% endif %}">
+                                        {% if event.importance == 'high' %}🔴 Priorité haute
+                                        {% elif event.importance == 'medium' %}🟡 Priorité moyenne
+                                        {% else %}🟢 Priorité normale{% endif %}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            
+                            {% if event.description %}
+                                <p class="text-gray-600">{{ event.description }}</p>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="flex-shrink-0 ml-4">
+                            {% if event.date == today %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    🔥 Aujourd'hui
+                                </span>
+                            {% elif event.date|timeuntil %}
+                                <span class="text-xs text-gray-500">Dans {{ event.date|timeuntil }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-12">
+                <div class="text-gray-400 text-6xl mb-4">📅</div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun événement programmé</h3>
+                <p class="text-gray-500">Aucun devoir ou examen n'est actuellement planifié.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Données des événements depuis Django
+    const eventsData = {{ events_by_date|safe }};
+    const today = new Date('{{ today|date:"Y-m-d" }}');
+    
+    // Générer le calendrier
+    generateCalendar();
+    
+    // Compter les événements par type
+    updateEventCounts();
+    
+    // Gérer les filtres
+    setupFilters();
+    
+    function generateCalendar() {
+        const grid = document.getElementById('calendar-grid');
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - firstDay.getDay() + 1); // Commence lundi
+        
+        grid.innerHTML = '';
+        
+        for (let i = 0; i < 42; i++) { // 6 semaines
+            const currentDate = new Date(startDate);
+            currentDate.setDate(startDate.getDate() + i);
+            
+            const dayElement = document.createElement('div');
+            dayElement.className = 'calendar-day';
+            
+            if (currentDate.getMonth() !== today.getMonth()) {
+                dayElement.classList.add('other-month');
+            }
+            
+            if (currentDate.toDateString() === today.toDateString()) {
+                dayElement.classList.add('today');
+            }
+            
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const dayEvents = eventsData[dateStr] || [];
+            
+            dayElement.innerHTML = `
+                <div class="day-number">${currentDate.getDate()}</div>
+                ${dayEvents.map(event => `
+                    <div class="event-item event-${event.type}" title="${event.title}">
+                        ${event.title.substring(0, 15)}${event.title.length > 15 ? '...' : ''}
+                    </div>
+                `).join('')}
+            `;
+            
+            grid.appendChild(dayElement);
+        }
+    }
+    
+    function updateEventCounts() {
+        const events = {{ events|safe }};
+        
+        const examCount = events.filter(e => e.type === 'exam').length;
+        const assignmentCount = events.filter(e => e.type === 'assignment').length;
+        const classCount = events.filter(e => e.type === 'class').length;
+        
+        document.getElementById('exam-count').textContent = examCount;
+        document.getElementById('assignment-count').textContent = assignmentCount;
+        document.getElementById('class-count').textContent = classCount;
+    }
+    
+    function setupFilters() {
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const eventDetails = document.querySelectorAll('.event-detail');
+        
+        filterButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Mise à jour des boutons actifs
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                
+                const filter = this.dataset.filter;
+                
+                // Filtrer les événements
+                eventDetails.forEach(event => {
+                    if (filter === 'all' || event.dataset.type === filter) {
+                        event.style.display = 'block';
+                    } else {
+                        event.style.display = 'none';
+                    }
+                });
+            });
+        });
+    }
+    
+    // Animation d'entrée
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    });
+    
+    document.querySelectorAll('.event-detail').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'all 0.5s ease';
+        observer.observe(el);
+    });
+});
+</script>
+{% endblock %}

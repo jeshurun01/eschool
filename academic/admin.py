@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
     AcademicYear, Level, Subject, ClassRoom, TeacherAssignment, 
-    Enrollment, Timetable, Attendance, Grade, Period
+    Enrollment, Timetable, Attendance, Grade, Period,
+    Document, DocumentAccess
 )
 
 
@@ -77,3 +78,41 @@ class PeriodAdmin(admin.ModelAdmin):
     list_display = ('name', 'academic_year', 'start_date', 'end_date', 'is_current')
     list_filter = ('academic_year', 'is_current')
     search_fields = ('name',)
+
+
+@admin.register(Document)
+class DocumentAdmin(admin.ModelAdmin):
+    list_display = ('title', 'subject', 'teacher', 'document_type', 'classroom', 'file_size_mb', 'is_public', 'is_accessible', 'created_at')
+    list_filter = ('document_type', 'subject', 'is_public', 'is_downloadable', 'created_at')
+    search_fields = ('title', 'description', 'teacher__user__first_name', 'teacher__user__last_name')
+    date_hierarchy = 'created_at'
+    readonly_fields = ('file_size', 'file_type', 'view_count', 'download_count', 'created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Informations générales', {
+            'fields': ('title', 'description', 'document_type', 'file')
+        }),
+        ('Attribution', {
+            'fields': ('subject', 'teacher', 'classroom')
+        }),
+        ('Accès et visibilité', {
+            'fields': ('is_public', 'is_downloadable', 'access_date', 'expiry_date')
+        }),
+        ('Métadonnées', {
+            'fields': ('file_size', 'file_type', 'view_count', 'download_count'),
+            'classes': ('collapse',)
+        }),
+        ('Dates', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+
+@admin.register(DocumentAccess)
+class DocumentAccessAdmin(admin.ModelAdmin):
+    list_display = ('document', 'user', 'access_type', 'accessed_at', 'ip_address')
+    list_filter = ('access_type', 'accessed_at', 'document__subject')
+    search_fields = ('document__title', 'user__first_name', 'user__last_name')
+    date_hierarchy = 'accessed_at'
+    readonly_fields = ('accessed_at',)

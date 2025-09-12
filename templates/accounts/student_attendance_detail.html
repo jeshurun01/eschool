@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mes Présences - eSchool{% endblock %}
+
+{% block extra_css %}
+<style>
+    .attendance-card {
+        transition: all 0.3s ease;
+    }
+    
+    .attendance-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .status-present { background-color: #10b981; color: white; }
+    .status-absent { background-color: #ef4444; color: white; }
+    .status-late { background-color: #f59e0b; color: white; }
+    .status-no-class { background-color: #6b7280; color: white; }
+    
+    .period-selector {
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .period-selector.active {
+        background-color: #8b5cf6;
+        color: white;
+    }
+    
+    .weekly-calendar {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1rem;
+    }
+    
+    .day-cell {
+        aspect-ratio: 1;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-green-600 to-teal-600 text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="py-8">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold">📅 Mes Présences</h1>
+                        <p class="mt-2 text-green-100">{{ student.user.get_full_name }} • {{ student.current_class.name }}</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-4xl font-bold">{{ attendance_rate }}%</div>
+                        <div class="text-lg">{{ present_days }}/{{ total_days }}</div>
+                        <div class="text-sm text-green-200">Taux de présence</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Sélecteur de période -->
+        <div class="mb-8">
+            <div class="flex space-x-4 bg-white rounded-lg p-2 shadow-sm">
+                <a href="?period=week" class="period-selector px-4 py-2 {% if period == 'week' %}active{% endif %}">
+                    7 derniers jours
+                </a>
+                <a href="?period=month" class="period-selector px-4 py-2 {% if period == 'month' %}active{% endif %}">
+                    30 derniers jours
+                </a>
+                <a href="?period=semester" class="period-selector px-4 py-2 {% if period == 'semester' %}active{% endif %}">
+                    Ce semestre
+                </a>
+            </div>
+        </div>
+
+        <!-- Statistiques globales -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+            <div class="attendance-card bg-white rounded-xl shadow-sm border p-6 text-center">
+                <div class="text-3xl font-bold text-green-600">{{ present_days }}</div>
+                <div class="text-gray-600">Présent</div>
+            </div>
+            <div class="attendance-card bg-white rounded-xl shadow-sm border p-6 text-center">
+                <div class="text-3xl font-bold text-red-600">{{ absent_days }}</div>
+                <div class="text-gray-600">Absent</div>
+            </div>
+            <div class="attendance-card bg-white rounded-xl shadow-sm border p-6 text-center">
+                <div class="text-3xl font-bold text-yellow-600">{{ late_days }}</div>
+                <div class="text-gray-600">En retard</div>
+            </div>
+            <div class="attendance-card bg-white rounded-xl shadow-sm border p-6 text-center">
+                <div class="text-3xl font-bold text-blue-600">{{ attendance_rate }}%</div>
+                <div class="text-gray-600">Taux présence</div>
+            </div>
+        </div>
+
+        <!-- Calendrier hebdomadaire -->
+        <div class="bg-white rounded-xl shadow-sm border p-6 mb-8">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">📊 Cette semaine</h3>
+            <div class="weekly-calendar">
+                {% for day in weekly_trend %}
+                <div class="day-cell 
+                    {% if day.status == 'PRESENT' %}status-present
+                    {% elif day.status == 'ABSENT' %}status-absent
+                    {% elif day.status == 'LATE' %}status-late
+                    {% else %}status-no-class{% endif %}">
+                    <div class="text-xs">{{ day.date|date:"D" }}</div>
+                    <div class="font-bold">{{ day.date|date:"j" }}</div>
+                    <div class="text-xs mt-1">
+                        {% if day.status == 'PRESENT' %}✓
+                        {% elif day.status == 'ABSENT' %}✗
+                        {% elif day.status == 'LATE' %}⏰
+                        {% else %}—{% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Présences par matière -->
+        <div class="bg-white rounded-xl shadow-sm border p-6 mb-8">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">📚 Par matière</h3>
+            <div class="space-y-4">
+                {% for subject, data in attendance_by_subject.items %}
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                            <span class="text-lg">📖</span>
+                        </div>
+                        <div>
+                            <div class="font-medium text-gray-900">{{ subject.name }}</div>
+                            <div class="text-sm text-gray-600">{{ data.total }} cours</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-6">
+                        <div class="text-center">
+                            <div class="text-sm font-medium text-green-600">{{ data.present }}</div>
+                            <div class="text-xs text-gray-600">Présent</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-sm font-medium text-red-600">{{ data.absent }}</div>
+                            <div class="text-xs text-gray-600">Absent</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-sm font-medium text-yellow-600">{{ data.late }}</div>
+                            <div class="text-xs text-gray-600">Retard</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-lg font-bold 
+                                {% if data.rate >= 90 %}text-green-600
+                                {% elif data.rate >= 80 %}text-yellow-600
+                                {% else %}text-red-600{% endif %}">
+                                {{ data.rate }}%
+                            </div>
+                            <div class="text-xs text-gray-600">Taux</div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-gray-500 py-4">
+                    Aucune donnée de présence par matière
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Historique détaillé -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">📝 Historique détaillé</h3>
+            <div class="space-y-2">
+                {% for attendance in attendances %}
+                <div class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center mr-3
+                            {% if attendance.status == 'PRESENT' %}status-present
+                            {% elif attendance.status == 'ABSENT' %}status-absent
+                            {% elif attendance.status == 'LATE' %}status-late{% endif %}">
+                            {% if attendance.status == 'PRESENT' %}✓
+                            {% elif attendance.status == 'ABSENT' %}✗
+                            {% elif attendance.status == 'LATE' %}⏰{% endif %}
+                        </div>
+                        <div>
+                            <div class="font-medium text-gray-900">{{ attendance.subject.name }}</div>
+                            <div class="text-sm text-gray-600">{{ attendance.date|date:"l d F Y" }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-right">
+                        <div class="text-sm font-medium
+                            {% if attendance.status == 'PRESENT' %}text-green-600
+                            {% elif attendance.status == 'ABSENT' %}text-red-600
+                            {% elif attendance.status == 'LATE' %}text-yellow-600{% endif %}">
+                            {{ attendance.get_status_display }}
+                        </div>
+                        {% if attendance.teacher %}
+                        <div class="text-xs text-gray-500">{{ attendance.teacher.user.get_full_name }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-gray-500 py-8">
+                    <svg class="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a4 4 0 118 0v4m-4 6l-2-2m0 0l-2-2m2 2l2-2m0 0l2 2"></path>
+                    </svg>
+                    <h3 class="text-lg font-medium mb-2">Aucune donnée de présence</h3>
+                    <p>Votre historique de présence apparaîtra ici.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-8 flex justify-center space-x-4">
+            <a href="{% url 'accounts:dashboard' %}" 
+               class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                ← Retour au dashboard
+            </a>
+            <a href="{% url 'accounts:student_grades_detail' %}" 
+               class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                📊 Voir mes notes
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

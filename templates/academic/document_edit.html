@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Modifier - {{ document.title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="flex items-center mb-8">
+            <a href="{% url 'academic:document_detail' document.id %}" 
+               class="flex items-center text-blue-600 hover:text-blue-800 transition-colors mr-4">
+                <i class="fas fa-arrow-left mr-2"></i>
+                <span class="text-sm font-medium">Retour aux détails</span>
+            </a>
+        </div>
+
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Modifier le Document</h1>
+            <p class="mt-2 text-gray-600">{{ document.title }}</p>
+        </div>
+
+        <!-- Formulaire principal -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+            <form method="post" enctype="multipart/form-data" class="divide-y divide-gray-200">
+                {% csrf_token %}
+                
+                <!-- Section 1: Informations du document -->
+                <div class="p-8">
+                    <div class="flex items-center mb-6">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-file-alt text-blue-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Informations du document</h3>
+                            <p class="text-sm text-gray-500">Détails et contenu du fichier</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="lg:col-span-2">
+                            <label class="block text-sm font-medium text-gray-900 mb-2">
+                                Titre du document <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" name="title" required value="{{ document.title }}"
+                                   class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                                   placeholder="Ex: Cours sur les fonctions linéaires">
+                        </div>
+                        
+                        <div class="lg:col-span-2">
+                            <label class="block text-sm font-medium text-gray-900 mb-2">
+                                Description
+                            </label>
+                            <textarea name="description" rows="4" 
+                                      class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                                      placeholder="Description détaillée du contenu du document...">{{ document.description }}</textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-2">
+                                Type de document <span class="text-red-500">*</span>
+                            </label>
+                            <select name="document_type" required 
+                                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors">
+                                {% for value, label in document_types %}
+                                    <option value="{{ value }}" {% if document.document_type == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-2">
+                                Fichier actuel
+                            </label>
+                            <div class="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <i class="{{ document.file_icon }} text-lg"></i>
+                                <span class="text-sm text-gray-700">{{ document.file.name|cut:"documents/" }}</span>
+                                <span class="text-xs text-gray-500">({{ document.file_size_mb }} MB)</span>
+                            </div>
+                        </div>
+                        
+                        <div class="lg:col-span-2">
+                            <label class="block text-sm font-medium text-gray-900 mb-2">
+                                Remplacer le fichier (optionnel)
+                            </label>
+                            <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors">
+                                <div class="space-y-1 text-center">
+                                    <i class="fas fa-cloud-upload-alt text-3xl text-gray-400"></i>
+                                    <div class="flex text-sm text-gray-600">
+                                        <label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                                            <span>Télécharger un nouveau fichier</span>
+                                            <input id="file-upload" name="file" type="file" class="sr-only"
+                                                   accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.gif,.zip,.rar"
+                                                   onchange="updateFileName(this)">
+                                        </label>
+                                        <p class="pl-1">ou glisser-déposer</p>
+                                    </div>
+                                    <p class="text-xs text-gray-500">
+                                        PDF, Word, PowerPoint, Excel, Images, Archives jusqu'à 100MB
+                                    </p>
+                                    <p id="file-name" class="text-sm text-blue-600 font-medium hidden"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Attribution et visibilité -->
+                <div class="p-8">
+                    <div class="flex items-center mb-6">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-users text-green-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Attribution et visibilité</h3>
+                            <p class="text-sm text-gray-500">Matière et classe concernées</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-2">
+                                Matière <span class="text-red-500">*</span>
+                            </label>
+                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <span class="text-sm font-medium text-gray-900">{{ document.subject.name }}</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">La matière ne peut pas être modifiée</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-2">
+                                Classe
+                            </label>
+                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <span class="text-sm font-medium text-gray-900">
+                                    {% if document.classroom %}
+                                        {{ document.classroom.name }}
+                                    {% else %}
+                                        Toutes les classes
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">La classe ne peut pas être modifiée</p>
+                        </div>
+                        
+                        <div class="lg:col-span-2">
+                            <div class="space-y-4">
+                                <div class="flex items-center">
+                                    <input type="checkbox" name="is_public" id="is_public" 
+                                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                           {% if document.is_public %}checked{% endif %}>
+                                    <label for="is_public" class="ml-2 block text-sm text-gray-900">
+                                        Document public (visible par les étudiants)
+                                    </label>
+                                </div>
+                                
+                                <div class="flex items-center">
+                                    <input type="checkbox" name="is_downloadable" id="is_downloadable" 
+                                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                           {% if document.is_downloadable %}checked{% endif %}>
+                                    <label for="is_downloadable" class="ml-2 block text-sm text-gray-900">
+                                        Autoriser le téléchargement
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Planification -->
+                <div class="p-8">
+                    <div class="flex items-center mb-6">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-calendar text-purple-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Planification</h3>
+                            <p class="text-sm text-gray-500">Dates de publication et d'expiration</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-2">
+                                Date de publication <span class="text-red-500">*</span>
+                            </label>
+                            <input type="datetime-local" name="access_date" required
+                                   value="{{ document.access_date|date:'Y-m-d\TH:i' }}"
+                                   class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors">
+                            <p class="text-xs text-gray-500 mt-1">Le document sera visible à partir de cette date</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-2">
+                                Date d'expiration (optionnelle)
+                            </label>
+                            <input type="datetime-local" name="expiry_date"
+                                   value="{% if document.expiry_date %}{{ document.expiry_date|date:'Y-m-d\TH:i' }}{% endif %}"
+                                   class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors">
+                            <p class="text-xs text-gray-500 mt-1">Le document sera masqué après cette date (facultatif)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="px-8 py-6 bg-gray-50 flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <a href="{% url 'academic:document_detail' document.id %}" 
+                           class="text-gray-600 hover:text-gray-800 transition-colors">
+                            Annuler
+                        </a>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <button type="submit" 
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            <i class="fas fa-save mr-2"></i>
+                            Sauvegarder les modifications
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateFileName(input) {
+    const fileName = input.files[0]?.name;
+    const fileNameElement = document.getElementById('file-name');
+    
+    if (fileName) {
+        fileNameElement.textContent = `Fichier sélectionné: ${fileName}`;
+        fileNameElement.classList.remove('hidden');
+    } else {
+        fileNameElement.classList.add('hidden');
+    }
+}
+</script>
+{% endblock %}

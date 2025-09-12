@@ -3,8 +3,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db.models import Q, Count, Avg, F, FloatField
+from django.db import models
 from django.core.paginator import Paginator
 from django.utils import timezone
+from django.urls import reverse
 from datetime import datetime, timedelta
 from django.core.validators import MinValueValidator
 
@@ -16,12 +18,13 @@ from core.decorators.permissions import (
 
 from .models import (
     AcademicYear, Level, Subject, ClassRoom, 
-    TeacherAssignment, Enrollment, Grade, Attendance, Timetable
+    TeacherAssignment, Enrollment, Grade, Attendance, Timetable,
+    Document, DocumentAccess
 )
 from accounts.models import Teacher, Student
 
 
-@admin_required  # Seuls les admins peuvent voir toutes les classes
+@login_required
 def classroom_list(request):
     """Liste des classes avec filtrage et recherche"""
     # Utiliser le manager RBAC pour filtrer selon le rôle
@@ -87,15 +90,50 @@ def classroom_list(request):
     return render(request, 'academic/classroom_list.html', context)
 
 
-@login_required
+@teacher_or_student_required
 def classroom_detail(request, classroom_id):
-    """Détails d'une classe"""
+    """Détails d'une classe - accessible aux enseignants qui y enseignent et aux élèves inscrits"""
     classroom = get_object_or_404(
         ClassRoom.objects.select_related(
             'level', 'academic_year', 'head_teacher__user'
         ),
         id=classroom_id
     )
+    
+    # Vérification des permissions spécifiques
+    user = request.user
+    has_access = False
+    
+    # Les admins ont toujours accès
+    if user.role in ['ADMIN', 'SUPER_ADMIN']:
+        has_access = True
+    
+    # Les étudiants peuvent voir leur propre classe
+    elif user.role == 'STUDENT' and hasattr(user, 'student'):
+        student_classrooms = Enrollment.objects.filter(
+            student=user.student,
+            is_active=True
+        ).values_list('classroom_id', flat=True)
+        has_access = classroom_id in student_classrooms
+    
+    # Les enseignants peuvent voir les classes où ils enseignent
+    elif user.role == 'TEACHER' and hasattr(user, 'teacher_profile'):
+        teacher_classrooms = TeacherAssignment.objects.filter(
+            teacher=user.teacher_profile
+        ).values_list('classroom_id', flat=True)
+        has_access = classroom_id in teacher_classrooms
+    
+    # Les parents peuvent voir les classes de leurs enfants
+    elif user.role == 'PARENT' and hasattr(user, 'parent'):
+        children_classrooms = Enrollment.objects.filter(
+            student__parent=user.parent,
+            is_active=True
+        ).values_list('classroom_id', flat=True)
+        has_access = classroom_id in children_classrooms
+    
+    if not has_access:
+        messages.error(request, "Vous n'avez pas accès à cette classe.")
+        return redirect('accounts:' + user.role.lower() + '_dashboard')
     
     # Étudiants inscrits
     enrollments = Enrollment.objects.filter(
@@ -119,10 +157,10 @@ def classroom_detail(request, classroom_id):
     
     # Notes récentes (si l'utilisateur est enseignant)
     recent_grades = []
-    if hasattr(request.user, 'teacher'):
+    if hasattr(request.user, 'teacher_profile'):
         recent_grades = Grade.objects.filter(
             classroom=classroom,
-            subject__in=assignments.filter(teacher=request.user.teacher).values('subject')
+            subject__in=assignments.filter(teacher=request.user.teacher_profile).values('subject')
         ).select_related('student__user', 'subject').order_by('-created_at')[:10]
     
     context = {
@@ -429,8 +467,9 @@ def timetable_list(request):
 def timetable_create(request):
     return HttpResponse("Créer un emploi du temps - En cours de développement")
 
+@teacher_or_student_required
 def attendance_list(request):
-    """Liste des présences avec filtres"""
+    """Liste des présences avec filtres - accessible aux enseignants, étudiants et parents"""
     from django.db.models import Q, Count
     from datetime import datetime, timedelta
     
@@ -438,6 +477,22 @@ def attendance_list(request):
     attendances = Attendance.objects.select_related(
         'student__user', 'classroom', 'subject', 'teacher__user'
     )
+
+    # Filtrage RBAC selon l'utilisateur connecté
+    user = request.user
+    if hasattr(user, 'teacher_profile') and not user.is_superuser:
+        # Enseignant : uniquement ses présences
+        attendances = attendances.filter(teacher=user.teacher_profile)
+    elif hasattr(user, 'student'):
+        # Élève : uniquement ses propres présences
+        attendances = attendances.filter(student=user.student)
+    elif hasattr(user, 'parent'):
+        # Parent : uniquement les présences de ses enfants
+        children_ids = user.parent.students.values_list('id', flat=True)
+        attendances = attendances.filter(student_id__in=children_ids)
+    elif not user.is_superuser:
+        # Autres utilisateurs : aucun accès
+        attendances = attendances.none()
     
     # Filtres
     classroom_id = request.GET.get('classroom')
@@ -489,12 +544,39 @@ def attendance_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Données pour les filtres
+    # Données pour les filtres (avec filtrage RBAC)
     classrooms = ClassRoom.objects.filter(
         academic_year__is_current=True
     ).order_by('level__name', 'name')
     
     subjects = Subject.objects.all().order_by('name')
+    
+    # Filtrage RBAC pour les options de filtre - utiliser la même logique que attendance_take
+    if hasattr(user, 'teacher_profile') and not user.is_superuser:
+        # Enseignant : uniquement ses classes et matières assignées
+        teacher_assignments = TeacherAssignment.objects.filter(
+            teacher=user.teacher_profile,
+            academic_year__is_current=True
+        ).select_related('classroom', 'subject')
+        
+        classroom_ids = teacher_assignments.values_list('classroom_id', flat=True).distinct()
+        subject_ids = teacher_assignments.values_list('subject_id', flat=True).distinct()
+        
+        classrooms = classrooms.filter(id__in=classroom_ids)
+        subjects = subjects.filter(id__in=subject_ids)
+    elif hasattr(user, 'student'):
+        # Élève : uniquement ses classes
+        enrollment_classroom_ids = user.student.enrollments.filter(
+            is_active=True
+        ).values_list('classroom_id', flat=True)
+        classrooms = classrooms.filter(id__in=enrollment_classroom_ids)
+    elif hasattr(user, 'parent'):
+        # Parent : classes de ses enfants
+        children_classroom_ids = Enrollment.objects.filter(
+            student__in=user.parent.students.all(),
+            is_active=True
+        ).values_list('classroom_id', flat=True)
+        classrooms = classrooms.filter(id__in=children_classroom_ids)
     
     # Statistiques
     total_attendances = attendances.count()
@@ -526,8 +608,9 @@ def attendance_list(request):
     
     return render(request, 'academic/attendance_list.html', context)
 
+@teacher_required
 def attendance_take(request):
-    """Interface pour faire l'appel"""
+    """Interface pour faire l'appel - réservé aux enseignants"""
     from datetime import datetime
     
     if request.method == 'POST':
@@ -537,14 +620,20 @@ def attendance_take(request):
         
         try:
             classroom = get_object_or_404(ClassRoom, id=classroom_id)
-            subject = get_object_or_404(Subject, id=subject_id) if subject_id else None
+            
+            # Rendre la matière obligatoire
+            if not subject_id:
+                messages.error(request, "Veuillez sélectionner une matière pour faire l'appel.")
+                return redirect('academic:attendance_take')
+            
+            subject = get_object_or_404(Subject, id=subject_id)
             date = datetime.strptime(date_str, '%Y-%m-%d').date()
             
             # Vérifier que l'utilisateur peut faire l'appel pour cette classe
-            if not request.user.is_superuser and hasattr(request.user, 'teacher'):
+            if not request.user.is_superuser and hasattr(request.user, 'teacher_profile'):
                 # Vérifier si l'enseignant enseigne dans cette classe
                 if not TeacherAssignment.objects.filter(
-                    teacher=request.user.teacher,
+                    teacher=request.user.teacher_profile,
                     classroom=classroom,
                     subject=subject
                 ).exists():
@@ -569,7 +658,7 @@ def attendance_take(request):
                         subject=subject,
                         date=date,
                         defaults={
-                            'teacher': request.user.teacher if hasattr(request.user, 'teacher') else None,
+                            'teacher': request.user.teacher_profile if hasattr(request.user, 'teacher_profile') else None,
                             'status': status,
                             'justification': justification,
                         }
@@ -581,7 +670,17 @@ def attendance_take(request):
                         attendance.save()
             
             messages.success(request, f"Appel effectué avec succès pour la classe {classroom.name} le {date}.")
-            return redirect('academic:attendance_list')
+            
+            # Rediriger vers la liste des présences avec les filtres appropriés pour voir les nouvelles présences
+            from urllib.parse import urlencode
+            query_params = {
+                'classroom': classroom.id,
+                'subject': subject.id,
+                'date_from': date.strftime('%Y-%m-%d'),
+                'date_to': date.strftime('%Y-%m-%d'),
+            }
+            redirect_url = f"{reverse('academic:attendance_list')}?{urlencode(query_params)}"
+            return redirect(redirect_url)
             
         except Exception as e:
             messages.error(request, f"Erreur lors de l'enregistrement : {str(e)}")
@@ -594,9 +693,9 @@ def attendance_take(request):
     subjects = Subject.objects.all().order_by('name')
     
     # Si l'utilisateur est enseignant, filtrer les classes/matières
-    if hasattr(request.user, 'teacher') and not request.user.is_superuser:
+    if hasattr(request.user, 'teacher_profile') and not request.user.is_superuser:
         assignments = TeacherAssignment.objects.filter(
-            teacher=request.user.teacher,
+            teacher=request.user.teacher_profile,
             academic_year__is_current=True
         ).select_related('classroom', 'subject')
         
@@ -615,8 +714,50 @@ def attendance_take(request):
     
     return render(request, 'academic/attendance_take.html', context)
 
+@teacher_required
+def get_classroom_students(request, classroom_id):
+    """API AJAX pour récupérer les élèves d'une classe - réservé aux enseignants"""
+    try:
+        classroom = get_object_or_404(ClassRoom, id=classroom_id)
+        
+        # Vérifier que l'enseignant a accès à cette classe
+        if not request.user.is_superuser and hasattr(request.user, 'teacher_profile'):
+            # Vérifier si l'enseignant enseigne dans cette classe
+            if not TeacherAssignment.objects.filter(
+                teacher=request.user.teacher_profile,
+                classroom=classroom
+            ).exists():
+                return JsonResponse({'error': 'Accès non autorisé à cette classe'}, status=403)
+        
+        # Récupérer les élèves de la classe
+        students = Student.objects.filter(
+            enrollments__classroom=classroom,
+            enrollments__is_active=True
+        ).select_related('user').order_by('user__last_name', 'user__first_name')
+        
+        # Convertir en format JSON
+        students_data = []
+        for student in students:
+            students_data.append({
+                'id': student.id,
+                'name': student.user.get_full_name(),
+                'matricule': getattr(student, 'student_id', f'ETU{student.id:03d}'),
+                'email': student.user.email
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'students': students_data,
+            'classroom_name': classroom.name,
+            'total_students': len(students_data)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@teacher_or_student_required
 def attendance_class(request, classroom_id):
-    """Présences d'une classe avec vue calendrier"""
+    """Présences d'une classe avec vue calendrier - accessible aux enseignants et étudiants de la classe"""
     from datetime import datetime, timedelta
     from django.db.models import Count, Q
     
@@ -768,8 +909,8 @@ def grade_list(request):
             pass
     
     # Si l'utilisateur est enseignant, filtrer ses notes
-    if hasattr(request.user, 'teacher') and not request.user.is_superuser:
-        grades = grades.filter(teacher=request.user.teacher)
+    if hasattr(request.user, 'teacher_profile') and not request.user.is_superuser:
+        grades = grades.filter(teacher=request.user.teacher_profile)
     
     # Ordre pour la pagination
     grades = grades.order_by('-date', 'classroom__name', 'subject__name', 'student__user__last_name')
@@ -789,6 +930,39 @@ def grade_list(request):
     students = Student.objects.filter(
         enrollments__is_active=True
     ).select_related('user').order_by('user__last_name', 'user__first_name')
+    
+    # Filtrage RBAC pour les options de filtre
+    if hasattr(request.user, 'teacher_profile') and not request.user.is_superuser:
+        # Enseignant : uniquement ses classes, matières et étudiants
+        teacher_assignments = TeacherAssignment.objects.filter(
+            teacher=request.user.teacher_profile,
+            academic_year__is_current=True
+        ).select_related('classroom', 'subject')
+        
+        classroom_ids = teacher_assignments.values_list('classroom_id', flat=True).distinct()
+        subject_ids = teacher_assignments.values_list('subject_id', flat=True).distinct()
+        
+        classrooms = classrooms.filter(id__in=classroom_ids)
+        subjects = subjects.filter(id__in=subject_ids)
+        
+        # Étudiants uniquement de ses classes
+        students = students.filter(enrollments__classroom_id__in=classroom_ids)
+    elif hasattr(request.user, 'student'):
+        # Élève : uniquement ses propres classes et notes
+        enrollment_classroom_ids = request.user.student.enrollments.filter(
+            is_active=True
+        ).values_list('classroom_id', flat=True)
+        classrooms = classrooms.filter(id__in=enrollment_classroom_ids)
+        students = students.filter(id=request.user.student.id)
+    elif hasattr(request.user, 'parent'):
+        # Parent : classes et étudiants de ses enfants
+        children_ids = request.user.parent.students.values_list('id', flat=True)
+        children_classroom_ids = Enrollment.objects.filter(
+            student_id__in=children_ids,
+            is_active=True
+        ).values_list('classroom_id', flat=True)
+        classrooms = classrooms.filter(id__in=children_classroom_ids)
+        students = students.filter(id__in=children_ids)
     
     # Statistiques
     total_grades = grades.count()
@@ -869,16 +1043,50 @@ def grade_add(request):
         except Exception as e:
             messages.error(request, f"Erreur lors de l'ajout de la note: {str(e)}")
     
-    # Données pour le formulaire
-    subjects = Subject.objects.all()
-    classrooms = ClassRoom.objects.all()
-    students = Student.objects.select_related('user', 'current_class').all()
+    # Données pour le formulaire avec filtrage RBAC
+    classrooms = ClassRoom.objects.filter(
+        academic_year__is_current=True
+    ).order_by('level__name', 'name')
+    
+    subjects = Subject.objects.all().order_by('name')
+    
+    students = Student.objects.filter(
+        enrollments__is_active=True
+    ).select_related('user', 'current_class').order_by('user__last_name', 'user__first_name')
+    
+    # Filtrage RBAC pour enseignant
+    if hasattr(request.user, 'teacher_profile') and not request.user.is_superuser:
+        # Enseignant : uniquement ses classes, matières et étudiants
+        teacher_assignments = TeacherAssignment.objects.filter(
+            teacher=request.user.teacher_profile,
+            academic_year__is_current=True
+        ).select_related('classroom', 'subject')
+        
+        classroom_ids = teacher_assignments.values_list('classroom_id', flat=True).distinct()
+        subject_ids = teacher_assignments.values_list('subject_id', flat=True).distinct()
+        
+        classrooms = classrooms.filter(id__in=classroom_ids)
+        subjects = subjects.filter(id__in=subject_ids)
+        
+        # Étudiants uniquement de ses classes
+        students = students.filter(enrollments__classroom_id__in=classroom_ids)
+    
+    # Récupérer les paramètres d'URL pour pré-remplir le formulaire
+    selected_classroom = request.GET.get('classroom')
+    selected_subject = request.GET.get('subject')
+    
+    # Filtrer les étudiants si une classe est spécifiée
+    if selected_classroom:
+        students = students.filter(current_class_id=selected_classroom)
     
     context = {
         'subjects': subjects,
         'classrooms': classrooms,
         'students': students,
         'evaluation_types': Grade.EVALUATION_TYPE_CHOICES,
+        'selected_classroom': selected_classroom,
+        'selected_subject': selected_subject,
+        'today': timezone.now().date(),
     }
     
     return render(request, 'academic/grade_add.html', context)
@@ -999,3 +1207,530 @@ def student_bulletin(request, student_id):
 
 def class_report(request, classroom_id):
     return HttpResponse(f"Rapport de la classe {classroom_id} - En cours de développement")
+
+
+@teacher_required
+def course_detail(request, assignment_id):
+    """Vue détaillée d'un cours spécifique (TeacherAssignment)"""
+    assignment = get_object_or_404(
+        TeacherAssignment.objects.select_related(
+            'teacher__user', 'classroom', 'subject', 'academic_year'
+        ),
+        id=assignment_id,
+        teacher__user=request.user  # Sécurité : seul l'enseignant peut voir ses cours
+    )
+    
+    today = timezone.now().date()
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
+    
+    # Étudiants inscrits dans cette classe
+    students = Student.objects.filter(
+        enrollments__classroom=assignment.classroom,
+        enrollments__is_active=True
+    ).select_related('user').order_by('user__last_name', 'user__first_name')
+    
+    # Statistiques du cours
+    total_students = students.count()
+    
+    # Notes données par cet enseignant dans cette matière et cette classe
+    course_grades = Grade.objects.filter(
+        teacher=assignment.teacher,
+        subject=assignment.subject,
+        classroom=assignment.classroom
+    ).select_related('student__user').order_by('-created_at')
+    
+    recent_grades = course_grades[:10]  # 10 dernières notes
+    grades_this_month = course_grades.filter(created_at__gte=month_ago)
+    
+    # Moyennes
+    class_average = course_grades.aggregate(avg=Avg('score'))['avg'] or 0
+    monthly_average = grades_this_month.aggregate(avg=Avg('score'))['avg'] or 0
+    
+    # Présences pour ce cours
+    course_attendances = Attendance.objects.filter(
+        teacher=assignment.teacher,
+        subject=assignment.subject,
+        classroom=assignment.classroom
+    ).select_related('student__user').order_by('-date')
+    
+    recent_attendances = course_attendances[:10]  # 10 dernières présences
+    
+    # Statistiques de présence du mois
+    monthly_attendances = course_attendances.filter(date__gte=month_ago)
+    attendance_stats = {
+        'total': monthly_attendances.count(),
+        'present': monthly_attendances.filter(status='PRESENT').count(),
+        'absent': monthly_attendances.filter(status='ABSENT').count(),
+        'late': monthly_attendances.filter(status='LATE').count(),
+        'excused': monthly_attendances.filter(status='EXCUSED').count(),
+    }
+    
+    if attendance_stats['total'] > 0:
+        attendance_stats['presence_rate'] = round(
+            (attendance_stats['present'] / attendance_stats['total']) * 100, 1
+        )
+    else:
+        attendance_stats['presence_rate'] = 0
+    
+    # Étudiants avec leurs moyennes dans cette matière
+    students_with_grades = []
+    for student in students:
+        student_grades = course_grades.filter(student=student)
+        if student_grades.exists():
+            avg = student_grades.aggregate(avg=Avg('score'))['avg']
+            grade_count = student_grades.count()
+        else:
+            avg = None
+            grade_count = 0
+        
+        # Présences de cet étudiant pour ce cours
+        student_attendances = course_attendances.filter(student=student)
+        if student_attendances.exists():
+            present_count = student_attendances.filter(status='PRESENT').count()
+            total_attendance = student_attendances.count()
+            attendance_rate = round((present_count / total_attendance) * 100, 1) if total_attendance > 0 else 0
+        else:
+            attendance_rate = 0
+            total_attendance = 0
+        
+        students_with_grades.append({
+            'student': student,
+            'average': round(avg, 2) if avg else None,
+            'grade_count': grade_count,
+            'attendance_rate': attendance_rate,
+            'total_attendance': total_attendance
+        })
+    
+    # Trier par moyenne décroissante
+    students_with_grades.sort(key=lambda x: x['average'] or 0, reverse=True)
+    
+    # Documents liés à cette matière et classe
+    documents = Document.objects.filter(
+        subject=assignment.subject,
+        teacher=assignment.teacher
+    ).filter(
+        models.Q(classroom=assignment.classroom) | models.Q(classroom__isnull=True)
+    ).order_by('-created_at')[:5]  # Les 5 derniers documents
+    
+    context = {
+        'assignment': assignment,
+        'course': assignment,  # Alias pour le template
+        'students_with_grades': students_with_grades,
+        'total_students': total_students,
+        'recent_grades': recent_grades,
+        'recent_attendances': recent_attendances,
+        'class_average': round(class_average, 2),
+        'monthly_average': round(monthly_average, 2),
+        'grades_this_month': grades_this_month.count(),
+        'attendance_stats': attendance_stats,
+        'today': today,
+        'documents': documents,
+    }
+    
+    return render(request, 'academic/course_detail.html', context)
+
+
+# ===============================
+# VUES POUR LA GESTION DES DOCUMENTS
+# ===============================
+
+@teacher_required
+def document_list(request):
+    """Liste des documents de l'enseignant"""
+    documents = Document.objects.filter(
+        teacher=request.user.teacher_profile
+    ).select_related('subject', 'classroom').order_by('-created_at')
+    
+    # Filtres
+    subject_id = request.GET.get('subject')
+    document_type = request.GET.get('type')
+    classroom_id = request.GET.get('classroom')
+    
+    if subject_id:
+        documents = documents.filter(subject_id=subject_id)
+    if document_type:
+        documents = documents.filter(document_type=document_type)
+    if classroom_id:
+        documents = documents.filter(classroom_id=classroom_id)
+    
+    # Données pour les filtres (RBAC)
+    teacher_assignments = TeacherAssignment.objects.filter(
+        teacher=request.user.teacher_profile,
+        academic_year__is_current=True
+    ).select_related('classroom', 'subject')
+    
+    subjects = Subject.objects.filter(
+        id__in=teacher_assignments.values_list('subject_id', flat=True)
+    ).distinct()
+    
+    classrooms = ClassRoom.objects.filter(
+        id__in=teacher_assignments.values_list('classroom_id', flat=True)
+    ).distinct()
+    
+    context = {
+        'documents': documents,
+        'subjects': subjects,
+        'classrooms': classrooms,
+        'document_types': Document.DOCUMENT_TYPE_CHOICES,
+        'selected_subject': subject_id,
+        'selected_type': document_type,
+        'selected_classroom': classroom_id,
+    }
+    
+    return render(request, 'academic/document_list.html', context)
+
+
+@teacher_required
+def document_add(request):
+    """Ajouter un nouveau document"""
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        description = request.POST.get('description', '')
+        document_type = request.POST.get('document_type')
+        subject_id = request.POST.get('subject')
+        classroom_id = request.POST.get('classroom')
+        is_public = request.POST.get('is_public') == 'on'
+        is_downloadable = request.POST.get('is_downloadable') == 'on'
+        access_date = request.POST.get('access_date')
+        expiry_date = request.POST.get('expiry_date')
+        file = request.FILES.get('file')
+        
+        try:
+            # Validation des données
+            if not all([title, document_type, subject_id, file]):
+                messages.error(request, "Veuillez remplir tous les champs obligatoires.")
+                return redirect('academic:document_add')
+            
+            # Vérifier que l'enseignant enseigne cette matière
+            subject = get_object_or_404(Subject, id=subject_id)
+            teacher_assignment = TeacherAssignment.objects.filter(
+                teacher=request.user.teacher_profile,
+                subject=subject,
+                academic_year__is_current=True
+            ).first()
+            
+            if not teacher_assignment:
+                messages.error(request, "Vous n'êtes pas autorisé à ajouter des documents pour cette matière.")
+                return redirect('academic:document_add')
+            
+            # Vérifier la classe si spécifiée
+            classroom = None
+            if classroom_id:
+                classroom = get_object_or_404(ClassRoom, id=classroom_id)
+                # Vérifier que l'enseignant enseigne dans cette classe
+                if not TeacherAssignment.objects.filter(
+                    teacher=request.user.teacher_profile,
+                    classroom=classroom,
+                    subject=subject,
+                    academic_year__is_current=True
+                ).exists():
+                    messages.error(request, "Vous n'êtes pas autorisé à ajouter des documents pour cette classe.")
+                    return redirect('academic:document_add')
+            
+            # Créer le document
+            document = Document.objects.create(
+                title=title,
+                description=description,
+                document_type=document_type,
+                subject=subject,
+                teacher=request.user.teacher_profile,
+                classroom=classroom,
+                file=file,
+                is_public=is_public,
+                is_downloadable=is_downloadable,
+                access_date=datetime.strptime(access_date, '%Y-%m-%dT%H:%M') if access_date else timezone.now(),
+                expiry_date=datetime.strptime(expiry_date, '%Y-%m-%dT%H:%M') if expiry_date else None,
+            )
+            
+            messages.success(request, f"Document '{title}' ajouté avec succès.")
+            return redirect('academic:document_list')
+            
+        except Exception as e:
+            messages.error(request, f"Erreur lors de l'ajout du document: {str(e)}")
+    
+    # Données pour le formulaire (RBAC)
+    teacher_assignments = TeacherAssignment.objects.filter(
+        teacher=request.user.teacher_profile,
+        academic_year__is_current=True
+    ).select_related('classroom', 'subject')
+    
+    subjects = Subject.objects.filter(
+        id__in=teacher_assignments.values_list('subject_id', flat=True)
+    ).distinct()
+    
+    classrooms = ClassRoom.objects.filter(
+        id__in=teacher_assignments.values_list('classroom_id', flat=True)
+    ).distinct()
+    
+    # Récupérer les paramètres d'URL pour pré-remplir le formulaire
+    selected_subject = request.GET.get('subject')
+    selected_classroom = request.GET.get('classroom')
+    
+    context = {
+        'subjects': subjects,
+        'classrooms': classrooms,
+        'document_types': Document.DOCUMENT_TYPE_CHOICES,
+        'selected_subject': selected_subject,
+        'selected_classroom': selected_classroom,
+    }
+    
+    return render(request, 'academic/document_add.html', context)
+
+
+@teacher_required
+def document_edit(request, document_id):
+    """Modifier un document"""
+    document = get_object_or_404(Document, id=document_id, teacher=request.user.teacher_profile)
+    
+    if request.method == 'POST':
+        document.title = request.POST.get('title', document.title)
+        document.description = request.POST.get('description', document.description)
+        document.document_type = request.POST.get('document_type', document.document_type)
+        document.is_public = request.POST.get('is_public') == 'on'
+        document.is_downloadable = request.POST.get('is_downloadable') == 'on'
+        
+        access_date = request.POST.get('access_date')
+        if access_date:
+            document.access_date = datetime.strptime(access_date, '%Y-%m-%dT%H:%M')
+        
+        expiry_date = request.POST.get('expiry_date')
+        document.expiry_date = datetime.strptime(expiry_date, '%Y-%m-%dT%H:%M') if expiry_date else None
+        
+        # Nouveau fichier si uploadé
+        if 'file' in request.FILES:
+            document.file = request.FILES['file']
+        
+        document.save()
+        messages.success(request, "Document mis à jour avec succès.")
+        return redirect('academic:document_list')
+    
+    context = {
+        'document': document,
+        'document_types': Document.DOCUMENT_TYPE_CHOICES,
+    }
+    
+    return render(request, 'academic/document_edit.html', context)
+
+
+@teacher_required
+def document_delete(request, document_id):
+    """Supprimer un document"""
+    document = get_object_or_404(Document, id=document_id, teacher=request.user.teacher_profile)
+    
+    if request.method == 'POST':
+        # Supprimer le fichier physique
+        if document.file:
+            document.file.delete()
+        
+        document.delete()
+        messages.success(request, f"Document '{document.title}' supprimé avec succès.")
+        
+    return redirect('academic:document_list')
+
+
+@login_required
+def document_view(request, document_id):
+    """Voir/télécharger un document"""
+    document = get_object_or_404(Document, id=document_id)
+    
+    # Vérifier les permissions d'accès
+    can_access = False
+    
+    if hasattr(request.user, 'teacher_profile'):
+        # Enseignants : leurs propres documents ou documents de matières qu'ils enseignent
+        if document.teacher == request.user.teacher_profile:
+            can_access = True
+        elif TeacherAssignment.objects.filter(
+            teacher=request.user.teacher_profile,
+            subject=document.subject,
+            academic_year__is_current=True
+        ).exists():
+            can_access = True
+    
+    elif hasattr(request.user, 'student'):
+        # Étudiants : documents publics de leurs classes/matières
+        if document.is_public and document.is_accessible:
+            student_enrollments = request.user.student.enrollments.filter(is_active=True)
+            if document.classroom:
+                # Document spécifique à une classe
+                can_access = student_enrollments.filter(classroom=document.classroom).exists()
+            else:
+                # Document général pour la matière
+                # Vérifier si l'étudiant a cette matière (via TeacherAssignment)
+                student_classrooms = student_enrollments.values_list('classroom_id', flat=True)
+                can_access = TeacherAssignment.objects.filter(
+                    classroom_id__in=student_classrooms,
+                    subject=document.subject,
+                    academic_year__is_current=True
+                ).exists()
+    
+    if not can_access:
+        messages.error(request, "Vous n'avez pas l'autorisation d'accéder à ce document.")
+        return redirect('accounts:dashboard')
+    
+    # Enregistrer l'accès
+    action = request.GET.get('action', 'view')
+    access_type = 'DOWNLOAD' if action == 'download' else 'VIEW'
+    
+    DocumentAccess.objects.create(
+        document=document,
+        user=request.user,
+        access_type=access_type,
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+    
+    # Mettre à jour les compteurs
+    if access_type == 'DOWNLOAD':
+        document.download_count += 1
+    else:
+        document.view_count += 1
+    document.save()
+    
+    # Télécharger ou afficher
+    if action == 'download' and document.is_downloadable:
+        response = HttpResponse(document.file.read(), content_type='application/octet-stream')
+        response['Content-Disposition'] = f'attachment; filename="{document.file.name.split("/")[-1]}"'
+        return response
+    else:
+        # Rediriger vers le fichier pour affichage
+        return redirect(document.file.url)
+
+
+@teacher_or_student_required
+def document_subject_list(request, subject_id):
+    """Liste des documents d'une matière (pour étudiants et enseignants)"""
+    subject = get_object_or_404(Subject, id=subject_id)
+    
+    # Vérifier les permissions
+    can_access = False
+    documents = Document.objects.filter(subject=subject)
+    
+    if hasattr(request.user, 'teacher_profile'):
+        # Enseignants : vérifier qu'ils enseignent cette matière
+        if TeacherAssignment.objects.filter(
+            teacher=request.user.teacher_profile,
+            subject=subject,
+            academic_year__is_current=True
+        ).exists():
+            can_access = True
+            # Voir tous les documents de la matière
+            documents = documents.select_related('teacher', 'classroom')
+        
+    elif hasattr(request.user, 'student'):
+        # Étudiants : vérifier qu'ils ont cette matière
+        student_enrollments = request.user.student.enrollments.filter(is_active=True)
+        student_classrooms = student_enrollments.values_list('classroom_id', flat=True)
+        
+        if TeacherAssignment.objects.filter(
+            classroom_id__in=student_classrooms,
+            subject=subject,
+            academic_year__is_current=True
+        ).exists():
+            can_access = True
+            # Voir seulement les documents publics et accessibles
+            documents = documents.filter(
+                is_public=True,
+                access_date__lte=timezone.now()
+            ).filter(
+                models.Q(expiry_date__isnull=True) | models.Q(expiry_date__gt=timezone.now())
+            ).filter(
+                models.Q(classroom__isnull=True) | models.Q(classroom_id__in=student_classrooms)
+            ).select_related('teacher', 'classroom')
+    
+    if not can_access:
+        messages.error(request, "Vous n'avez pas l'autorisation d'accéder aux documents de cette matière.")
+        return redirect('accounts:dashboard')
+    
+    # Récupérer le paramètre classroom optionnel depuis l'URL
+    classroom_id = request.GET.get('classroom')
+    selected_classroom = None
+    if classroom_id and hasattr(request.user, 'teacher_profile'):
+        try:
+            selected_classroom = ClassRoom.objects.get(id=classroom_id)
+            # Vérifier que l'enseignant a accès à cette classe pour cette matière
+            if not TeacherAssignment.objects.filter(
+                teacher=request.user.teacher_profile,
+                classroom=selected_classroom,
+                subject=subject,
+                academic_year__is_current=True
+            ).exists():
+                selected_classroom = None
+        except ClassRoom.DoesNotExist:
+            selected_classroom = None
+    
+    # Calculer les statistiques par type
+    document_list = documents.order_by('-created_at')
+    document_stats = {
+        'total': document_list.count(),
+        'course': document_list.filter(document_type='COURSE').count(),
+        'exercise': document_list.filter(document_type='EXERCISE').count(), 
+        'exam': document_list.filter(document_type='EXAM').count(),
+        'correction': document_list.filter(document_type='CORRECTION').count(),
+        'reference': document_list.filter(document_type='REFERENCE').count(),
+    }
+    
+    context = {
+        'subject': subject,
+        'documents': document_list,
+        'document_stats': document_stats,
+        'can_add': hasattr(request.user, 'teacher_profile'),
+        'selected_classroom': selected_classroom,
+    }
+    
+    return render(request, 'academic/document_subject_list.html', context)
+
+
+@login_required
+def document_detail(request, document_id):
+    """Voir les détails d'un document"""
+    document = get_object_or_404(Document, id=document_id)
+    
+    # Vérifier les permissions d'accès
+    can_access = False
+    can_edit = False
+    
+    if hasattr(request.user, 'teacher_profile'):
+        # Enseignants : leurs propres documents ou documents de matières qu'ils enseignent
+        if document.teacher == request.user.teacher_profile:
+            can_access = True
+            can_edit = True
+        elif TeacherAssignment.objects.filter(
+            teacher=request.user.teacher_profile,
+            subject=document.subject,
+            academic_year__is_current=True
+        ).exists():
+            can_access = True
+    
+    elif hasattr(request.user, 'student'):
+        # Étudiants : documents publics de leurs classes/matières
+        if document.is_public and document.is_accessible:
+            student_enrollments = request.user.student.enrollments.filter(is_active=True)
+            if document.classroom:
+                # Document spécifique à une classe
+                can_access = student_enrollments.filter(classroom=document.classroom).exists()
+            else:
+                # Document général pour la matière
+                student_classrooms = student_enrollments.values_list('classroom_id', flat=True)
+                can_access = TeacherAssignment.objects.filter(
+                    classroom_id__in=student_classrooms,
+                    subject=document.subject,
+                    academic_year__is_current=True
+                ).exists()
+    
+    if not can_access:
+        messages.error(request, "Vous n'avez pas l'autorisation d'accéder à ce document.")
+        return redirect('accounts:dashboard')
+    
+    # Récupérer les accès récents
+    recent_accesses = DocumentAccess.objects.filter(
+        document=document
+    ).select_related('user').order_by('-accessed_at')[:10]
+    
+    context = {
+        'document': document,
+        'can_edit': can_edit,
+        'recent_accesses': recent_accesses,
+    }
+    
+    return render(request, 'academic/document_detail.html', context)

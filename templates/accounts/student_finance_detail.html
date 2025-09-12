@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mes Finances - eSchool{% endblock %}
+
+{% block extra_css %}
+<style>
+    .finance-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid #e5e7eb;
+    }
+    
+    .finance-card:hover {
+        border-left-color: #8b5cf6;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .status-paid { 
+        background-color: #10b981; 
+        color: white; 
+        border-left-color: #10b981;
+    }
+    .status-pending { 
+        background-color: #f59e0b; 
+        color: white; 
+        border-left-color: #f59e0b;
+    }
+    .status-overdue { 
+        background-color: #ef4444; 
+        color: white; 
+        border-left-color: #ef4444;
+    }
+    
+    .balance-success { color: #10b981; }
+    .balance-warning { color: #f59e0b; }
+    .balance-danger { color: #ef4444; }
+    
+    .invoice-item {
+        transition: all 0.3s ease;
+    }
+    
+    .invoice-item:hover {
+        background-color: #f8fafc;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-600 to-cyan-600 text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="py-8">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold">💰 Mes Finances</h1>
+                        <p class="mt-2 text-blue-100">{{ student.user.get_full_name }} • {{ student.current_class.name }}</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-4xl font-bold balance-{{ balance_status }}">
+                            {% if total_overdue > 0 %}{{ total_overdue }} FCFA
+                            {% elif total_pending > 0 %}{{ total_pending }} FCFA
+                            {% else %}✓ À jour{% endif %}
+                        </div>
+                        <div class="text-sm text-blue-200">
+                            {% if total_overdue > 0 %}En retard de paiement
+                            {% elif total_pending > 0 %}En attente de paiement
+                            {% else %}Situation financière saine{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Résumé financier -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="finance-card bg-white rounded-xl shadow-sm border p-6 text-center">
+                <div class="text-3xl font-bold text-yellow-600">{{ total_pending }} FCFA</div>
+                <div class="text-gray-600">En attente</div>
+                <div class="text-sm text-gray-500">{{ pending_invoices|length }} facture(s)</div>
+            </div>
+            <div class="finance-card bg-white rounded-xl shadow-sm border p-6 text-center">
+                <div class="text-3xl font-bold text-red-600">{{ total_overdue }} FCFA</div>
+                <div class="text-gray-600">En retard</div>
+                <div class="text-sm text-gray-500">{{ overdue_invoices|length }} facture(s)</div>
+            </div>
+            <div class="finance-card bg-white rounded-xl shadow-sm border p-6 text-center">
+                <div class="text-3xl font-bold text-green-600">{{ total_paid }} FCFA</div>
+                <div class="text-gray-600">Payé</div>
+                <div class="text-sm text-gray-500">Cette année</div>
+            </div>
+        </div>
+
+        <!-- Prochaines échéances -->
+        {% if upcoming_due %}
+        <div class="bg-white rounded-xl shadow-sm border p-6 mb-8">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">⏰ Prochaines échéances (30 jours)</h3>
+            <div class="space-y-3">
+                {% for invoice in upcoming_due %}
+                <div class="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-4">
+                            <span class="text-lg">⚠️</span>
+                        </div>
+                        <div>
+                            <div class="font-medium text-gray-900">{{ invoice.invoice_number }}</div>
+                            <div class="text-sm text-gray-600">Échéance: {{ invoice.due_date|date:"d/m/Y" }}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg font-bold text-yellow-600">{{ invoice.total_amount }} FCFA</div>
+                        <div class="text-sm text-gray-600">
+                            {% if invoice.due_date < today %}En retard
+                            {% else %}{{ invoice.due_date|timeuntil }}{% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Factures en attente -->
+            <div class="bg-white rounded-xl shadow-sm border p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">📋 Factures en attente</h3>
+                <div class="space-y-3">
+                    {% for invoice in pending_invoices %}
+                    <div class="invoice-item flex items-center justify-between p-3 border rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                                <span class="text-sm">📄</span>
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-900">{{ invoice.invoice_number }}</div>
+                                <div class="text-sm text-gray-600">{{ invoice.issue_date|date:"d/m/Y" }}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-yellow-600">{{ invoice.total_amount }} FCFA</div>
+                            <div class="text-xs text-gray-500">Échéance: {{ invoice.due_date|date:"d/m/Y" }}</div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-gray-500 py-4">
+                        <span class="text-4xl mb-2 block">✅</span>
+                        Aucune facture en attente !
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Factures en retard -->
+            <div class="bg-white rounded-xl shadow-sm border p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">🚨 Factures en retard</h3>
+                <div class="space-y-3">
+                    {% for invoice in overdue_invoices %}
+                    <div class="invoice-item flex items-center justify-between p-3 border border-red-200 bg-red-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                                <span class="text-sm">⚠️</span>
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-900">{{ invoice.invoice_number }}</div>
+                                <div class="text-sm text-red-600">En retard depuis le {{ invoice.due_date|date:"d/m/Y" }}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-red-600">{{ invoice.total_amount }} FCFA</div>
+                            <div class="text-xs text-red-500">{{ invoice.due_date|timesince }} de retard</div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-gray-500 py-4">
+                        <span class="text-4xl mb-2 block">✅</span>
+                        Aucune facture en retard !
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Historique des paiements -->
+        <div class="bg-white rounded-xl shadow-sm border p-6 mt-8">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">💳 Historique des paiements</h3>
+            <div class="space-y-3">
+                {% for payment in recent_payments %}
+                <div class="invoice-item flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                            <span class="text-sm">✅</span>
+                        </div>
+                        <div>
+                            <div class="font-medium text-gray-900">{{ payment.invoice.invoice_number }}</div>
+                            <div class="text-sm text-gray-600">{{ payment.payment_date|date:"d/m/Y à H:i" }}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-green-600">{{ payment.amount }} FCFA</div>
+                        <div class="text-xs text-gray-500">{{ payment.payment_method }}</div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-gray-500 py-4">
+                    <svg class="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                    </svg>
+                    <h3 class="text-lg font-medium mb-2">Aucun paiement</h3>
+                    <p>Votre historique de paiements apparaîtra ici.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Factures payées récentes -->
+        <div class="bg-white rounded-xl shadow-sm border p-6 mt-8">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">✅ Factures payées récentes</h3>
+            <div class="space-y-3">
+                {% for invoice in paid_invoices %}
+                <div class="invoice-item flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                            <span class="text-sm">📄</span>
+                        </div>
+                        <div>
+                            <div class="font-medium text-gray-900">{{ invoice.invoice_number }}</div>
+                            <div class="text-sm text-gray-600">Payée le {{ invoice.payment_date|date:"d/m/Y" }}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-green-600">{{ invoice.total_amount }} FCFA</div>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Payé
+                        </span>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-gray-500 py-4">
+                    Aucune facture payée récemment
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-8 flex justify-center space-x-4">
+            <a href="{% url 'accounts:dashboard' %}" 
+               class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                ← Retour au dashboard
+            </a>
+            <a href="{% url 'finance:invoice_list' %}" 
+               class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                📄 Voir toutes les factures
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

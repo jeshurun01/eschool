@@ -1,0 +1,337 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Créer une facture{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-section {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+.form-section-header {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+.form-section-content {
+    padding: 1.5rem;
+}
+.item-row {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: #f8fafc;
+}
+.add-item-btn {
+    border: 2px dashed #cbd5e0;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.add-item-btn:hover {
+    border-color: #4299e1;
+    background-color: #ebf8ff;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- En-tête -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <a href="{% url 'finance:invoice_list' %}" 
+                       class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        <svg class="-ml-1 mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0L3.586 12l2.707-2.707a1 1 0 011.414 1.414L6.414 12l1.293 1.293a1 1 0 010 1.414z" clip-rule="evenodd"/>
+                            <path fill-rule="evenodd" d="M4.586 12H17a1 1 0 010 2H4.586l1.293 1.293a1 1 0 01-1.414 1.414L1.758 13.414a1 1 0 010-1.414l2.707-2.707a1 1 0 011.414 1.414L4.586 12z" clip-rule="evenodd"/>
+                        </svg>
+                        Retour aux factures
+                    </a>
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900">Créer une nouvelle facture</h1>
+                        <p class="mt-1 text-gray-600">Ajouter une facture manuelle</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} mb-3">
+                <div class="flex items-center">
+                    {% if message.tags == 'error' %}
+                    <svg class="h-5 w-5 text-red-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    {% elif message.tags == 'success' %}
+                    <svg class="h-5 w-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    {% endif %}
+                    <span>{{ message }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" class="space-y-8" id="invoice-form">
+            {% csrf_token %}
+            
+            <!-- Informations de base -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h3 class="text-lg font-medium text-gray-900">Informations de base</h3>
+                </div>
+                <div class="form-section-content">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Élève -->
+                        <div>
+                            <label for="student" class="block text-sm font-medium text-gray-700 mb-2">
+                                Élève <span class="text-red-500">*</span>
+                            </label>
+                            <select id="student" name="student" required 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Sélectionner un élève</option>
+                                {% for student in students %}
+                                <option value="{{ student.id }}">
+                                    {{ student.user.get_full_name }} ({{ student.matricule }})
+                                    {% if student.current_class %} - {{ student.current_class.name }}{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Date d'échéance -->
+                        <div>
+                            <label for="due_date" class="block text-sm font-medium text-gray-700 mb-2">
+                                Date d'échéance
+                            </label>
+                            <input type="date" id="due_date" name="due_date" 
+                                   value="{{ default_due_date }}"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <!-- Remise -->
+                        <div>
+                            <label for="discount" class="block text-sm font-medium text-gray-700 mb-2">
+                                Remise (€)
+                            </label>
+                            <input type="number" id="discount" name="discount" step="0.01" min="0" value="0.00"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Éléments de facture -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-medium text-gray-900">Éléments de facture</h3>
+                        <button type="button" onclick="addInvoiceItem()" 
+                                class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200">
+                            <svg class="-ml-1 mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                            </svg>
+                            Ajouter un élément
+                        </button>
+                    </div>
+                </div>
+                <div class="form-section-content">
+                    <div id="invoice-items">
+                        <!-- Premier élément par défaut -->
+                        <div class="item-row" data-item="0">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="text-sm font-medium text-gray-900">Élément 1</h4>
+                                <button type="button" onclick="removeInvoiceItem(this)" 
+                                        class="text-red-600 hover:text-red-800 text-sm">
+                                    <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Supprimer
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Type de frais</label>
+                                    <select name="fee_type" required 
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">Sélectionner</option>
+                                        {% for fee_type in fee_types %}
+                                        <option value="{{ fee_type.id }}">{{ fee_type.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                    <input type="text" name="description" required 
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                           placeholder="Description de l'élément">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
+                                    <input type="number" name="quantity" step="0.01" min="0.01" value="1" required 
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Prix unitaire (€)</label>
+                                    <input type="number" name="unit_price" step="0.01" min="0.01" required 
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bouton d'ajout d'élément -->
+                    <div class="add-item-btn" onclick="addInvoiceItem()">
+                        <svg class="mx-auto h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                        <p class="text-sm text-gray-600">Cliquer pour ajouter un nouvel élément</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h3 class="text-lg font-medium text-gray-900">Notes (optionnel)</h3>
+                </div>
+                <div class="form-section-content">
+                    <textarea id="notes" name="notes" rows="4" 
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Notes supplémentaires pour cette facture..."></textarea>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex justify-end space-x-4">
+                <a href="{% url 'finance:invoice_list' %}" 
+                   class="px-6 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    Annuler
+                </a>
+                <button type="submit" 
+                        class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    <svg class="-ml-1 mr-2 h-4 w-4 inline" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    Créer la facture
+                </button>
+            </div>
+        </form>
+
+        <!-- Informations d'aide -->
+        <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-blue-800">Conseils pour la création de factures</h3>
+                    <div class="mt-2 text-sm text-blue-700">
+                        <ul class="list-disc space-y-1 pl-5">
+                            <li>La facture sera créée avec le statut "Brouillon" et pourra être modifiée</li>
+                            <li>Le numéro de facture sera généré automatiquement</li>
+                            <li>Un parent responsable sera automatiquement assigné si disponible</li>
+                            <li>Vous pouvez ajouter plusieurs éléments à une même facture</li>
+                            <li>Les totaux seront calculés automatiquement</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let itemCounter = 1;
+
+function addInvoiceItem() {
+    const container = document.getElementById('invoice-items');
+    const newItem = document.createElement('div');
+    newItem.className = 'item-row';
+    newItem.setAttribute('data-item', itemCounter);
+    
+    newItem.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="text-sm font-medium text-gray-900">Élément ${itemCounter + 1}</h4>
+            <button type="button" onclick="removeInvoiceItem(this)" 
+                    class="text-red-600 hover:text-red-800 text-sm">
+                <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+                Supprimer
+            </button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Type de frais</label>
+                <select name="fee_type" required 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Sélectionner</option>
+                    {% for fee_type in fee_types %}
+                    <option value="{{ fee_type.id }}">{{ fee_type.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <input type="text" name="description" required 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Description de l'élément">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
+                <input type="number" name="quantity" step="0.01" min="0.01" value="1" required 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Prix unitaire (€)</label>
+                <input type="number" name="unit_price" step="0.01" min="0.01" required 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(newItem);
+    itemCounter++;
+}
+
+function removeInvoiceItem(button) {
+    const itemRow = button.closest('.item-row');
+    const container = document.getElementById('invoice-items');
+    
+    // Ne pas supprimer s'il n'y a qu'un seul élément
+    if (container.children.length > 1) {
+        itemRow.remove();
+        updateItemNumbers();
+    } else {
+        alert('Une facture doit contenir au moins un élément.');
+    }
+}
+
+function updateItemNumbers() {
+    const items = document.querySelectorAll('#invoice-items .item-row');
+    items.forEach((item, index) => {
+        const title = item.querySelector('h4');
+        title.textContent = `Élément ${index + 1}`;
+    });
+}
+</script>
+{% endblock %}

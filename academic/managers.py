@@ -79,7 +79,7 @@ class ClassRoomQuerySet(models.QuerySet):
         if hasattr(student_user, 'student_profile'):
             return self.filter(
                 enrollments__student=student_user.student_profile,
-                enrollments__withdrawal_date__isnull=True
+                enrollments__is_active=True
             ).distinct()
         return self.none()
     
@@ -89,7 +89,7 @@ class ClassRoomQuerySet(models.QuerySet):
             children = parent_user.parent_profile.children.all()
             return self.filter(
                 enrollments__student__in=children,
-                enrollments__withdrawal_date__isnull=True
+                enrollments__is_active=True
             ).distinct()
         return self.none()
     

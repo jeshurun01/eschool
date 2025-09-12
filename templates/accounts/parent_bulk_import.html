@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Import en Masse - Parents{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-area {
+        border: 2px dashed #cbd5e0;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+    }
+    .upload-area:hover {
+        border-color: #667eea;
+        background-color: #f7fafc;
+    }
+    .upload-area.dragover {
+        border-color: #667eea;
+        background-color: #ebf8ff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+                    <a href="{% url 'accounts:parent_list' %}" class="hover:text-blue-600">👨‍👩‍👧‍👦 Parents</a>
+                    <span>/</span>
+                    <span class="text-gray-900">📥 Import en Masse</span>
+                </nav>
+                
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                    📥 Import en Masse de Parents
+                </h1>
+                <p class="text-gray-600">Importer plusieurs parents à la fois via un fichier CSV</p>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+            <h2 class="text-blue-800 font-bold mb-3">📋 Instructions</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="font-medium text-blue-800 mb-2">Champs Obligatoires :</h3>
+                    <ul class="text-blue-700 text-sm space-y-1">
+                        <li>• <strong>first_name</strong> - Prénom</li>
+                        <li>• <strong>last_name</strong> - Nom</li>
+                        <li>• <strong>email</strong> - Adresse email (unique)</li>
+                        <li>• <strong>relationship</strong> - FATHER, MOTHER, GUARDIAN, OTHER</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-medium text-blue-800 mb-2">Champs Optionnels :</h3>
+                    <ul class="text-blue-700 text-sm space-y-1">
+                        <li>• <strong>phone</strong> - Numéro de téléphone</li>
+                        <li>• <strong>profession</strong> - Profession</li>
+                        <li>• <strong>workplace</strong> - Lieu de travail</li>
+                        <li>• <strong>password</strong> - Mot de passe (défaut: password123)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Form -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                {% csrf_token %}
+                
+                <div class="upload-area p-8 text-center" id="uploadArea">
+                    <div class="mb-4">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    
+                    <div class="text-lg font-medium text-gray-900 mb-2">
+                        Glissez-déposez votre fichier CSV ici
+                    </div>
+                    <div class="text-sm text-gray-600 mb-4">
+                        ou cliquez pour sélectionner un fichier
+                    </div>
+                    
+                    <input type="file" 
+                           name="csv_file" 
+                           accept=".csv"
+                           class="hidden" 
+                           id="csvFile"
+                           required>
+                    
+                    <button type="button" 
+                            onclick="document.getElementById('csvFile').click()"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200">
+                        📁 Sélectionner un Fichier
+                    </button>
+                </div>
+                
+                <div id="fileInfo" class="mt-4 hidden">
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <svg class="h-5 w-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span class="text-green-800 font-medium">Fichier sélectionné :</span>
+                            <span id="fileName" class="text-green-700 ml-2"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex justify-end space-x-3">
+                    <a href="{% url 'accounts:parent_list' %}" 
+                       class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200">
+                        ❌ Annuler
+                    </a>
+                    
+                    <button type="submit" 
+                            id="submitBtn"
+                            disabled
+                            class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200">
+                        📥 Importer les Parents
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sample CSV -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">📄 Exemple de Fichier CSV</h2>
+            
+            <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                <div class="text-sm font-mono text-gray-800 overflow-x-auto">
+                    <div class="whitespace-nowrap">first_name,last_name,email,relationship,phone,profession,workplace</div>
+                    <div class="whitespace-nowrap">Jean,Dupont,jean.dupont@email.com,FATHER,0123456789,Ingénieur,Tech Corp</div>
+                    <div class="whitespace-nowrap">Marie,Martin,marie.martin@email.com,MOTHER,0987654321,Médecin,Hôpital Central</div>
+                    <div class="whitespace-nowrap">Pierre,Durand,pierre.durand@email.com,GUARDIAN,0112233445,Retraité,</div>
+                </div>
+            </div>
+            
+            <a href="data:text/csv;charset=utf-8,first_name%2Clast_name%2Cemail%2Crelationship%2Cphone%2Cprofession%2Cworkplace%0AJean%2CDupont%2Cjean.dupont%40email.com%2CFATHER%2C0123456789%2CIng%C3%A9nieur%2CTech%20Corp%0AMarie%2CMartin%2Cmarie.martin%40email.com%2CMOTHER%2C0987654321%2CM%C3%A9decin%2CH%C3%B4pital%20Central%0APierre%2CDurand%2Cpierre.durand%40email.com%2CGUARDIAN%2C0112233445%2CRetraité%2C" 
+               download="exemple_parents.csv"
+               class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
+                💾 Télécharger l'Exemple
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+// File upload handling
+const csvFile = document.getElementById('csvFile');
+const uploadArea = document.getElementById('uploadArea');
+const fileInfo = document.getElementById('fileInfo');
+const fileName = document.getElementById('fileName');
+const submitBtn = document.getElementById('submitBtn');
+
+// Click to select file
+uploadArea.addEventListener('click', () => {
+    csvFile.click();
+});
+
+// File selection
+csvFile.addEventListener('change', (e) => {
+    handleFileSelect(e.target.files[0]);
+});
+
+// Drag and drop
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+});
+
+uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        csvFile.files = files;
+        handleFileSelect(files[0]);
+    }
+});
+
+function handleFileSelect(file) {
+    if (file) {
+        if (!file.name.endsWith('.csv')) {
+            alert('Veuillez sélectionner un fichier CSV.');
+            return;
+        }
+        
+        fileName.textContent = file.name;
+        fileInfo.classList.remove('hidden');
+        submitBtn.disabled = false;
+    }
+}
+
+// Form submission with loading state
+document.getElementById('uploadForm').addEventListener('submit', function() {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '⏳ Import en cours...';
+});
+</script>
+{% endblock %}

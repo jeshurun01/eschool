@@ -4,6 +4,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 from django.core.paginator import Paginator
+from django.utils import timezone
+from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 
 # Import RBAC
 from core.decorators.permissions import (
@@ -11,33 +14,590 @@ from core.decorators.permissions import (
     admin_required, parent_or_student_required
 )
 
-from .models import Payment, Invoice, PaymentMethod
+from .models import Payment, Invoice, PaymentMethod, FeeType, FeeStructure, InvoiceItem
+from academic.models import Level, AcademicYear, Enrollment
+from accounts.models import Student
 
 # Vues temporaires (placeholder) - À implémenter plus tard
 
 @staff_required  # Seul le personnel financier/admin peut gérer les types de frais
 def fee_type_list(request):
-    return HttpResponse("Liste des types de frais - En cours de développement")
+    """Liste des types de frais et structures de frais"""
+    fee_types = FeeType.objects.all().order_by('name')
+    
+    # Organiser les structures par type de frais et compter
+    for fee_type in fee_types:
+        fee_type.fee_structures_list = FeeStructure.objects.filter(
+            fee_type=fee_type
+        ).select_related('level', 'academic_year').order_by('level__name')
+        fee_type.structures_count = fee_type.fee_structures_list.count()
+    
+    # Statistiques pour les filtres
+    total_mandatory = sum(1 for ft in fee_types if ft.is_mandatory)
+    total_recurring = sum(1 for ft in fee_types if ft.is_recurring)
+    
+    context = {
+        'fee_types': fee_types,
+        'current_academic_year': AcademicYear.objects.filter(is_current=True).first(),
+        'total_mandatory': total_mandatory,
+        'total_recurring': total_recurring,
+    }
+    
+    return render(request, 'finance/fee_type_list.html', context)
 
 @staff_required
 def fee_type_create(request):
-    return HttpResponse("Créer un type de frais - En cours de développement")
+    """Créer un nouveau type de frais"""
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description', '')
+        is_recurring = request.POST.get('is_recurring') == 'on'
+        is_mandatory = request.POST.get('is_mandatory') == 'on'
+        
+        if name:
+            try:
+                fee_type = FeeType.objects.create(
+                    name=name,
+                    description=description,
+                    is_recurring=is_recurring,
+                    is_mandatory=is_mandatory
+                )
+                messages.success(request, f'Type de frais "{fee_type.name}" créé avec succès.')
+                return redirect('finance:fee_type_list')
+            except Exception as e:
+                messages.error(request, f'Erreur lors de la création: {str(e)}')
+        else:
+            messages.error(request, 'Le nom du type de frais est obligatoire.')
+    
+    return render(request, 'finance/fee_type_create.html')
+
+@staff_required
+def fee_structure_list(request):
+    """Liste des structures tarifaires"""
+    fee_structures = FeeStructure.objects.select_related(
+        'fee_type', 'level', 'academic_year'
+    ).order_by('fee_type__name', 'academic_year__name', 'level__name')
+    
+    context = {
+        'fee_structures': fee_structures,
+        'fee_types': FeeType.objects.all().order_by('name'),
+        'levels': Level.objects.all().order_by('name'),
+        'academic_years': AcademicYear.objects.all().order_by('-is_current', 'name'),
+    }
+    
+    return render(request, 'finance/fee_structure_list.html', context)
+
+@staff_required
+def fee_structure_create(request, fee_type_id=None):
+    """Créer une nouvelle structure tarifaire"""
+    if request.method == 'POST':
+        fee_type_id = request.POST.get('fee_type')
+        level_id = request.POST.get('level')
+        academic_year_id = request.POST.get('academic_year')
+        amount = request.POST.get('amount')
+        due_date_str = request.POST.get('due_date')
+        
+        try:
+            # Validation
+            fee_type = FeeType.objects.get(id=fee_type_id)
+            level = Level.objects.get(id=level_id)
+            academic_year = AcademicYear.objects.get(id=academic_year_id)
+            
+            # Vérifier si une structure similaire existe déjà
+            existing = FeeStructure.objects.filter(
+                fee_type=fee_type,
+                level=level,
+                academic_year=academic_year
+            ).first()
+            
+            if existing:
+                messages.error(request, f'Une structure tarifaire existe déjà pour {fee_type.name} - {level.name} ({academic_year.name})')
+                return redirect('finance:fee_structure_create')
+            
+            # Date d'échéance optionnelle
+            due_date = None
+            if due_date_str:
+                from datetime import datetime
+                due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+            
+            # Créer la structure
+            fee_structure = FeeStructure.objects.create(
+                fee_type=fee_type,
+                level=level,
+                academic_year=academic_year,
+                amount=amount,
+                due_date=due_date
+            )
+            
+            messages.success(request, f'Structure tarifaire créée: {fee_structure}')
+            return redirect('finance:fee_type_list')
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la création: {str(e)}')
+    
+    # Pré-sélectionner le type de frais si fourni
+    selected_fee_type = None
+    if fee_type_id:
+        try:
+            selected_fee_type = FeeType.objects.get(id=fee_type_id)
+        except FeeType.DoesNotExist:
+            pass
+    
+    context = {
+        'fee_types': FeeType.objects.all().order_by('name'),
+        'levels': Level.objects.all().order_by('name'),
+        'academic_years': AcademicYear.objects.all().order_by('-is_current', 'name'),
+        'selected_fee_type': selected_fee_type,
+        'current_academic_year': AcademicYear.objects.filter(is_current=True).first(),
+    }
+    
+    return render(request, 'finance/fee_structure_create.html', context)
 
 @parent_or_student_required  # Parents et élèves peuvent voir leurs factures
 def invoice_list(request):
-    return HttpResponse("Liste des factures - En cours de développement")
+    """Liste des factures avec filtres et pagination"""
+    # Gestion de la modification en lot
+    if request.method == 'POST' and request.user.is_staff:
+        print(f"[DEBUG] POST request reçu par {request.user}")  # Debug
+        print(f"[DEBUG] POST data: {request.POST}")  # Debug
+        
+        action = request.POST.get('action')
+        selected_invoices = request.POST.getlist('selected_invoices')
+        
+        print(f"[DEBUG] Action: {action}")  # Debug
+        print(f"[DEBUG] Selected invoices: {selected_invoices}")  # Debug
+        
+        if action == 'bulk_status_change' and selected_invoices:
+            new_status = request.POST.get('new_status')
+            print(f"[DEBUG] New status: {new_status}")  # Debug
+            
+            if new_status and new_status in dict(Invoice.STATUS_CHOICES):
+                try:
+                    # Filtrer les factures selon les permissions RBAC
+                    invoices_to_update = Invoice.objects.filter(
+                        id__in=selected_invoices
+                    )
+                    print(f"[DEBUG] Factures trouvées: {invoices_to_update.count()}")  # Debug
+                    
+                    updated_count = invoices_to_update.update(status=new_status)
+                    print(f"[DEBUG] Factures mises à jour: {updated_count}")  # Debug
+                    
+                    status_display = dict(Invoice.STATUS_CHOICES)[new_status]
+                    messages.success(
+                        request, 
+                        f'{updated_count} facture(s) ont été modifiée(s) au statut "{status_display}".'
+                    )
+                    print(f"[DEBUG] Message de succès ajouté")  # Debug
+                except Exception as e:
+                    print(f"[DEBUG] Erreur: {e}")  # Debug
+                    messages.error(request, f'Erreur lors de la modification: {str(e)}')
+            else:
+                print(f"[DEBUG] Statut invalide: {new_status}")  # Debug
+                messages.error(request, 'Statut invalide sélectionné.')
+        elif action == 'bulk_delete' and selected_invoices and request.user.is_superuser:
+            try:
+                invoices_to_delete = Invoice.objects.filter(
+                    id__in=selected_invoices
+                )
+                deleted_count = invoices_to_delete.count()
+                invoices_to_delete.delete()
+                
+                messages.success(request, f'{deleted_count} facture(s) ont été supprimée(s).')
+            except Exception as e:
+                messages.error(request, f'Erreur lors de la suppression: {str(e)}')
+        else:
+            print(f"[DEBUG] Aucune action effectuée - Action: {action}, Selected: {len(selected_invoices) if selected_invoices else 0}")  # Debug
+        
+        print(f"[DEBUG] Redirection vers invoice_list")  # Debug
+        return redirect('finance:invoice_list')
+    
+    # Utiliser le manager RBAC pour filtrer selon le rôle
+    invoices = Invoice.objects.for_role(request.user).select_related(
+        'student__user', 'parent__user'
+    ).prefetch_related('items__fee_type')
+    
+    # Filtres
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    student_filter = request.GET.get('student', '')
+    
+    if search_query:
+        invoices = invoices.filter(
+            Q(invoice_number__icontains=search_query) |
+            Q(student__user__first_name__icontains=search_query) |
+            Q(student__user__last_name__icontains=search_query) |
+            Q(notes__icontains=search_query)
+        )
+    
+    if status_filter:
+        invoices = invoices.filter(status=status_filter)
+    
+    if student_filter and (hasattr(request.user, 'teacher_profile') or request.user.is_staff):
+        invoices = invoices.filter(student_id=student_filter)
+    
+    # Statistiques pour le dashboard
+    total_invoices = invoices.count()
+    paid_invoices = invoices.filter(status='PAID').count()
+    pending_invoices = invoices.filter(status='SENT').count()
+    overdue_invoices = invoices.filter(status='OVERDUE').count()
+    
+    # Montants
+    from django.db.models import Sum
+    total_amount = invoices.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    paid_amount = invoices.filter(status='PAID').aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    pending_amount = invoices.filter(status__in=['SENT', 'OVERDUE']).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    
+    # Pagination
+    paginator = Paginator(invoices.order_by('-issue_date'), 15)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Pour les enseignants/staff : liste des étudiants pour le filtre
+    students = None
+    if hasattr(request.user, 'teacher_profile') or request.user.is_staff:
+        from accounts.models import Student
+        students = Student.objects.filter(
+            invoices__isnull=False
+        ).distinct().select_related('user').order_by('user__first_name')
+    
+    context = {
+        'page_obj': page_obj,
+        'invoices': page_obj.object_list,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'student_filter': student_filter,
+        'students': students,
+        'stats': {
+            'total_invoices': total_invoices,
+            'paid_invoices': paid_invoices,
+            'pending_invoices': pending_invoices,
+            'overdue_invoices': overdue_invoices,
+            'total_amount': total_amount,
+            'paid_amount': paid_amount,
+            'pending_amount': pending_amount,
+        },
+        'status_choices': Invoice.STATUS_CHOICES,
+    }
+    
+    return render(request, 'finance/invoice_list.html', context)
 
 @staff_required  # Seul le personnel financier peut créer des factures
+@admin_required
 def invoice_create(request):
-    return HttpResponse("Créer une facture - En cours de développement")
+    """Créer une nouvelle facture"""
+    if request.method == 'POST':
+        # Récupérer les données du formulaire
+        student_id = request.POST.get('student')
+        due_date_str = request.POST.get('due_date')
+        discount_str = request.POST.get('discount', '0')
+        notes = request.POST.get('notes', '')
+        
+        # Données des éléments de facture
+        fee_types = request.POST.getlist('fee_type')
+        descriptions = request.POST.getlist('description')
+        quantities = request.POST.getlist('quantity')
+        unit_prices = request.POST.getlist('unit_price')
+        
+        try:
+            # Validation des données
+            if not student_id:
+                messages.error(request, 'Veuillez sélectionner un élève.')
+                return redirect('finance:invoice_create')
+            
+            student = Student.objects.get(id=student_id)
+            
+            # Date d'échéance
+            if due_date_str:
+                from datetime import datetime
+                due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+            else:
+                due_date = (timezone.now() + timedelta(days=30)).date()
+            
+            # Récupérer le parent responsable
+            parent = student.parents.first()
+            
+            # Créer la facture
+            invoice = Invoice.objects.create(
+                student=student,
+                parent=parent,
+                due_date=due_date,
+                discount=Decimal(discount_str) if discount_str else Decimal('0.00'),
+                notes=notes,
+                status='DRAFT'
+            )
+            
+            # Créer les éléments de facture
+            subtotal = Decimal('0.00')
+            for i in range(len(fee_types)):
+                if fee_types[i] and descriptions[i] and quantities[i] and unit_prices[i]:
+                    try:
+                        fee_type = FeeType.objects.get(id=int(fee_types[i]))
+                        quantity = Decimal(quantities[i])
+                        unit_price = Decimal(unit_prices[i])
+                        
+                        item = InvoiceItem.objects.create(
+                            invoice=invoice,
+                            fee_type=fee_type,
+                            description=descriptions[i],
+                            quantity=quantity,
+                            unit_price=unit_price
+                        )
+                        subtotal += item.total
+                    except (ValueError, FeeType.DoesNotExist):
+                        pass
+            
+            # Mettre à jour les totaux de la facture
+            invoice.subtotal = subtotal
+            invoice.total_amount = subtotal - invoice.discount
+            invoice.save()
+            
+            messages.success(request, f'Facture {invoice.invoice_number} créée avec succès.')
+            return redirect('finance:invoice_detail', invoice_id=invoice.id)
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la création: {str(e)}')
+    
+    # GET request - afficher le formulaire
+    context = {
+        'students': Student.objects.select_related('user').all(),
+        'fee_types': FeeType.objects.all(),
+        'default_due_date': (timezone.now() + timedelta(days=30)).strftime('%Y-%m-%d'),
+    }
+    
+    return render(request, 'finance/invoice_create.html', context)
 
 @parent_or_student_required
+@login_required
 def invoice_detail(request, invoice_id):
-    return HttpResponse(f"Détails de la facture {invoice_id} - En cours de développement")
+    """Détails d'une facture avec RBAC"""
+    # Récupérer la facture avec filtrage RBAC
+    invoice = get_object_or_404(
+        Invoice.objects.for_role(request.user).select_related(
+            'student__user', 'parent__user'
+        ).prefetch_related('items__fee_type'),
+        id=invoice_id
+    )
+    
+    # Récupérer les paiements liés à cette facture
+    payments = invoice.payments.select_related('payment_method').all()
+    
+    context = {
+        'invoice': invoice,
+        'payments': payments,
+        'can_edit': request.user.role in ['ADMIN', 'SUPER_ADMIN'],
+        'can_view_payments': True,  # Tous les utilisateurs autorisés peuvent voir les paiements
+        'total_paid': sum(payment.amount for payment in payments),
+        'remaining_amount': invoice.total_amount - sum(payment.amount for payment in payments),
+    }
+    
+    return render(request, 'finance/invoice_detail.html', context)
 
-@staff_required
+@admin_required
 def invoice_edit(request, invoice_id):
-    return HttpResponse(f"Modifier la facture {invoice_id} - En cours de développement")
+    """Modifier une facture avec RBAC"""
+    # Récupérer la facture avec filtrage RBAC
+    invoice = get_object_or_404(
+        Invoice.objects.for_role(request.user).select_related(
+            'student__user', 'parent__user'
+        ).prefetch_related('items__fee_type'),
+        id=invoice_id
+    )
+    
+    if request.method == 'POST':
+        # Traitement du formulaire
+        status = request.POST.get('status')
+        due_date_str = request.POST.get('due_date')
+        discount_str = request.POST.get('discount', '0')
+        notes = request.POST.get('notes', '')
+        
+        try:
+            # Validation et mise à jour
+            if status and status in dict(Invoice.STATUS_CHOICES):
+                invoice.status = status
+            
+            if due_date_str:
+                from datetime import datetime
+                try:
+                    invoice.due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    messages.error(request, 'Format de date invalide. Utilisez le format YYYY-MM-DD.')
+                    return render(request, 'finance/invoice_edit.html', {
+                        'invoice': invoice,
+                        'status_choices': Invoice.STATUS_CHOICES,
+                        'fee_types': FeeType.objects.all(),
+                    })
+            
+            if discount_str and discount_str.strip():
+                try:
+                    # Fonction de nettoyage avancée pour les valeurs numériques
+                    def clean_numeric_string(value):
+                        """Nettoie une chaîne pour la conversion en Decimal"""
+                        if not value or not str(value).strip():
+                            return "0"
+                        
+                        # Convertir en string et nettoyer
+                        clean = str(value).strip()
+                        
+                        # Supprimer les caractères non numériques sauf point, virgule et tiret
+                        import re
+                        clean = re.sub(r'[^\d.,\-]', '', clean)
+                        
+                        # Gérer les séparateurs de milliers (ex: 1,234.56 ou 1.234,56)
+                        if ',' in clean and '.' in clean:
+                            # Détecter le format (US: 1,234.56 vs EU: 1.234,56)
+                            last_comma = clean.rfind(',')
+                            last_dot = clean.rfind('.')
+                            if last_dot > last_comma:
+                                # Format US: 1,234.56
+                                clean = clean.replace(',', '')
+                            else:
+                                # Format EU: 1.234,56
+                                clean = clean.replace('.', '').replace(',', '.')
+                        elif ',' in clean:
+                            # Détecter si c'est un séparateur décimal ou de milliers
+                            parts = clean.split(',')
+                            if len(parts) == 2 and len(parts[1]) <= 2:
+                                # Probablement décimal: 100,50
+                                clean = clean.replace(',', '.')
+                            else:
+                                # Probablement milliers: 1,234
+                                clean = clean.replace(',', '')
+                        
+                        # Valider qu'il ne reste qu'un seul point décimal
+                        if clean.count('.') > 1:
+                            raise ValueError("Format numérique invalide")
+                        
+                        return clean
+                    
+                    discount_str_clean = clean_numeric_string(discount_str)
+                    discount = Decimal(discount_str_clean)
+                    
+                    if discount >= 0 and discount <= invoice.subtotal:
+                        invoice.discount = discount
+                        invoice.total_amount = invoice.subtotal - discount
+                    else:
+                        messages.error(request, f'La remise doit être entre 0 et {invoice.subtotal}.')
+                        return render(request, 'finance/invoice_edit.html', {
+                            'invoice': invoice,
+                            'status_choices': Invoice.STATUS_CHOICES,
+                            'fee_types': FeeType.objects.all(),
+                        })
+                except (ValueError, InvalidOperation) as e:
+                    messages.error(request, f'Valeur de remise invalide: "{discount_str}". Utilisez un nombre valide (ex: 100.50).')
+                    return render(request, 'finance/invoice_edit.html', {
+                        'invoice': invoice,
+                        'status_choices': Invoice.STATUS_CHOICES,
+                        'fee_types': FeeType.objects.all(),
+                    })
+            
+            invoice.notes = notes
+            invoice.save()
+            
+            # Traitement des éléments de facture
+            item_ids = request.POST.getlist('item_id')
+            item_descriptions = request.POST.getlist('item_description')
+            item_quantities = request.POST.getlist('item_quantity')
+            item_unit_prices = request.POST.getlist('item_unit_price')
+            
+            # Mise à jour des éléments existants
+            for i, item_id in enumerate(item_ids):
+                if item_id and item_id != 'new':
+                    try:
+                        item = InvoiceItem.objects.get(id=int(item_id), invoice=invoice)
+                        if i < len(item_descriptions):
+                            item.description = item_descriptions[i]
+                        if i < len(item_quantities):
+                            try:
+                                def clean_numeric_string(value):
+                                    """Nettoie une chaîne pour la conversion en Decimal"""
+                                    if not value or not str(value).strip():
+                                        return "0"
+                                    
+                                    import re
+                                    clean = str(value).strip()
+                                    clean = re.sub(r'[^\d.,\-]', '', clean)
+                                    
+                                    if ',' in clean and '.' in clean:
+                                        last_comma = clean.rfind(',')
+                                        last_dot = clean.rfind('.')
+                                        if last_dot > last_comma:
+                                            clean = clean.replace(',', '')
+                                        else:
+                                            clean = clean.replace('.', '').replace(',', '.')
+                                    elif ',' in clean:
+                                        parts = clean.split(',')
+                                        if len(parts) == 2 and len(parts[1]) <= 2:
+                                            clean = clean.replace(',', '.')
+                                        else:
+                                            clean = clean.replace(',', '')
+                                    
+                                    if clean.count('.') > 1:
+                                        raise ValueError("Format numérique invalide")
+                                    
+                                    return clean
+                                
+                                quantity_str = clean_numeric_string(item_quantities[i])
+                                item.quantity = Decimal(quantity_str)
+                            except (ValueError, InvalidOperation):
+                                messages.error(request, f'Quantité invalide pour l\'élément {item.description}: "{item_quantities[i]}". Utilisez un nombre valide.')
+                                continue
+                        if i < len(item_unit_prices):
+                            try:
+                                def clean_numeric_string(value):
+                                    """Nettoie une chaîne pour la conversion en Decimal"""
+                                    if not value or not str(value).strip():
+                                        return "0"
+                                    
+                                    import re
+                                    clean = str(value).strip()
+                                    clean = re.sub(r'[^\d.,\-]', '', clean)
+                                    
+                                    if ',' in clean and '.' in clean:
+                                        last_comma = clean.rfind(',')
+                                        last_dot = clean.rfind('.')
+                                        if last_dot > last_comma:
+                                            clean = clean.replace(',', '')
+                                        else:
+                                            clean = clean.replace('.', '').replace(',', '.')
+                                    elif ',' in clean:
+                                        parts = clean.split(',')
+                                        if len(parts) == 2 and len(parts[1]) <= 2:
+                                            clean = clean.replace(',', '.')
+                                        else:
+                                            clean = clean.replace(',', '')
+                                    
+                                    if clean.count('.') > 1:
+                                        raise ValueError("Format numérique invalide")
+                                    
+                                    return clean
+                                
+                                price_str = clean_numeric_string(item_unit_prices[i])
+                                item.unit_price = Decimal(price_str)
+                            except (ValueError, InvalidOperation):
+                                messages.error(request, f'Prix unitaire invalide pour l\'élément {item.description}: "{item_unit_prices[i]}". Utilisez un nombre valide.')
+                                continue
+                        item.save()  # Le total sera calculé automatiquement
+                    except (ValueError, InvoiceItem.DoesNotExist):
+                        pass
+            
+            # Recalculer les totaux
+            invoice.subtotal = sum(item.total for item in invoice.items.all())
+            invoice.total_amount = invoice.subtotal - invoice.discount
+            invoice.save()
+            
+            messages.success(request, 'Facture mise à jour avec succès.')
+            return redirect('finance:invoice_detail', invoice_id=invoice.id)
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la mise à jour: {str(e)}')
+    
+    context = {
+        'invoice': invoice,
+        'status_choices': Invoice.STATUS_CHOICES,
+        'fee_types': FeeType.objects.all(),
+    }
+    
+    return render(request, 'finance/invoice_edit.html', context)
 
 @parent_or_student_required
 def invoice_pdf(request, invoice_id):
@@ -142,5 +702,144 @@ def expense_report(request):
 def report_list(request):
     return HttpResponse("Liste des rapports - En cours de développement")
 
+@admin_required
 def invoice_generate(request):
-    return HttpResponse("Générer des factures - En cours de développement")
+    """Générer des factures automatiquement"""
+    from django.db.models import Q
+    from decimal import Decimal
+    from datetime import datetime, timedelta
+    
+    if request.method == 'POST':
+        # Récupérer les paramètres du formulaire
+        fee_type_id = request.POST.get('fee_type')
+        level_id = request.POST.get('level')
+        academic_year_id = request.POST.get('academic_year')
+        due_date_str = request.POST.get('due_date')
+        
+        # Validation
+        if not fee_type_id or not academic_year_id:
+            messages.error(request, 'Le type de frais et l\'année académique sont obligatoires.')
+            return redirect('finance:invoice_generate')
+        
+        try:
+            fee_type = FeeType.objects.get(id=fee_type_id)
+            academic_year = AcademicYear.objects.get(id=academic_year_id)
+            
+            # Date d'échéance
+            if due_date_str:
+                due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+            else:
+                due_date = (timezone.now() + timedelta(days=30)).date()
+            
+            # Construire la requête pour les élèves
+            students_query = Student.objects.select_related('user').filter(
+                enrollments__academic_year=academic_year,
+                enrollments__is_active=True
+            )
+            
+            # Filtrer par niveau si spécifié
+            if level_id:
+                level = Level.objects.get(id=level_id)
+                students_query = students_query.filter(
+                    enrollments__classroom__level=level
+                )
+            
+            students = students_query.distinct()
+            
+            if not students.exists():
+                messages.warning(request, 'Aucun élève trouvé avec les critères spécifiés.')
+                return redirect('finance:invoice_generate')
+            
+            # Compter les factures créées
+            created_count = 0
+            errors = []
+            
+            for student in students:
+                try:
+                    # Récupérer la structure de frais pour le niveau de l'élève
+                    enrollment = student.enrollments.filter(
+                        academic_year=academic_year,
+                        is_active=True
+                    ).first()
+                    
+                    if not enrollment:
+                        errors.append(f"Pas d'inscription active pour {student.user.get_full_name()}")
+                        continue
+                    
+                    fee_structure = FeeStructure.objects.filter(
+                        fee_type=fee_type,
+                        level=enrollment.classroom.level,
+                        academic_year=academic_year
+                    ).first()
+                    
+                    if not fee_structure:
+                        errors.append(f"Pas de structure de frais pour {fee_type.name} - {enrollment.classroom.level.name}")
+                        continue
+                    
+                    # Vérifier si une facture similaire existe déjà
+                    existing_invoice = Invoice.objects.filter(
+                        student=student,
+                        items__fee_type=fee_type,
+                        status__in=['DRAFT', 'PENDING']
+                    ).first()
+                    
+                    if existing_invoice:
+                        errors.append(f"Facture en cours déjà existante pour {student.user.get_full_name()}")
+                        continue
+                    
+                    # Récupérer le parent responsable (premier parent)
+                    parent = student.parents.first()
+                    
+                    # Créer la facture
+                    invoice = Invoice.objects.create(
+                        student=student,
+                        parent=parent,
+                        due_date=due_date,
+                        status='DRAFT'
+                    )
+                    
+                    # Créer l'élément de facture
+                    InvoiceItem.objects.create(
+                        invoice=invoice,
+                        fee_type=fee_type,
+                        description=f"{fee_type.name} - {enrollment.classroom.level.name}",
+                        quantity=1,
+                        unit_price=fee_structure.amount
+                    )
+                    
+                    # Mettre à jour les totaux de la facture
+                    invoice.subtotal = fee_structure.amount
+                    invoice.total_amount = fee_structure.amount
+                    invoice.save()
+                    
+                    created_count += 1
+                    
+                except Exception as e:
+                    errors.append(f"Erreur pour {student.user.get_full_name()}: {str(e)}")
+            
+            # Messages de résultat
+            if created_count > 0:
+                messages.success(request, f'{created_count} facture(s) créée(s) avec succès.')
+            
+            if errors:
+                for error in errors[:5]:  # Limiter à 5 erreurs affichées
+                    messages.warning(request, error)
+                if len(errors) > 5:
+                    messages.info(request, f"... et {len(errors) - 5} autres erreurs.")
+            
+            return redirect('finance:invoice_list')
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la génération: {str(e)}')
+            return redirect('finance:invoice_generate')
+    
+    # GET request - afficher le formulaire
+    context = {
+        'fee_types': FeeType.objects.all(),
+        'levels': Level.objects.all(),
+        'academic_years': AcademicYear.objects.all(),
+        'current_academic_year': AcademicYear.objects.filter(is_current=True).first(),
+        'default_due_date': (timezone.now() + timedelta(days=30)).strftime('%Y-%m-%d'),
+    }
+    
+    return render(request, 'finance/invoice_generate.html', context)

@@ -7,6 +7,9 @@ urlpatterns = [
     # Gestion des types de frais
     path('fee-types/', views.fee_type_list, name='fee_type_list'),
     path('fee-types/create/', views.fee_type_create, name='fee_type_create'),
+    path('fee-structures/', views.fee_structure_list, name='fee_structure_list'),
+    path('fee-structures/create/', views.fee_structure_create, name='fee_structure_create'),
+    path('fee-structures/create/<int:fee_type_id>/', views.fee_structure_create, name='fee_structure_create_for_type'),
     
     # Gestion des factures
     path('invoices/', views.invoice_list, name='invoice_list'),

@@ -1,420 +1,251 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ classroom.name }} - Détails Classe - eSchool{% endblock %}
+{% block title %}{{ classroom.name }} - Détails Classe{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
-    <!-- En-tête amélioré avec design moderne -->
-    <div class="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 text-white overflow-hidden">
-        <!-- Pattern de fond décoratif -->
-        <div class="absolute inset-0 bg-black opacity-10"></div>
-        <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="%23ffffff" fill-opacity="0.05"><circle cx="7" cy="7" r="7"/></g></svg>');"></div>
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <!-- Breadcrumb amélioré -->
-            <nav class="flex mb-6" aria-label="Breadcrumb">
-                <ol class="inline-flex items-center space-x-1 md:space-x-3">
-                    <li class="inline-flex items-center">
-                        <a href="{% url 'academic:classroom_list' %}" class="text-blue-200 hover:text-white transition-all duration-200 hover:scale-105">
-                            <i class="fas fa-chalkboard-teacher mr-2 text-lg"></i>Classes
-                        </a>
-                    </li>
-                    <li>
-                        <div class="flex items-center">
-                            <i class="fas fa-chevron-right text-blue-300 mx-3 text-sm"></i>
-                            <span class="text-blue-100 font-medium">{{ classroom.name }}</span>
-                        </div>
-                    </li>
-                </ol>
+        <!-- En-tête de la page -->
+        <div class="mb-8">
+            <!-- Breadcrumb -->
+            <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+                <a href="{% url 'academic:classroom_list' %}" class="hover:text-gray-900 transition-colors">
+                    🏛️ Classes
+                </a>
+                <span>•</span>
+                <span class="text-gray-900 font-medium">{{ classroom.name }}</span>
             </nav>
             
-            <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
-                <div class="flex-1">
-                    <!-- Badge de statut -->
-                    <div class="flex items-center mb-4">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white bg-opacity-20 text-white border border-white border-opacity-30">
-                            <i class="fas fa-graduation-cap mr-2"></i>
-                            Classe Active
-                        </span>
-                        {% if classroom.head_teacher %}
-                        <span class="ml-3 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500 bg-opacity-90 text-white">
-                            <i class="fas fa-user-tie mr-2"></i>
-                            Prof. Principal Assigné
-                        </span>
-                        {% endif %}
-                    </div>
-                    
-                    <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
-                        {{ classroom.name }}
-                    </h1>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-blue-100">
-                        <div class="flex items-center bg-white bg-opacity-10 rounded-lg px-4 py-3 backdrop-blur-sm">
-                            <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mr-3">
-                                <i class="fas fa-layer-group text-white"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs text-blue-200">Niveau</p>
-                                <p class="font-semibold">{{ classroom.level.name }}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-center bg-white bg-opacity-10 rounded-lg px-4 py-3 backdrop-blur-sm">
-                            <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mr-3">
-                                <i class="fas fa-calendar text-white"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs text-blue-200">Année</p>
-                                <p class="font-semibold">{{ classroom.academic_year.name }}</p>
-                            </div>
-                        </div>
-                        
-                        {% if classroom.room_number %}
-                        <div class="flex items-center bg-white bg-opacity-10 rounded-lg px-4 py-3 backdrop-blur-sm">
-                            <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mr-3">
-                                <i class="fas fa-door-open text-white"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs text-blue-200">Salle</p>
-                                <p class="font-semibold">{{ classroom.room_number }}</p>
-                            </div>
-                        </div>
-                        {% endif %}
+            <!-- Titre et actions -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">{{ classroom.name }}</h1>
+                    <div class="flex flex-wrap gap-4 mt-2 text-sm text-gray-600">
+                        <span>📚 {{ classroom.level.name }}</span>
+                        <span>📅 {{ classroom.academic_year.name }}</span>
+                        {% if classroom.room_number %}<span>🚪 Salle {{ classroom.room_number }}</span>{% endif %}
+                        {% if classroom.head_teacher %}<span>👨‍🏫 {{ classroom.head_teacher.first_name }} {{ classroom.head_teacher.last_name }}</span>{% endif %}
                     </div>
                 </div>
                 
                 {% if user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
-                <div class="flex flex-col sm:flex-row gap-3">
+                <div class="flex gap-2">
                     <a href="{% url 'academic:classroom_edit' classroom.pk %}" 
-                       class="group bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-xl transition-all duration-200 flex items-center backdrop-blur-sm border border-white border-opacity-30 hover:scale-105 hover:shadow-lg">
-                        <i class="fas fa-edit mr-2 group-hover:rotate-12 transition-transform"></i>
-                        Modifier
+                       class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors">
+                        ✏️ Modifier
                     </a>
                     <a href="{% url 'academic:enrollment_manage' classroom.pk %}" 
-                       class="group bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl transition-all duration-200 flex items-center shadow-lg hover:scale-105 hover:shadow-xl">
-                        <i class="fas fa-users mr-2 group-hover:scale-110 transition-transform"></i>
-                        Gestion Élèves
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                        👥 Gestion Élèves
                     </a>
                 </div>
                 {% endif %}
-        </div>
-    </div>
-
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        <!-- Statistiques améliorées avec animations -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 -mt-16 relative z-10">
-            <!-- Élèves inscrits -->
-            <div class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 p-6 border border-gray-100 hover:scale-105">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                            <i class="fas fa-users text-white text-2xl"></i>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Élèves inscrits</dt>
-                            <dd class="text-3xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{{ stats.total_students }}</dd>
-                            <dd class="text-xs text-gray-400">sur {{ classroom.capacity }} places</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Taux d'occupation -->
-            <div class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 p-6 border border-gray-100 hover:scale-105">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                            <i class="fas fa-chart-pie text-white text-2xl"></i>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Taux d'occupation</dt>
-                            <dd class="text-3xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">{{ stats.capacity_usage }}%</dd>
-                            <dd class="text-xs text-gray-400">de la capacité</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Enseignants -->
-            <div class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 p-6 border border-gray-100 hover:scale-105">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                            <i class="fas fa-chalkboard-teacher text-white text-2xl"></i>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Enseignants</dt>
-                            <dd class="text-3xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">{{ stats.total_teachers }}</dd>
-                            <dd class="text-xs text-gray-400">assignés</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Matières -->
-            <div class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 p-6 border border-gray-100 hover:scale-105">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                            <i class="fas fa-book text-white text-2xl"></i>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Matières</dt>
-                            <dd class="text-3xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors">{{ stats.total_subjects }}</dd>
-                            <dd class="text-xs text-gray-400">enseignées</dd>
-                        </dl>
-                    </div>
-                </div>
             </div>
         </div>
 
-        <!-- Contenu principal avec design moderne -->
+        <!-- Statistiques en grille -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-4 rounded-xl border border-gray-200 hover:shadow-sm transition-shadow">
+                <div class="text-2xl mb-2">👥</div>
+                <div class="text-2xl font-bold text-gray-900">{{ stats.total_students }}</div>
+                <div class="text-sm text-gray-600">Élèves inscrits</div>
+                <div class="text-xs text-gray-500 mt-1">sur {{ classroom.capacity }} places</div>
+            </div>
+            
+            <div class="bg-white p-4 rounded-xl border border-gray-200 hover:shadow-sm transition-shadow">
+                <div class="text-2xl mb-2">📊</div>
+                <div class="text-2xl font-bold text-gray-900">{{ stats.capacity_usage }}%</div>
+                <div class="text-sm text-gray-600">Taux d'occupation</div>
+                <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                    <div class="{% if stats.capacity_usage > 90 %}bg-red-500{% elif stats.capacity_usage > 75 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-1.5 rounded-full" style="width: {{ stats.capacity_usage }}%"></div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded-xl border border-gray-200 hover:shadow-sm transition-shadow">
+                <div class="text-2xl mb-2">👨‍🏫</div>
+                <div class="text-2xl font-bold text-gray-900">{{ stats.total_teachers }}</div>
+                <div class="text-sm text-gray-600">Enseignants</div>
+                <div class="text-xs text-gray-500 mt-1">assignés</div>
+            </div>
+            
+            <div class="bg-white p-4 rounded-xl border border-gray-200 hover:shadow-sm transition-shadow">
+                <div class="text-2xl mb-2">📚</div>
+                <div class="text-2xl font-bold text-gray-900">{{ stats.total_subjects }}</div>
+                <div class="text-sm text-gray-600">Matières</div>
+                <div class="text-xs text-gray-500 mt-1">enseignées</div>
+            </div>
+        </div>
+
+        <!-- Contenu principal -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             <!-- Colonne principale -->
             <div class="lg:col-span-2 space-y-8">
                 
-                <!-- Informations de la classe améliorées -->
-                <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
-                    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5">
-                        <h3 class="text-xl font-bold text-white flex items-center">
-                            <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mr-3">
-                                <i class="fas fa-info-circle text-white"></i>
-                            </div>
-                            Informations de la classe
-                        </h3>
+                <!-- Liste des élèves -->
+                <div class="bg-white rounded-xl border border-gray-200">
+                    <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-semibold text-gray-900">👥 Élèves inscrits</h2>
+                        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">{{ enrollments.count }}</span>
                     </div>
-                    <div class="p-8">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <!-- Professeur principal -->
-                            <div class="space-y-3">
-                                <label class="block text-sm font-semibold text-gray-700 uppercase tracking-wide">Professeur principal</label>
-                                {% if classroom.head_teacher %}
-                                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-                                    <div class="flex items-center">
-                                        <div class="relative">
-                                            <img class="h-12 w-12 rounded-xl object-cover border-2 border-blue-200" 
-                                                 src="{% if classroom.head_teacher.user.avatar %}{{ classroom.head_teacher.user.avatar.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}" 
-                                                 alt="">
-                                            <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-                                        </div>
-                                        <div class="ml-4">
-                                            <p class="text-lg font-semibold text-gray-900">
-                                                {{ classroom.head_teacher.user.first_name }} {{ classroom.head_teacher.user.last_name }}
-                                            </p>
-                                            {% if classroom.head_teacher.specialization %}
-                                            <p class="text-sm text-blue-600 font-medium">{{ classroom.head_teacher.specialization }}</p>
-                                            {% endif %}
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
-                                                <i class="fas fa-star mr-1"></i>Responsable
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% else %}
-                                <div class="bg-gray-50 rounded-xl p-6 border-2 border-dashed border-gray-200 text-center">
-                                    <i class="fas fa-user-slash text-gray-400 text-2xl mb-2"></i>
-                                    <p class="text-gray-600 font-medium">Aucun professeur principal assigné</p>
-                                    <p class="text-sm text-gray-500 mt-1">Un responsable doit être désigné</p>
-                                </div>
-                                {% endif %}
-                            </div>
-                            
-                            <!-- Capacité avec design amélioré -->
-                            <div class="space-y-3">
-                                <label class="block text-sm font-semibold text-gray-700 uppercase tracking-wide">Capacité de la classe</label>
-                                <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
-                                    <div class="flex items-center justify-between mb-3">
-                                        <span class="text-sm font-medium text-gray-700">
-                                            <i class="fas fa-users mr-2 text-green-600"></i>
-                                            {{ stats.total_students }} / {{ classroom.capacity }} élèves
-                                        </span>
-                                        <span class="text-lg font-bold text-gray-900">{{ stats.capacity_usage }}%</span>
-                                    </div>
-                                    <div class="w-full bg-gray-200 rounded-full h-3 relative overflow-hidden">
-                                        <div class="absolute inset-0 bg-gradient-to-r {% if stats.capacity_usage > 90 %}from-red-400 to-red-500{% elif stats.capacity_usage > 75 %}from-yellow-400 to-orange-500{% else %}from-green-400 to-emerald-500{% endif %} rounded-full transition-all duration-500 ease-out"
-                                             style="width: {{ stats.capacity_usage }}%">
-                                            <div class="absolute inset-0 bg-white bg-opacity-20 rounded-full"></div>
-                                        </div>
-                                    </div>
-                                    <div class="flex justify-between text-xs text-gray-600 mt-2">
-                                        <span>0</span>
-                                        <span>{{ classroom.capacity }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Liste des élèves avec design moderne -->
-                <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
-                    <div class="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-5">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-xl font-bold text-white flex items-center">
-                                <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mr-3">
-                                    <i class="fas fa-users text-white"></i>
-                                </div>
-                                Élèves inscrits
-                                <span class="ml-3 bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm">{{ enrollments.count }}</span>
-                            </h3>
-                            {% if user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
-                            <a href="{% url 'academic:enrollment_manage' classroom.pk %}" 
-                               class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium flex items-center">
-                                <i class="fas fa-plus mr-2"></i>Gérer les inscriptions
-                            </a>
-                            {% endif %}
-                        </div>
-                    </div>
+                    
                     <div class="p-6">
                         {% if enrollments %}
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-3">
                                 {% for enrollment in enrollments %}
-                                <div class="group bg-gradient-to-r from-gray-50 to-blue-50 hover:from-blue-50 hover:to-indigo-50 rounded-xl p-4 transition-all duration-200 border border-gray-100 hover:border-blue-200 hover:shadow-lg">
-                                    <div class="flex items-center">
-                                        <div class="relative">
-                                            <img class="h-12 w-12 rounded-xl object-cover border-2 border-gray-200 group-hover:border-blue-300 transition-colors" 
-                                                 src="{% if enrollment.student.user.avatar %}{{ enrollment.student.user.avatar.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}" 
-                                                 alt="">
-                                            <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-                                        </div>
-                                        <div class="ml-4 flex-1 min-w-0">
-                                            <p class="text-base font-semibold text-gray-900 truncate group-hover:text-blue-700 transition-colors">
-                                                {{ enrollment.student.user.first_name }} {{ enrollment.student.user.last_name }}
-                                            </p>
-                                            <p class="text-sm text-gray-600">
-                                                <i class="fas fa-calendar mr-1"></i>
-                                                Inscrit le {{ enrollment.enrollment_date|date:"d/m/Y" }}
-                                            </p>
-                                        </div>
-                                        <div class="flex-shrink-0">
-                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                                                <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                                                Actif
-                                            </span>
-                                        </div>
+                                <div class="flex items-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                                        <span class="text-blue-600 font-semibold text-sm">
+                                            {{ enrollment.student.user.first_name.0 }}{{ enrollment.student.user.last_name.0 }}
+                                        </span>
                                     </div>
+                                    <div class="flex-1">
+                                        <h3 class="font-medium text-gray-900">
+                                            {{ enrollment.student.user.first_name }} {{ enrollment.student.user.last_name }}
+                                        </h3>
+                                        <p class="text-sm text-gray-600">Inscrit le {{ enrollment.enrollment_date|date:"d/m/Y" }}</p>
+                                    </div>
+                                    <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">Actif</span>
                                 </div>
                                 {% endfor %}
                             </div>
                         {% else %}
                             <div class="text-center py-12">
-                                <div class="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                    <i class="fas fa-user-graduate text-gray-400 text-3xl"></i>
-                                </div>
-                                <h4 class="text-xl font-semibold text-gray-700 mb-2">Aucun élève inscrit</h4>
-                                <p class="text-gray-500 mb-6 max-w-md mx-auto">Cette classe n'a pas encore d'élèves inscrits. Commencez par ajouter des élèves pour démarrer l'année scolaire.</p>
+                                <div class="text-6xl mb-4">🎓</div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">Aucun élève inscrit</h3>
+                                <p class="text-gray-600 mb-6">Cette classe n'a pas encore d'élèves inscrits.</p>
                                 {% if user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
                                 <a href="{% url 'academic:enrollment_manage' classroom.pk %}" 
-                                   class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl">
-                                    <i class="fas fa-user-plus mr-2"></i>Inscrire des élèves
+                                   class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                                    ➕ Inscrire des élèves
                                 </a>
                                 {% endif %}
                             </div>
                         {% endif %}
                     </div>
                 </div>
+
+                <!-- Informations détaillées -->
+                <div class="bg-white rounded-xl border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-semibold text-gray-900">📋 Informations détaillées</h2>
+                    </div>
+                    
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Professeur principal -->
+                            <div>
+                                <h3 class="font-medium text-gray-900 mb-3">Professeur principal</h3>
+                                {% if classroom.head_teacher %}
+                                <div class="flex items-center p-3 bg-blue-50 rounded-lg">
+                                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                        <span class="text-blue-600 font-semibold text-sm">
+                                            {{ classroom.head_teacher.user.first_name.0 }}{{ classroom.head_teacher.user.last_name.0 }}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">
+                                            {{ classroom.head_teacher.user.first_name }} {{ classroom.head_teacher.user.last_name }}
+                                        </p>
+                                        {% if classroom.head_teacher.specialization %}
+                                        <p class="text-sm text-gray-600">{{ classroom.head_teacher.specialization }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="text-center p-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                                    <div class="text-3xl mb-2">👤</div>
+                                    <p class="text-gray-600">Aucun professeur principal assigné</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Capacité détaillée -->
+                            <div>
+                                <h3 class="font-medium text-gray-900 mb-3">Capacité de la classe</h3>
+                                <div class="p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <span class="text-sm text-gray-600">{{ stats.total_students }} / {{ classroom.capacity }} élèves</span>
+                                        <span class="font-semibold text-gray-900">{{ stats.capacity_usage }}%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                        <div class="{% if stats.capacity_usage > 90 %}bg-red-500{% elif stats.capacity_usage > 75 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-2 rounded-full transition-all" style="width: {{ stats.capacity_usage }}%"></div>
+                                    </div>
+                                    <div class="flex justify-between text-xs text-gray-500">
+                                        <span>Libre : {{ classroom.capacity|add:"-"|add:stats.total_students }}</span>
+                                        <span>
+                                            {% if stats.capacity_usage > 90 %}Pleine
+                                            {% elif stats.capacity_usage > 75 %}Presque pleine
+                                            {% else %}Disponible{% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Colonne latérale améliorée -->
+            <!-- Colonne latérale -->
             <div class="space-y-8">
                 
-                <!-- Enseignants assignés avec design moderne -->
-                <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
-                    <div class="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-5">
-                        <h3 class="text-xl font-bold text-white flex items-center">
-                            <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mr-3">
-                                <i class="fas fa-chalkboard-teacher text-white"></i>
-                            </div>
-                            Équipe enseignante
-                        </h3>
+                <!-- Équipe enseignante -->
+                <div class="bg-white rounded-xl border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-semibold text-gray-900">👨‍🏫 Équipe enseignante</h2>
                     </div>
+                    
                     <div class="p-6">
                         {% if assignments %}
-                            <div class="space-y-4">
+                            <div class="space-y-3">
                                 {% for assignment in assignments %}
-                                <div class="group bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 rounded-xl p-4 transition-all duration-200 border border-purple-100">
-                                    <div class="flex items-center">
-                                        <div class="relative">
-                                            <img class="h-12 w-12 rounded-xl object-cover border-2 border-purple-200 group-hover:border-purple-300 transition-colors" 
-                                                 src="{% if assignment.teacher.user.avatar %}{{ assignment.teacher.user.avatar.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}" 
-                                                 alt="">
-                                            <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-purple-500 rounded-full border-2 border-white"></div>
-                                        </div>
-                                        <div class="ml-4 flex-1 min-w-0">
-                                            <p class="text-base font-semibold text-gray-900 truncate group-hover:text-purple-700 transition-colors">
-                                                {{ assignment.teacher.user.first_name }} {{ assignment.teacher.user.last_name }}
-                                            </p>
-                                            <p class="text-sm text-purple-600 font-medium">
-                                                {{ assignment.subject.name }}
-                                            </p>
-                                            <p class="text-xs text-gray-500">
-                                                <i class="fas fa-clock mr-1"></i>
-                                                {{ assignment.hours_per_week }}h/semaine
-                                            </p>
-                                        </div>
+                                <div class="flex items-center p-3 bg-purple-50 rounded-lg">
+                                    <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                                        <span class="text-purple-600 font-semibold text-sm">
+                                            {{ assignment.teacher.user.first_name.0 }}{{ assignment.teacher.user.last_name.0 }}
+                                        </span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="font-medium text-gray-900">
+                                            {{ assignment.teacher.user.first_name }} {{ assignment.teacher.user.last_name }}
+                                        </h3>
+                                        <p class="text-sm text-purple-600 font-medium">{{ assignment.subject.name }}</p>
+                                        <p class="text-xs text-gray-500">{{ assignment.hours_per_week }}h/semaine</p>
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div>
                         {% else %}
                             <div class="text-center py-8">
-                                <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                    <i class="fas fa-chalkboard-teacher text-gray-400 text-2xl"></i>
-                                </div>
-                                <p class="text-gray-600 font-medium">Aucun enseignant assigné</p>
-                                <p class="text-sm text-gray-500 mt-1">Les enseignants seront assignés prochainement</p>
+                                <div class="text-4xl mb-2">👨‍🏫</div>
+                                <p class="text-gray-600">Aucun enseignant assigné</p>
                             </div>
                         {% endif %}
                     </div>
                 </div>
 
-                <!-- Notes récentes avec design amélioré -->
+                <!-- Notes récentes -->
                 {% if recent_grades %}
-                <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
-                    <div class="bg-gradient-to-r from-yellow-500 to-orange-500 px-6 py-5">
-                        <h3 class="text-xl font-bold text-white flex items-center">
-                            <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mr-3">
-                                <i class="fas fa-star text-white"></i>
-                            </div>
-                            Notes récentes
-                        </h3>
+                <div class="bg-white rounded-xl border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-semibold text-gray-900">⭐ Notes récentes</h2>
                     </div>
+                    
                     <div class="p-6">
-                        <div class="space-y-4">
+                        <div class="space-y-3">
                             {% for grade in recent_grades %}
-                            <div class="group bg-gradient-to-r from-yellow-50 to-orange-50 hover:from-yellow-100 hover:to-orange-100 rounded-xl p-4 transition-all duration-200 border border-yellow-100">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-base font-semibold text-gray-900 truncate group-hover:text-orange-700 transition-colors">
-                                            {{ grade.student.user.first_name }} {{ grade.student.user.last_name }}
-                                        </p>
-                                        <p class="text-sm text-orange-600 font-medium">
-                                            {{ grade.subject.name }}
-                                        </p>
-                                        <p class="text-xs text-gray-500">
-                                            {{ grade.evaluation_type }}
-                                        </p>
-                                    </div>
-                                    <div class="flex-shrink-0">
-                                        <span class="inline-flex items-center px-3 py-2 rounded-xl text-sm font-bold 
-                                        {% if grade.score >= 15 %}bg-green-100 text-green-800 border-2 border-green-200
-                                        {% elif grade.score >= 12 %}bg-yellow-100 text-yellow-800 border-2 border-yellow-200
-                                        {% elif grade.score >= 10 %}bg-orange-100 text-orange-800 border-2 border-orange-200
-                                        {% else %}bg-red-100 text-red-800 border-2 border-red-200{% endif %}">
-                                            {{ grade.score }}/20
-                                        </span>
-                                    </div>
+                            <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                                <div class="flex-1">
+                                    <h3 class="font-medium text-gray-900">
+                                        {{ grade.student.user.first_name }} {{ grade.student.user.last_name }}
+                                    </h3>
+                                    <p class="text-sm text-orange-600 font-medium">{{ grade.subject.name }}</p>
+                                    <p class="text-xs text-gray-500">{{ grade.evaluation_type }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xl font-bold text-gray-900">{{ grade.value }}/20</span>
                                 </div>
                             </div>
                             {% endfor %}
@@ -423,68 +254,39 @@
                 </div>
                 {% endif %}
 
-                <!-- Actions rapides avec design moderne -->
-                <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
-                    <div class="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-5">
-                        <h3 class="text-xl font-bold text-white flex items-center">
-                            <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mr-3">
-                                <i class="fas fa-bolt text-white"></i>
-                            </div>
-                            Actions rapides
-                        </h3>
+                <!-- Actions rapides -->
+                <div class="bg-white rounded-xl border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-semibold text-gray-900">⚡ Actions rapides</h2>
                     </div>
+                    
                     <div class="p-6 space-y-3">
-                        <a href="#" class="group w-full inline-flex items-center justify-center px-6 py-3 border-2 border-gray-200 hover:border-blue-300 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-blue-50 transition-all duration-200 hover:scale-105">
-                            <i class="fas fa-calendar-check mr-3 text-blue-600 group-hover:scale-110 transition-transform"></i>
-                            Faire l'appel
+                        <a href="{% url 'academic:attendance_list' %}?classroom={{ classroom.id }}" 
+                           class="flex items-center justify-center w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors font-medium">
+                            📋 Prendre les présences
                         </a>
-                        <a href="#" class="group w-full inline-flex items-center justify-center px-6 py-3 border-2 border-gray-200 hover:border-green-300 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-green-50 transition-all duration-200 hover:scale-105">
-                            <i class="fas fa-plus-circle mr-3 text-green-600 group-hover:scale-110 transition-transform"></i>
-                            Ajouter une note
+                        <a href="{% url 'academic:grade_list' %}?classroom={{ classroom.id }}" 
+                           class="flex items-center justify-center w-full px-4 py-3 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors font-medium">
+                            ⭐ Saisir des notes
                         </a>
-                        <a href="{% url 'academic:classroom_timetable' classroom.pk %}" class="group w-full inline-flex items-center justify-center px-6 py-3 border-2 border-gray-200 hover:border-purple-300 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-purple-50 transition-all duration-200 hover:scale-105">
-                            <i class="fas fa-clock mr-3 text-purple-600 group-hover:scale-110 transition-transform"></i>
-                            Emploi du temps
+                        {% if user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
+                        <a href="{% url 'communication:announcement_create' %}?classroom={{ classroom.id }}" 
+                           class="flex items-center justify-center w-full px-4 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg transition-colors font-medium">
+                            📢 Créer une annonce
                         </a>
-                        <a href="{% url 'communication:forum_classroom' classroom.pk %}" class="group w-full inline-flex items-center justify-center px-6 py-3 border-2 border-gray-200 hover:border-orange-300 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-orange-50 transition-all duration-200 hover:scale-105">
-                            <i class="fas fa-comments mr-3 text-orange-600 group-hover:scale-110 transition-transform"></i>
-                            Forum de classe
-                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
+        
+        <!-- Bouton retour -->
+        <div class="mt-12 text-center">
+            <a href="{% url 'academic:classroom_list' %}" 
+               class="inline-flex items-center px-6 py-3 text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-300 transition-colors font-medium">
+                ← Retour à la liste des classes
+            </a>
+        </div>
     </div>
 </div>
-
-<!-- Script pour les animations -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Animation des cartes statistiques
-    const statCards = document.querySelectorAll('.group');
-    statCards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        
-        setTimeout(() => {
-            card.style.transition = 'all 0.6s ease-out';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 150);
-    });
-    
-    // Effet de survol amélioré pour les boutons
-    const actionButtons = document.querySelectorAll('a[href]');
-    actionButtons.forEach(button => {
-        button.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-2px)';
-        });
-        
-        button.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-        });
-    });
-});
-</script>
-
 {% endblock %}

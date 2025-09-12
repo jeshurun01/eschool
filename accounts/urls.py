@@ -36,12 +36,31 @@ urlpatterns = [
     # Gestion des parents
     path('parents/', views.parent_list, name='parent_list'),
     path('parents/create/', views.parent_create, name='parent_create'),
+    path('parents/bulk-import/', views.parent_bulk_import, name='parent_bulk_import'),
+    path('parents/export-csv/', views.parent_export_csv, name='parent_export_csv'),
     path('parents/<int:parent_id>/', views.parent_detail, name='parent_detail'),
     path('parents/<int:parent_id>/edit/', views.parent_edit, name='parent_edit'),
+    path('parents/<int:parent_id>/delete/', views.parent_delete, name='parent_delete'),
+    path('parents/<int:parent_id>/assign-children/', views.parent_assign_children, name='parent_assign_children'),
+    path('parents/<int:parent_id>/toggle-active/', views.parent_toggle_active, name='parent_toggle_active'),
     
     # Gestion des enseignants
     path('teachers/', views.teacher_list, name='teacher_list'),
     path('teachers/create/', views.teacher_create, name='teacher_create'),
     path('teachers/<int:teacher_id>/', views.teacher_detail, name='teacher_detail'),
     path('teachers/<int:teacher_id>/edit/', views.teacher_edit, name='teacher_edit'),
+    
+    # === VUE D'ENSEMBLE POUR ADMIN ===
+    path('children-overview/', views.admin_children_overview, name='admin_children_overview'),
+    
+    # === NOUVELLES VUES SPÉCIALISÉES ÉLÈVE ===
+    path('student/grades/', views.student_grades_detail, name='student_grades_detail'),
+    path('student/attendance/', views.student_attendance_detail, name='student_attendance_detail'),
+    path('student/finance/', views.student_finance_detail, name='student_finance_detail'),
+    path('student/calendar/', views.student_academic_calendar, name='student_academic_calendar'),
+    
+    # === NOUVELLES VUES SPÉCIALISÉES PARENT ===
+    path('parent/children/', views.parent_children_overview, name='parent_children_overview'),
+    path('parent/child/<int:child_id>/', views.parent_child_detail, name='parent_child_detail'),
+    path('parent/communication/', views.parent_communication_center, name='parent_communication_center'),
 ]

@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gérer les Enfants - {{ parent.user.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .student-card {
+        transition: all 0.3s ease;
+    }
+    .student-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .current-children {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .available-students {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+                    <a href="{% url 'accounts:parent_list' %}" class="hover:text-blue-600">👨‍👩‍👧‍👦 Parents</a>
+                    <span>/</span>
+                    <a href="{% url 'accounts:parent_detail' parent.id %}" class="hover:text-blue-600">{{ parent.user.full_name }}</a>
+                    <span>/</span>
+                    <span class="text-gray-900">👶 Gérer Enfants</span>
+                </nav>
+                
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                    👶 Gérer les Enfants de {{ parent.user.full_name }}
+                </h1>
+                <p class="text-gray-600">Assigner ou retirer des enfants à ce parent/tuteur</p>
+            </div>
+        </div>
+
+        <!-- Search Section -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <form method="GET" class="flex items-end space-x-4">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">🔍 Rechercher un élève</label>
+                    <input type="text" 
+                           name="search" 
+                           value="{{ search_query }}"
+                           placeholder="Nom, prénom, matricule..."
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <button type="submit" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors duration-200">
+                        🔍 Chercher
+                    </button>
+                </div>
+                <div>
+                    <a href="{% url 'accounts:parent_assign_children' parent.id %}" 
+                       class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md transition-colors duration-200">
+                        🔄 Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Current Children -->
+            <div class="bg-white rounded-lg shadow-lg">
+                <div class="current-children p-6 rounded-t-lg">
+                    <h2 class="text-xl font-bold flex items-center">
+                        <span class="mr-2">👶</span>
+                        Enfants Actuels ({{ current_children.count }})
+                    </h2>
+                </div>
+                
+                <div class="p-6">
+                    {% if current_children %}
+                        <form method="POST" id="removeForm">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="remove">
+                            
+                            <div class="space-y-3 mb-4">
+                                {% for child in current_children %}
+                                <div class="student-card bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-3">
+                                            <input type="checkbox" 
+                                                   name="students" 
+                                                   value="{{ child.id }}"
+                                                   class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded">
+                                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                <span class="text-blue-600 font-bold">{{ child.user.first_name|first }}{{ child.user.last_name|first }}</span>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium text-gray-900">
+                                                    {{ child.user.first_name }} {{ child.user.last_name }}
+                                                </div>
+                                                <div class="text-sm text-gray-500">
+                                                    📝 {{ child.matricule }}
+                                                </div>
+                                                <div class="text-sm text-gray-500">
+                                                    📧 {{ child.user.email }}
+                                                </div>
+                                                {% if child.current_class %}
+                                                <div class="text-xs text-gray-400">
+                                                    🏫 {{ child.current_class.name }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="text-right">
+                                            <a href="{% url 'accounts:student_detail' child.id %}" 
+                                               class="text-blue-600 hover:text-blue-800 text-sm">
+                                                👁️ Voir Profil
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <button type="button" 
+                                    onclick="removeSelected()"
+                                    class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
+                                ❌ Retirer les Enfants Sélectionnés
+                            </button>
+                        </form>
+                    {% else %}
+                        <div class="text-center py-8">
+                            <div class="text-6xl mb-4">👶</div>
+                            <p class="text-gray-500">Aucun enfant assigné à ce parent</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Available Students -->
+            <div class="bg-white rounded-lg shadow-lg">
+                <div class="available-students p-6 rounded-t-lg">
+                    <h2 class="text-xl font-bold flex items-center">
+                        <span class="mr-2">➕</span>
+                        Élèves Disponibles ({{ available_students.count }})
+                    </h2>
+                </div>
+                
+                <div class="p-6">
+                    {% if available_students %}
+                        <form method="POST" id="addForm">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add">
+                            
+                            <div class="space-y-3 mb-4 max-h-96 overflow-y-auto">
+                                {% for student in available_students %}
+                                <div class="student-card bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-3">
+                                            <input type="checkbox" 
+                                                   name="students" 
+                                                   value="{{ student.id }}"
+                                                   class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
+                                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                                <span class="text-green-600 font-bold">{{ student.user.first_name|first }}{{ student.user.last_name|first }}</span>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium text-gray-900">
+                                                    {{ student.user.first_name }} {{ student.user.last_name }}
+                                                </div>
+                                                <div class="text-sm text-gray-500">
+                                                    📝 {{ student.matricule }}
+                                                </div>
+                                                <div class="text-sm text-gray-500">
+                                                    📧 {{ student.user.email }}
+                                                </div>
+                                                {% if student.current_class %}
+                                                <div class="text-xs text-gray-400">
+                                                    🏫 {{ student.current_class.name }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="text-right">
+                                            <a href="{% url 'accounts:student_detail' student.id %}" 
+                                               class="text-blue-600 hover:text-blue-800 text-sm">
+                                                👁️ Voir Profil
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <button type="button" 
+                                    onclick="addSelected()"
+                                    class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
+                                ➕ Ajouter les Élèves Sélectionnés
+                            </button>
+                        </form>
+                    {% else %}
+                        <div class="text-center py-8">
+                            <div class="text-6xl mb-4">✅</div>
+                            <p class="text-gray-500">
+                                {% if search_query %}
+                                    Aucun élève trouvé pour "{{ search_query }}"
+                                {% else %}
+                                    Tous les élèves ont déjà un parent assigné
+                                {% endif %}
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-8 bg-white rounded-lg shadow-sm p-6">
+            <div class="flex flex-col sm:flex-row gap-4">
+                <a href="{% url 'accounts:parent_detail' parent.id %}" 
+                   class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg text-center font-medium transition-colors duration-200">
+                    ← Retour aux Détails
+                </a>
+                
+                <a href="{% url 'accounts:parent_list' %}" 
+                   class="flex-1 bg-blue-100 hover:bg-blue-200 text-blue-700 px-6 py-3 rounded-lg text-center font-medium transition-colors duration-200">
+                    👨‍👩‍👧‍👦 Liste des Parents
+                </a>
+                
+                <a href="{% url 'accounts:student_list' %}" 
+                   class="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 px-6 py-3 rounded-lg text-center font-medium transition-colors duration-200">
+                    👨‍🎓 Liste des Élèves
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4" id="modalTitle"></h3>
+                <p class="text-gray-600 mb-6" id="modalMessage"></p>
+                <div class="flex justify-end space-x-3">
+                    <button onclick="closeModal()" 
+                            class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200">
+                        Annuler
+                    </button>
+                    <button id="confirmButton" 
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200">
+                        Confirmer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showModal(title, message, onConfirm) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalMessage').textContent = message;
+    document.getElementById('confirmButton').onclick = onConfirm;
+    document.getElementById('confirmModal').classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('confirmModal').classList.add('hidden');
+}
+
+function addSelected() {
+    const checkboxes = document.querySelectorAll('#addForm input[name="students"]:checked');
+    
+    if (checkboxes.length === 0) {
+        alert('Veuillez sélectionner au moins un élève à ajouter.');
+        return;
+    }
+    
+    const count = checkboxes.length;
+    const message = `Êtes-vous sûr de vouloir ajouter ${count} élève${count > 1 ? 's' : ''} à {{ parent.user.full_name }} ?`;
+    
+    showModal('➕ Ajouter des Enfants', message, function() {
+        document.getElementById('addForm').submit();
+    });
+}
+
+function removeSelected() {
+    const checkboxes = document.querySelectorAll('#removeForm input[name="students"]:checked');
+    
+    if (checkboxes.length === 0) {
+        alert('Veuillez sélectionner au moins un enfant à retirer.');
+        return;
+    }
+    
+    const count = checkboxes.length;
+    const message = `Êtes-vous sûr de vouloir retirer ${count} enfant${count > 1 ? 's' : ''} de {{ parent.user.full_name }} ?`;
+    
+    showModal('❌ Retirer des Enfants', message, function() {
+        document.getElementById('removeForm').submit();
+    });
+}
+
+// Select all functionality
+function selectAllAdd() {
+    const checkboxes = document.querySelectorAll('#addForm input[name="students"]');
+    checkboxes.forEach(cb => cb.checked = true);
+}
+
+function selectAllRemove() {
+    const checkboxes = document.querySelectorAll('#removeForm input[name="students"]');
+    checkboxes.forEach(cb => cb.checked = true);
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeModal();
+    }
+});
+
+// Close modal on background click
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeModal();
+    }
+});
+</script>
+{% endblock %}

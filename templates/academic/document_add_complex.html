@@ -1,0 +1,501 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ajouter un Document{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header avec breadcrumb -->
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'academic:document_list' %}" 
+                   class="flex items-center text-blue-600 hover:text-blue-800 transition-colors group">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                        <i class="fas fa-arrow-left text-blue-600"></i>
+                    </div>
+                    <span class="text-sm font-medium ml-3">Retour aux documents</span>
+                </a>
+                <div class="text-gray-400">/</div>
+                <span class="text-sm text-gray-600">Nouveau document</span>
+            </div>
+            
+            <!-- Indicateur de progression -->
+            <div class="hidden md:flex items-center space-x-2">
+                <div class="flex items-center space-x-2 text-sm text-gray-500">
+                    <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span>Étape 1/1</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Titre principal avec icône -->
+        <div class="text-center mb-12">
+            <div class="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <i class="fas fa-plus text-white text-2xl"></i>
+            </div>
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">Ajouter un Document</h1>
+            <p class="text-lg text-gray-600 max-w-2xl mx-auto">Partagez un nouveau document pédagogique avec vos étudiants et enrichissez votre contenu de cours</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Formulaire principal -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                    <!-- En-tête du formulaire -->
+                    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 px-8 py-6">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-upload text-white text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h2 class="text-xl font-semibold text-white">Nouveau Document</h2>
+                                <p class="text-blue-100">Remplissez les informations ci-dessous</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data" class="divide-y divide-gray-100">
+                        {% csrf_token %}
+                        
+                        <!-- Section 1: Informations générales -->
+                        <div class="p-8">
+                            <div class="flex items-center mb-8">
+                                <div class="w-10 h-10 bg-gradient-to-r from-green-400 to-green-600 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-info-circle text-white"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-xl font-semibold text-gray-900">Informations générales</h3>
+                                    <p class="text-gray-500">Titre, description et type du document</p>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-6">
+                                <!-- Titre -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-900 mb-3">
+                                        <i class="fas fa-text-width text-blue-500 mr-2"></i>
+                                        Titre du document <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" name="title" required 
+                                           class="block w-full px-4 py-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-0 transition-all duration-200 text-lg"
+                                           placeholder="Ex: Cours sur les fonctions linéaires">
+                                </div>
+
+                                <!-- Description -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-900 mb-3">
+                                        <i class="fas fa-align-left text-green-500 mr-2"></i>
+                                        Description du contenu
+                                    </label>
+                                    <textarea name="description" rows="4" 
+                                              class="block w-full px-4 py-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-0 transition-all duration-200"
+                                              placeholder="Décrivez brièvement le contenu et l'objectif de ce document..."></textarea>
+                                </div>
+
+                                <!-- Type de document -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-900 mb-3">
+                                        <i class="fas fa-tags text-purple-500 mr-2"></i>
+                                        Type de document <span class="text-red-500">*</span>
+                                    </label>
+                                    <select name="document_type" required 
+                                            class="block w-full px-4 py-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-0 transition-all duration-200 text-lg bg-white">
+                                        <option value="">Choisir un type de document</option>
+                                        {% for value, label in document_types %}
+                                            <option value="{{ value }}">
+                                                {% if value == "COURSE" %}📚{% elif value == "EXERCISE" %}📝{% elif value == "EXAM" %}📋{% elif value == "CORRECTION" %}✅{% elif value == "REFERENCE" %}📖{% else %}📄{% endif %}
+                                                {{ label }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Upload du fichier -->
+                        <div class="p-8 bg-gradient-to-r from-gray-50 to-blue-50">
+                            <div class="flex items-center mb-8">
+                                <div class="w-10 h-10 bg-gradient-to-r from-orange-400 to-red-500 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-cloud-upload-alt text-white"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-xl font-semibold text-gray-900">Fichier du document</h3>
+                                    <p class="text-gray-500">Téléchargez votre document pédagogique</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Zone de drop -->
+                            <div class="relative">
+                                <input type="file" name="file" id="file-upload" required
+                                       accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.gif,.zip,.rar"
+                                       class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                
+                                <div id="drop-zone" class="border-3 border-dashed border-blue-300 rounded-2xl p-12 text-center hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 bg-white">
+                                    <div id="upload-content">
+                                        <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                            <i class="fas fa-cloud-upload-alt text-white text-2xl"></i>
+                                        </div>
+                                        <h4 class="text-xl font-semibold text-gray-900 mb-2">Glissez-déposez votre fichier ici</h4>
+                                        <p class="text-gray-500 mb-4">ou cliquez pour sélectionner un fichier</p>
+                                        <div class="flex flex-wrap justify-center gap-2 text-xs text-gray-400">
+                                            <span class="bg-gray-100 px-2 py-1 rounded">PDF</span>
+                                            <span class="bg-gray-100 px-2 py-1 rounded">Word</span>
+                                            <span class="bg-gray-100 px-2 py-1 rounded">PowerPoint</span>
+                                            <span class="bg-gray-100 px-2 py-1 rounded">Excel</span>
+                                            <span class="bg-gray-100 px-2 py-1 rounded">Images</span>
+                                            <span class="bg-gray-100 px-2 py-1 rounded">Archives</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Aperçu du fichier sélectionné -->
+                                    <div id="file-preview" class="hidden">
+                                        <div class="flex items-center justify-center space-x-4">
+                                            <div id="file-icon" class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-file text-blue-600 text-xl"></i>
+                                            </div>
+                                            <div class="text-left">
+                                                <div id="file-name" class="font-semibold text-gray-900"></div>
+                                                <div id="file-size" class="text-sm text-gray-500"></div>
+                                            </div>
+                                            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-check text-green-600"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="lg:col-span-2">
+                            <label class="block text-sm font-medium text-gray-900 mb-2">Description</label>
+                            <textarea name="description" rows="3"
+                                      class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                                      placeholder="Décrivez brièvement le contenu de ce document..."></textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-2">
+                                Type de document <span class="text-red-500">*</span>
+                            </label>
+                            <select name="document_type" required 
+                                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors">
+                                <option value="">Sélectionner un type</option>
+                                {% for type_value, type_label in document_types %}
+                                    <option value="{{ type_value }}">{{ type_label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-2">
+                                Fichier <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <input type="file" name="file" required id="file-input"
+                                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-colors"
+                                       accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.zip,.rar">
+                            </div>
+                            <p class="mt-2 text-xs text-gray-500">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Formats acceptés: PDF, Word, PowerPoint, Excel, Images, Archives (Max: 50MB)
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Attribution et accès -->
+                <div class="p-8">
+                    <div class="flex items-center mb-8">
+                        <div class="w-10 h-10 bg-gradient-to-r from-purple-400 to-pink-500 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-users text-white"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-xl font-semibold text-gray-900">Attribution et accès</h3>
+                            <p class="text-gray-500">Définissez qui peut accéder à ce document</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <!-- Matière -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 mb-3">
+                                <i class="fas fa-book text-blue-500 mr-2"></i>
+                                Matière <span class="text-red-500">*</span>
+                            </label>
+                            <select name="subject" required 
+                                    class="block w-full px-4 py-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-0 transition-all duration-200 text-lg bg-white">
+                                <option value="">Choisir une matière</option>
+                                {% for subject in subjects %}
+                                    <option value="{{ subject.id }}" {% if subject.id|stringformat:"s" == selected_subject %}selected{% endif %}>
+                                        📚 {{ subject.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Classe -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 mb-3">
+                                <i class="fas fa-users text-green-500 mr-2"></i>
+                                Classe spécifique
+                            </label>
+                            <select name="classroom" 
+                                    class="block w-full px-4 py-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-0 transition-all duration-200 text-lg bg-white">
+                                <option value="">🌐 Toutes les classes de la matière</option>
+                                {% for classroom in classrooms %}
+                                    <option value="{{ classroom.id }}" {% if classroom.id|stringformat:"s" == selected_classroom %}selected{% endif %}>
+                                        🎓 {{ classroom.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <p class="mt-2 text-sm text-gray-500 flex items-center">
+                                <i class="fas fa-info-circle mr-2 text-blue-400"></i>
+                                Laissez vide pour partager avec toutes vos classes de cette matière
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Options d'accès -->
+                    <div class="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                        <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-shield-alt text-blue-500 mr-2"></i>
+                            Options d'accès
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <label class="flex items-center p-4 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-300 transition-colors cursor-pointer">
+                                <input type="checkbox" name="is_public" checked
+                                       class="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500">
+                                <div class="ml-3">
+                                    <div class="font-medium text-gray-900">Document public</div>
+                                    <div class="text-sm text-gray-500">Visible par les étudiants</div>
+                                </div>
+                            </label>
+                            
+                            <label class="flex items-center p-4 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-300 transition-colors cursor-pointer">
+                                <input type="checkbox" name="is_downloadable" checked
+                                       class="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500">
+                                <div class="ml-3">
+                                    <div class="font-medium text-gray-900">Téléchargeable</div>
+                                    <div class="text-sm text-gray-500">Autoriser le téléchargement</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Planification -->
+                <div class="p-8 bg-gradient-to-r from-gray-50 to-purple-50">
+                    <div class="flex items-center mb-8">
+                        <div class="w-10 h-10 bg-gradient-to-r from-indigo-400 to-purple-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-calendar-alt text-white"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-xl font-semibold text-gray-900">Planification</h3>
+                            <p class="text-gray-500">Programmez la mise à disposition du document</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <!-- Date de publication -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 mb-3">
+                                <i class="fas fa-play-circle text-green-500 mr-2"></i>
+                                Date de mise à disposition
+                            </label>
+                            <input type="datetime-local" name="access_date" 
+                                   class="block w-full px-4 py-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-0 transition-all duration-200 text-lg">
+                            <p class="mt-2 text-sm text-gray-500 flex items-center">
+                                <i class="fas fa-info-circle mr-2 text-blue-400"></i>
+                                Le document sera visible à partir de cette date
+                            </p>
+                        </div>
+                        
+                        <!-- Date d'expiration -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 mb-3">
+                                <i class="fas fa-stop-circle text-red-500 mr-2"></i>
+                                Date d'expiration (optionnelle)
+                            </label>
+                            <input type="datetime-local" name="expiry_date" 
+                                   class="block w-full px-4 py-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-0 transition-all duration-200 text-lg">
+                            <p class="mt-2 text-sm text-gray-500 flex items-center">
+                                <i class="fas fa-info-circle mr-2 text-blue-400"></i>
+                                Le document sera masqué après cette date
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="px-8 py-6 bg-gray-50 flex items-center justify-between">
+                    <a href="{% url 'academic:document_list' %}" 
+                       class="flex items-center px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors rounded-lg hover:bg-gray-100">
+                        <i class="fas fa-times mr-2"></i>
+                        Annuler
+                    </a>
+                    
+                    <button type="submit" 
+                            class="flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                        <i class="fas fa-upload mr-3"></i>
+                        Publier le document
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Définir la date/heure actuelle comme valeur par défaut pour access_date
+    const accessDateInput = document.querySelector('input[name="access_date"]');
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    accessDateInput.value = now.toISOString().slice(0, 16);
+    
+    // Gestion du drag & drop moderne
+    const fileUpload = document.getElementById('file-upload');
+    const dropZone = document.getElementById('drop-zone');
+    const uploadContent = document.getElementById('upload-content');
+    const filePreview = document.getElementById('file-preview');
+    const fileIcon = document.getElementById('file-icon');
+    const fileName = document.getElementById('file-name');
+    const fileSize = document.getElementById('file-size');
+
+    // Icônes pour différents types de fichiers
+    const fileIcons = {
+        'pdf': { icon: 'fas fa-file-pdf', color: 'text-red-600', bg: 'bg-red-100' },
+        'doc': { icon: 'fas fa-file-word', color: 'text-blue-600', bg: 'bg-blue-100' },
+        'docx': { icon: 'fas fa-file-word', color: 'text-blue-600', bg: 'bg-blue-100' },
+        'ppt': { icon: 'fas fa-file-powerpoint', color: 'text-orange-600', bg: 'bg-orange-100' },
+        'pptx': { icon: 'fas fa-file-powerpoint', color: 'text-orange-600', bg: 'bg-orange-100' },
+        'xls': { icon: 'fas fa-file-excel', color: 'text-green-600', bg: 'bg-green-100' },
+        'xlsx': { icon: 'fas fa-file-excel', color: 'text-green-600', bg: 'bg-green-100' },
+        'jpg': { icon: 'fas fa-file-image', color: 'text-purple-600', bg: 'bg-purple-100' },
+        'jpeg': { icon: 'fas fa-file-image', color: 'text-purple-600', bg: 'bg-purple-100' },
+        'png': { icon: 'fas fa-file-image', color: 'text-purple-600', bg: 'bg-purple-100' },
+        'gif': { icon: 'fas fa-file-image', color: 'text-purple-600', bg: 'bg-purple-100' },
+        'zip': { icon: 'fas fa-file-archive', color: 'text-yellow-600', bg: 'bg-yellow-100' },
+        'rar': { icon: 'fas fa-file-archive', color: 'text-yellow-600', bg: 'bg-yellow-100' },
+        'txt': { icon: 'fas fa-file-alt', color: 'text-gray-600', bg: 'bg-gray-100' }
+    };
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function showFilePreview(file) {
+        const extension = file.name.split('.').pop().toLowerCase();
+        const iconData = fileIcons[extension] || { icon: 'fas fa-file', color: 'text-gray-600', bg: 'bg-gray-100' };
+        
+        // Mettre à jour l'icône
+        fileIcon.className = `w-12 h-12 ${iconData.bg} rounded-lg flex items-center justify-center`;
+        fileIcon.innerHTML = `<i class="${iconData.icon} ${iconData.color} text-xl"></i>`;
+        
+        // Mettre à jour les informations du fichier
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        
+        // Afficher l'aperçu et masquer le contenu d'upload
+        uploadContent.classList.add('hidden');
+        filePreview.classList.remove('hidden');
+        
+        // Changer l'apparence de la zone de drop
+        dropZone.classList.remove('border-blue-300', 'hover:border-blue-400');
+        dropZone.classList.add('border-green-300', 'bg-green-50');
+    }
+
+    function resetFileUpload() {
+        uploadContent.classList.remove('hidden');
+        filePreview.classList.add('hidden');
+        dropZone.classList.remove('border-green-300', 'bg-green-50');
+        dropZone.classList.add('border-blue-300', 'hover:border-blue-400');
+    }
+
+    // Gestion du fichier sélectionné
+    fileUpload.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            showFilePreview(file);
+        } else {
+            resetFileUpload();
+        }
+    });
+
+    // Gestion du drag & drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+        dropZone.classList.add('border-blue-500', 'bg-blue-100', 'scale-105');
+    }
+
+    function unhighlight(e) {
+        dropZone.classList.remove('border-blue-500', 'bg-blue-100', 'scale-105');
+    }
+
+    dropZone.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length > 0) {
+            fileUpload.files = files;
+            showFilePreview(files[0]);
+        }
+    }
+    
+    // Gestion des paramètres d'URL pour pré-remplir les champs
+    const urlParams = new URLSearchParams(window.location.search);
+    const subjectParam = urlParams.get('subject');
+    const classroomParam = urlParams.get('classroom');
+    
+    // Pré-remplir la matière si elle n'est pas déjà sélectionnée (côté serveur)
+    if (subjectParam) {
+        const subjectSelect = document.querySelector('select[name="subject"]');
+        if (subjectSelect && !subjectSelect.value) {
+            subjectSelect.value = subjectParam;
+        }
+    }
+    
+    // Pré-remplir la classe si elle n'est pas déjà sélectionnée (côté serveur)
+    if (classroomParam) {
+        const classroomSelect = document.querySelector('select[name="classroom"]');
+        if (classroomSelect && !classroomSelect.value) {
+            classroomSelect.value = classroomParam;
+        }
+    }
+
+    // Animation d'envoi du formulaire
+    const form = document.querySelector('form');
+    const submitButton = form.querySelector('button[type="submit"]');
+    
+    form.addEventListener('submit', function(e) {
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-3"></i>Publication en cours...';
+        submitButton.classList.add('opacity-75');
+    });
+});
+</script>
+{% endblock %}

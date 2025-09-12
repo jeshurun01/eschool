@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mes Notes Détaillées - eSchool{% endblock %}
+
+{% block extra_css %}
+<style>
+    .subject-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid #e5e7eb;
+    }
+    
+    .subject-card:hover {
+        border-left-color: #8b5cf6;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .grade-badge-excellent { background-color: #10b981; }
+    .grade-badge-good { background-color: #f59e0b; }
+    .grade-badge-average { background-color: #ef4444; }
+    
+    .progress-ring {
+        transform: rotate(-90deg);
+    }
+    
+    .progress-circle {
+        stroke-dasharray: 251;
+        stroke-dashoffset: 251;
+        transition: stroke-dashoffset 1s ease-in-out;
+    }
+    
+    .trend-up { color: #10b981; }
+    .trend-down { color: #ef4444; }
+    .trend-stable { color: #6b7280; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="py-8">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold">📊 Mes Notes Détaillées</h1>
+                        <p class="mt-2 text-purple-100">{{ student.user.get_full_name }} • {{ student.current_class.name }}</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-4xl font-bold">{{ general_average }}/20</div>
+                        <div class="text-lg">{{ general_percentage }}%</div>
+                        <div class="text-sm text-purple-200">Moyenne générale</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Statistiques générales -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm border p-6 text-center">
+                <div class="text-3xl font-bold text-purple-600">{{ total_subjects }}</div>
+                <div class="text-gray-600">Matières</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border p-6 text-center">
+                <div class="text-3xl font-bold text-blue-600">{{ total_evaluations }}</div>
+                <div class="text-gray-600">Évaluations</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border p-6 text-center">
+                <div class="text-3xl font-bold text-green-600">{{ general_average }}</div>
+                <div class="text-gray-600">Moyenne</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border p-6 text-center">
+                <div class="text-3xl font-bold text-indigo-600">{{ general_percentage }}%</div>
+                <div class="text-gray-600">Pourcentage</div>
+            </div>
+        </div>
+
+        <!-- Notes par matière -->
+        <div class="space-y-6">
+            {% for subject, data in grades_by_subject.items %}
+            <div class="subject-card bg-white rounded-xl shadow-sm border p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
+                            <span class="text-2xl">📚</span>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">{{ subject.name }}</h3>
+                            <p class="text-gray-600">{{ data.total_evaluations }} évaluation(s)</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-6">
+                        <!-- Moyenne de la matière -->
+                        <div class="text-center">
+                            <div class="text-2xl font-bold 
+                                {% if data.average >= 16 %}text-green-600
+                                {% elif data.average >= 12 %}text-yellow-600
+                                {% else %}text-red-600{% endif %}">
+                                {{ data.average }}/20
+                            </div>
+                            <div class="text-sm text-gray-600">{{ data.percentage }}%</div>
+                        </div>
+                        
+                        <!-- Progression circulaire -->
+                        <div class="relative w-16 h-16">
+                            <svg class="w-16 h-16 progress-ring">
+                                <circle cx="32" cy="32" r="28" stroke="#e5e7eb" stroke-width="4" fill="transparent"></circle>
+                                <circle cx="32" cy="32" r="28" stroke="#8b5cf6" stroke-width="4" fill="transparent" 
+                                        class="progress-circle" 
+                                        style="stroke-dashoffset: calc(251 - (251 * {{ data.percentage }}) / 100);"></circle>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span class="text-xs font-medium">{{ data.percentage }}%</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Tendance -->
+                        <div class="text-center">
+                            {% if data.improvement > 0 %}
+                                <span class="trend-up">↗ +{{ data.improvement }}</span>
+                            {% elif data.improvement < 0 %}
+                                <span class="trend-down">↘ {{ data.improvement }}</span>
+                            {% else %}
+                                <span class="trend-stable">→ 0</span>
+                            {% endif %}
+                            <div class="text-xs text-gray-600">Tendance</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Détail des notes -->
+                <div class="border-t pt-4">
+                    <h4 class="font-medium text-gray-900 mb-3">Historique des notes</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {% for grade in data.grades %}
+                        <div class="bg-gray-50 rounded-lg p-3 flex items-center justify-between">
+                            <div>
+                                <div class="font-medium
+                                    {% if grade.score >= 16 %}text-green-600
+                                    {% elif grade.score >= 12 %}text-yellow-600
+                                    {% else %}text-red-600{% endif %}">
+                                    {{ grade.score }}/20
+                                </div>
+                                <div class="text-xs text-gray-600">{{ grade.evaluation_type }}</div>
+                                <div class="text-xs text-gray-500">{{ grade.created_at|date:"d/m/Y" }}</div>
+                            </div>
+                            {% if grade.comment %}
+                            <div class="text-xs text-gray-600 max-w-20 truncate" title="{{ grade.comment }}">
+                                {{ grade.comment }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% empty %}
+                        <div class="col-span-full text-center text-gray-500 py-4">
+                            Aucune note pour cette matière
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="bg-white rounded-xl shadow-sm border p-8 text-center">
+                <div class="text-gray-500">
+                    <svg class="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <h3 class="text-lg font-medium mb-2">Aucune note disponible</h3>
+                    <p>Vos notes apparaîtront ici dès qu'elles seront saisies par vos enseignants.</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-8 flex justify-center space-x-4">
+            <a href="{% url 'accounts:dashboard' %}" 
+               class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                ← Retour au dashboard
+            </a>
+            <a href="{% url 'accounts:student_attendance_detail' %}" 
+               class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                📅 Voir mes présences
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des cercles de progression
+    const circles = document.querySelectorAll('.progress-circle');
+    circles.forEach(circle => {
+        setTimeout(() => {
+            circle.style.strokeDashoffset = circle.style.strokeDashoffset;
+        }, 500);
+    });
+});
+</script>
+{% endblock %}

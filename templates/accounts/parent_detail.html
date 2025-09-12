@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ parent.user.full_name }} - Détails Parent{% endblock %}
+
+{% block extra_css %}
+<style>
+    .child-card {
+        transition: all 0.3s ease;
+    }
+    .child-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .finance-card {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+                    <a href="{% url 'accounts:parent_list' %}" class="hover:text-blue-600">👨‍👩‍👧‍👦 Parents</a>
+                    <span>/</span>
+                    <span class="text-gray-900">{{ parent.user.full_name }}</span>
+                </nav>
+                
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span class="text-blue-600 font-bold text-2xl">
+                                {{ parent.user.first_name|first }}{{ parent.user.last_name|first }}
+                            </span>
+                        </div>
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-900">
+                                {{ parent.user.full_name }}
+                            </h1>
+                            <p class="text-gray-600">{{ parent.get_relationship_display }}</p>
+                            <div class="mt-1">
+                                {% if parent.user.is_active %}
+                                    <span class="bg-green-100 text-green-800 text-sm px-2 py-1 rounded-full">✅ Actif</span>
+                                {% else %}
+                                    <span class="bg-red-100 text-red-800 text-sm px-2 py-1 rounded-full">❌ Inactif</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 md:mt-0 flex space-x-3">
+                        <a href="{% url 'accounts:parent_edit' parent.id %}" 
+                           class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
+                            ✏️ Modifier
+                        </a>
+                        <a href="{% url 'accounts:parent_assign_children' parent.id %}" 
+                           class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
+                            👶 Gérer Enfants
+                        </a>
+                        <form method="POST" action="{% url 'accounts:parent_toggle_active' parent.id %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" 
+                                    class="{% if parent.user.is_active %}bg-red-600 hover:bg-red-700{% else %}bg-green-600 hover:bg-green-700{% endif %} text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
+                                {% if parent.user.is_active %}🔒 Désactiver{% else %}🔓 Activer{% endif %}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Parent Information -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Contact Information -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                    <span class="mr-2">📞</span>
+                    Informations de Contact
+                </h2>
+                
+                <div class="space-y-3">
+                    <div class="flex items-center">
+                        <span class="mr-3 text-gray-500">📧</span>
+                        <span class="text-gray-900">{{ parent.user.email }}</span>
+                    </div>
+                    
+                    {% if parent.user.phone %}
+                    <div class="flex items-center">
+                        <span class="mr-3 text-gray-500">📱</span>
+                        <span class="text-gray-900">{{ parent.user.phone }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if parent.user.address %}
+                    <div class="flex items-start">
+                        <span class="mr-3 text-gray-500 mt-1">🏠</span>
+                        <span class="text-gray-900">{{ parent.user.address }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="flex items-center">
+                        <span class="mr-3 text-gray-500">📅</span>
+                        <span class="text-gray-900">Inscrit le {{ parent.user.date_joined|date:"d/m/Y" }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Professional Information -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                    <span class="mr-2">💼</span>
+                    Informations Professionnelles
+                </h2>
+                
+                <div class="space-y-3">
+                    <div class="flex items-center">
+                        <span class="mr-3 text-gray-500">👥</span>
+                        <span class="text-gray-900">{{ parent.get_relationship_display }}</span>
+                    </div>
+                    
+                    {% if parent.profession %}
+                    <div class="flex items-center">
+                        <span class="mr-3 text-gray-500">🏢</span>
+                        <span class="text-gray-900">{{ parent.profession }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if parent.workplace %}
+                    <div class="flex items-start">
+                        <span class="mr-3 text-gray-500 mt-1">🏭</span>
+                        <span class="text-gray-900">{{ parent.workplace }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if not parent.profession and not parent.workplace %}
+                    <p class="text-gray-500 italic">Aucune information professionnelle</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Financial Summary -->
+            <div class="finance-card rounded-lg shadow-sm p-6">
+                <h2 class="text-xl font-bold mb-4 flex items-center">
+                    <span class="mr-2">💰</span>
+                    Résumé Financier
+                </h2>
+                
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="opacity-90">Total Factures:</span>
+                        <span class="font-bold">{{ total_invoices }}</span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="opacity-90">Montant Total:</span>
+                        <span class="font-bold">${{ total_amount|floatformat:2 }}</span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="opacity-90">Montant Payé:</span>
+                        <span class="font-bold">${{ paid_amount|floatformat:2 }}</span>
+                    </div>
+                    
+                    <hr class="border-white/30">
+                    
+                    <div class="flex justify-between text-lg">
+                        <span class="opacity-90">Solde:</span>
+                        <span class="font-bold {% if balance > 0 %}text-yellow-200{% else %}text-green-200{% endif %}">
+                            ${{ balance|floatformat:2 }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Children Section -->
+        <div class="bg-white rounded-lg shadow-sm">
+            <div class="border-b border-gray-200 p-6">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center">
+                    <span class="mr-2">👶</span>
+                    Enfants ({{ children_data|length }})
+                </h2>
+            </div>
+            
+            {% if children_data %}
+                <div class="p-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {% for child_data in children_data %}
+                        <div class="child-card bg-gray-50 rounded-lg p-6 border border-gray-200">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                        <span class="text-green-600 font-bold">
+                                            {{ child_data.student.user.first_name|first }}{{ child_data.student.user.last_name|first }}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900">
+                                            {{ child_data.student.user.full_name }}
+                                        </h3>
+                                        <p class="text-sm text-gray-600">{{ child_data.student.matricule }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-2 mb-4">
+                                {% if child_data.current_enrollment %}
+                                <div class="flex items-center text-sm text-gray-600">
+                                    <span class="mr-2">🏫</span>
+                                    <span>{{ child_data.current_enrollment.classroom.name }}</span>
+                                </div>
+                                <div class="flex items-center text-sm text-gray-600">
+                                    <span class="mr-2">📚</span>
+                                    <span>{{ child_data.current_enrollment.classroom.level.name }}</span>
+                                </div>
+                                {% else %}
+                                <div class="flex items-center text-sm text-gray-500">
+                                    <span class="mr-2">⚠️</span>
+                                    <span>Non inscrit cette année</span>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="flex items-center text-sm text-gray-600">
+                                    <span class="mr-2">📧</span>
+                                    <span>{{ child_data.student.user.email }}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Recent Activity -->
+                            <div class="space-y-3">
+                                {% if child_data.recent_invoices %}
+                                <div>
+                                    <h4 class="font-medium text-gray-900 text-sm mb-2">💰 Factures Récentes</h4>
+                                    <div class="space-y-1">
+                                        {% for invoice in child_data.recent_invoices %}
+                                        <div class="flex justify-between text-xs text-gray-600">
+                                            <span>{{ invoice.created_at|date:"d/m/Y" }}</span>
+                                            <span>${{ invoice.total_amount|floatformat:2 }}</span>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if child_data.recent_attendance %}
+                                <div>
+                                    <h4 class="font-medium text-gray-900 text-sm mb-2">📅 Présences Récentes</h4>
+                                    <div class="flex space-x-1">
+                                        {% for attendance in child_data.recent_attendance %}
+                                        <span class="w-6 h-6 rounded-full text-xs flex items-center justify-center
+                                                   {% if attendance.status == 'PRESENT' %}bg-green-100 text-green-600
+                                                   {% elif attendance.status == 'ABSENT' %}bg-red-100 text-red-600
+                                                   {% else %}bg-yellow-100 text-yellow-600{% endif %}">
+                                            {% if attendance.status == 'PRESENT' %}✓{% elif attendance.status == 'ABSENT' %}✗{% else %}?{% endif %}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mt-4 pt-4 border-t border-gray-200">
+                                <a href="{% url 'accounts:student_detail' child_data.student.id %}" 
+                                   class="block bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-2 rounded text-center text-sm font-medium transition-colors duration-200">
+                                    👁️ Voir le Profil Complet
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="p-8 text-center">
+                    <div class="text-6xl mb-4">👶</div>
+                    <h3 class="text-xl font-medium text-gray-900 mb-2">Aucun enfant assigné</h3>
+                    <p class="text-gray-600 mb-4">Ce parent n'a encore aucun enfant assigné dans le système.</p>
+                    <a href="{% url 'accounts:parent_assign_children' parent.id %}" 
+                       class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200">
+                        👶 Assigner des Enfants
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-8 bg-white rounded-lg shadow-sm p-6">
+            <div class="flex flex-col sm:flex-row gap-4">
+                <a href="{% url 'accounts:parent_list' %}" 
+                   class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg text-center font-medium transition-colors duration-200">
+                    ← Retour à la Liste
+                </a>
+                
+                <button onclick="window.print()" 
+                        class="flex-1 bg-blue-100 hover:bg-blue-200 text-blue-700 px-6 py-3 rounded-lg font-medium transition-colors duration-200">
+                    🖨️ Imprimer le Profil
+                </button>
+                
+                {% if parent.children.exists %}
+                <a href="#" 
+                   class="flex-1 bg-green-100 hover:bg-green-200 text-green-700 px-6 py-3 rounded-lg text-center font-medium transition-colors duration-200">
+                    💌 Envoyer Message
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

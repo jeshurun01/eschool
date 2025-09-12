@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ document.title }} - Détails{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="flex items-center mb-8">
+            <a href="{% url 'academic:document_subject_list' document.subject.id %}" 
+               class="flex items-center text-blue-600 hover:text-blue-800 transition-colors mr-4">
+                <i class="fas fa-arrow-left mr-2"></i>
+                <span class="text-sm font-medium">Retour aux documents</span>
+            </a>
+        </div>
+
+        <!-- Détails du document -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <!-- En-tête du document -->
+            <div class="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-white rounded-lg shadow-sm flex items-center justify-center">
+                                <i class="{{ document.file_icon }} text-2xl"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ document.title }}</h1>
+                            <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    {{ document.get_document_type_display }}
+                                </span>
+                                <span><i class="fas fa-book mr-1"></i>{{ document.subject.name }}</span>
+                                {% if document.classroom %}
+                                    <span><i class="fas fa-users mr-1"></i>{{ document.classroom.name }}</span>
+                                {% else %}
+                                    <span><i class="fas fa-globe mr-1"></i>Toutes les classes</span>
+                                {% endif %}
+                                <span><i class="fas fa-user mr-1"></i>{{ document.teacher.user.get_full_name }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-2">
+                        {% if document.is_accessible %}
+                            <a href="{% url 'academic:document_view' document.id %}?action=view" 
+                               class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                <i class="fas fa-eye mr-2"></i>Voir
+                            </a>
+                            {% if document.is_downloadable %}
+                                <a href="{% url 'academic:document_view' document.id %}?action=download" 
+                                   class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                    <i class="fas fa-download mr-2"></i>Télécharger
+                                </a>
+                            {% endif %}
+                        {% endif %}
+                        {% if can_edit %}
+                            <a href="{% url 'academic:document_edit' document.id %}" 
+                               class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                <i class="fas fa-edit mr-2"></i>Modifier
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenu principal -->
+            <div class="p-8">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Informations principales -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <!-- Description -->
+                        {% if document.description %}
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-3">Description</h3>
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <p class="text-gray-700 leading-relaxed">{{ document.description|linebreaks }}</p>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <!-- Informations du fichier -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">Informations du fichier</h3>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <div class="text-sm text-gray-500 mb-1">Nom du fichier</div>
+                                        <div class="text-sm font-medium text-gray-900">{{ document.file.name|cut:"documents/"|cut:"/" }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-500 mb-1">Taille</div>
+                                        <div class="text-sm font-medium text-gray-900">{{ document.file_size_mb }} MB</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-500 mb-1">Type</div>
+                                        <div class="text-sm font-medium text-gray-900">{{ document.file_type|upper }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-500 mb-1">Ajouté le</div>
+                                        <div class="text-sm font-medium text-gray-900">{{ document.created_at|date:"d/m/Y à H:i" }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accès et permissions -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">Accès et permissions</h3>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <div class="text-sm text-gray-500 mb-1">Visibilité</div>
+                                        <div class="text-sm font-medium">
+                                            {% if document.is_public %}
+                                                <span class="text-green-600"><i class="fas fa-eye mr-1"></i>Public</span>
+                                            {% else %}
+                                                <span class="text-red-600"><i class="fas fa-eye-slash mr-1"></i>Privé</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-500 mb-1">Téléchargement</div>
+                                        <div class="text-sm font-medium">
+                                            {% if document.is_downloadable %}
+                                                <span class="text-green-600"><i class="fas fa-download mr-1"></i>Autorisé</span>
+                                            {% else %}
+                                                <span class="text-red-600"><i class="fas fa-ban mr-1"></i>Interdit</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-500 mb-1">Disponible depuis</div>
+                                        <div class="text-sm font-medium text-gray-900">{{ document.access_date|date:"d/m/Y à H:i" }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-500 mb-1">Expire le</div>
+                                        <div class="text-sm font-medium text-gray-900">
+                                            {% if document.expiry_date %}
+                                                {{ document.expiry_date|date:"d/m/Y à H:i" }}
+                                            {% else %}
+                                                <span class="text-gray-500">Jamais</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panneau latéral -->
+                    <div class="space-y-6">
+                        <!-- Statistiques -->
+                        <div class="bg-white border border-gray-200 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Statistiques</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-600">Vues</span>
+                                    <span class="text-lg font-bold text-blue-600">{{ document.view_count }}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-600">Téléchargements</span>
+                                    <span class="text-lg font-bold text-green-600">{{ document.download_count }}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-600">Dernière mise à jour</span>
+                                    <span class="text-sm text-gray-900">{{ document.updated_at|date:"d/m/Y" }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Statut -->
+                        <div class="bg-white border border-gray-200 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Statut</h3>
+                            <div class="space-y-3">
+                                {% if document.is_accessible %}
+                                    <div class="flex items-center text-green-600">
+                                        <i class="fas fa-check-circle mr-2"></i>
+                                        <span class="text-sm font-medium">Document accessible</span>
+                                    </div>
+                                {% else %}
+                                    <div class="flex items-center text-yellow-600">
+                                        <i class="fas fa-clock mr-2"></i>
+                                        <span class="text-sm font-medium">En attente de publication</span>
+                                    </div>
+                                {% endif %}
+
+                                {% if document.expiry_date and document.expiry_date < "now"|date %}
+                                    <div class="flex items-center text-red-600">
+                                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                                        <span class="text-sm font-medium">Document expiré</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Accès récents -->
+                        {% if can_edit and recent_accesses %}
+                            <div class="bg-white border border-gray-200 rounded-lg p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Accès récents</h3>
+                                <div class="space-y-3">
+                                    {% for access in recent_accesses %}
+                                        <div class="flex items-center space-x-3">
+                                            <div class="flex-shrink-0">
+                                                {% if access.access_type == "DOWNLOAD" %}
+                                                    <i class="fas fa-download text-green-500"></i>
+                                                {% else %}
+                                                    <i class="fas fa-eye text-blue-500"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="text-sm font-medium text-gray-900 truncate">
+                                                    {{ access.user.get_full_name }}
+                                                </div>
+                                                <div class="text-xs text-gray-500">
+                                                    {{ access.accessed_at|date:"d/m à H:i" }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

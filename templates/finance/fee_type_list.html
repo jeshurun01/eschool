@@ -1,0 +1,487 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Types de frais{% endblock %}
+
+{% block extra_css %}
+<style>
+.fee-type-card {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    display: block;
+    transition: all 0.3s ease;
+}
+.fee-type-card.hidden {
+    display: none !important;
+}
+.fee-type-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 4rem;
+}
+.fee-type-content {
+    padding: 1.5rem;
+    min-height: 8rem;
+}
+.structure-table {
+    background: #f8fafc;
+    border-radius: 0.375rem;
+    border: 1px solid #e2e8f0;
+    margin-top: 1rem;
+    overflow-x: auto;
+}
+.structure-table th {
+    background: #f1f5f9;
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    white-space: nowrap;
+}
+.structure-table td {
+    padding: 0.75rem;
+    border-top: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+.badge-success {
+    background: #dcfce7;
+    color: #166534;
+}
+.badge-secondary {
+    background: #f1f5f9;
+    color: #475569;
+}
+.filter-btn.active {
+    background-color: #2563eb !important;
+    color: white !important;
+    border-color: #2563eb !important;
+}
+.filter-btn {
+    transition: all 0.2s ease-in-out;
+}
+.filter-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- En-tête -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Types de frais</h1>
+                    <p class="mt-2 text-gray-600">Gestion des types de frais et de leurs structures tarifaires</p>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="{% url 'finance:fee_type_create' %}" 
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg class="-ml-1 mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                        </svg>
+                        Nouveau type de frais
+                    </a>
+                    <a href="{% url 'finance:fee_structure_list' %}" 
+                       class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        <svg class="-ml-1 mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                        Gérer les structures
+                    </a>
+                    <a href="{% url 'finance:invoice_list' %}" 
+                       class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        <svg class="-ml-1 mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0L3.586 12l2.707-2.707a1 1 0 011.414 1.414L6.414 12l1.293 1.293a1 1 0 010 1.414z" clip-rule="evenodd"/>
+                        </svg>
+                        Retour aux factures
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} mb-3">
+                <div class="flex items-center">
+                    {% if message.tags == 'error' %}
+                    <svg class="h-5 w-5 text-red-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    {% elif message.tags == 'success' %}
+                    <svg class="h-5 w-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    {% else %}
+                    <svg class="h-5 w-5 text-blue-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                    </svg>
+                    {% endif %}
+                    <span>{{ message }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Statistiques -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
+                            <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/>
+                                <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total types</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ fee_types.count }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-green-100 rounded-md flex items-center justify-center">
+                            <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Récurrents</dt>
+                            <dd class="text-lg font-medium text-gray-900">
+                                {% for fee_type in fee_types %}{% if fee_type.is_recurring %}{{ forloop.counter }}{% endif %}{% empty %}0{% endfor %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-red-100 rounded-md flex items-center justify-center">
+                            <svg class="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Obligatoires</dt>
+                            <dd class="text-lg font-medium text-gray-900">
+                                {% for fee_type in fee_types %}{% if fee_type.is_mandatory %}{{ forloop.counter }}{% endif %}{% empty %}0{% endfor %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-purple-100 rounded-md flex items-center justify-center">
+                            <svg class="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Année actuelle</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ current_academic_year.name|default:"N/A" }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Système de filtrage -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0 sm:space-x-4">
+                <div class="flex-1">
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">Filtrer par type de frais</h3>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="filterFeeTypes('all')" 
+                                class="filter-btn active px-4 py-2 text-sm font-medium rounded-md border border-gray-300 bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            Tous ({{ fee_types.count }})
+                        </button>
+                        {% for fee_type in fee_types %}
+                        <button onclick="filterFeeTypes('fee-type-{{ fee_type.id }}')" 
+                                class="filter-btn px-4 py-2 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            {{ fee_type.name }}
+                            <span class="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium 
+                                        {% if fee_type.fee_structures_list %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {% if fee_type.fee_structures_list %}{{ fee_type.fee_structures_list.count }}{% else %}0{% endif %}
+                            </span>
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="filter-mandatory" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <label for="filter-mandatory" class="ml-2 text-sm text-gray-700">Obligatoires uniquement</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="filter-recurring" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <label for="filter-recurring" class="ml-2 text-sm text-gray-700">Récurrents uniquement</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Liste des types de frais -->
+        <div class="space-y-6">
+            {% for fee_type in fee_types %}
+            <div class="fee-type-card" 
+                 id="fee-type-{{ fee_type.id }}" 
+                 data-mandatory="{{ fee_type.is_mandatory|yesno:'true,false' }}"
+                 data-recurring="{{ fee_type.is_recurring|yesno:'true,false' }}">
+                <div class="fee-type-header">
+                    <div>
+                        <h3 class="text-lg font-semibold">{{ fee_type.name }}</h3>
+                        {% if fee_type.description %}
+                        <p class="text-blue-100 text-sm mt-1">{{ fee_type.description }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <a href="{% url 'finance:fee_structure_create_for_type' fee_type.id %}" 
+                           class="inline-flex items-center px-3 py-1.5 border border-blue-200 rounded-md text-xs font-medium text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                            <svg class="-ml-0.5 mr-1 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                            </svg>
+                            Ajouter structure
+                        </a>
+                        <div class="flex space-x-1">
+                            {% if fee_type.is_recurring %}
+                            <span class="badge badge-success">Récurrent</span>
+                            {% endif %}
+                            {% if fee_type.is_mandatory %}
+                            <span class="badge badge-success">Obligatoire</span>
+                            {% else %}
+                            <span class="badge badge-secondary">Optionnel</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="fee-type-content">
+                    {% if fee_type.fee_structures_list %}
+                    <h4 class="font-medium text-gray-900 mb-3">Structures tarifaires :</h4>
+                    <div class="structure-table">
+                        <table class="w-full">
+                            <thead>
+                                <tr>
+                                    <th class="text-left">Niveau</th>
+                                    <th class="text-left">Année académique</th>
+                                    <th class="text-right">Montant</th>
+                                    <th class="text-left">Date d'échéance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for structure in fee_type.fee_structures_list %}
+                                <tr>
+                                    <td class="font-medium">{{ structure.level.name }}</td>
+                                    <td>{{ structure.academic_year.name }}</td>
+                                    <td class="text-right font-semibold text-green-600">
+                                        {{ structure.amount|floatformat:0 }} FCFA
+                                    </td>
+                                    <td>
+                                        {% if structure.due_date %}
+                                            {{ structure.due_date|date:"d/m/Y" }}
+                                        {% else %}
+                                            <span class="text-gray-400">Non définie</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <h4 class="mt-2 text-sm font-medium text-gray-900">Aucune structure tarifaire</h4>
+                        <p class="mt-1 text-sm text-gray-500">Utilisez le bouton "Ajouter structure" ci-dessus pour définir les tarifs.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-12">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">Aucun type de frais</h3>
+                <p class="mt-1 text-sm text-gray-500">Commencez par créer votre premier type de frais.</p>
+                <div class="mt-6">
+                    <a href="{% url 'finance:fee_type_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg class="-ml-1 mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                        </svg>
+                        Nouveau type de frais
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Système de filtrage des types de frais
+function filterFeeTypes(filter) {
+    const allCards = document.querySelectorAll('.fee-type-card');
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const mandatoryFilter = document.getElementById('filter-mandatory').checked;
+    const recurringFilter = document.getElementById('filter-recurring').checked;
+    
+    // Mettre à jour les boutons
+    filterButtons.forEach(btn => {
+        btn.classList.remove('active', 'bg-blue-600', 'text-white');
+        btn.classList.add('bg-white', 'text-gray-700');
+    });
+    
+    // Activer le bouton sélectionné
+    event.target.classList.add('active', 'bg-blue-600', 'text-white');
+    event.target.classList.remove('bg-white', 'text-gray-700');
+    
+    let visibleCount = 0;
+    
+    // Filtrer les cartes
+    allCards.forEach(card => {
+        let shouldShow = true;
+        
+        // Filtre par type de frais
+        if (filter !== 'all' && card.id !== filter) {
+            shouldShow = false;
+        }
+        
+        // Filtre obligatoire
+        if (mandatoryFilter && card.dataset.mandatory !== 'true') {
+            shouldShow = false;
+        }
+        
+        // Filtre récurrent
+        if (recurringFilter && card.dataset.recurring !== 'true') {
+            shouldShow = false;
+        }
+        
+        // Afficher/masquer la carte avec animation
+        if (shouldShow) {
+            card.style.display = 'block';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(-10px)';
+        }
+    });
+    
+    // Mettre à jour le compteur
+    updateVisibleCount(visibleCount);
+    
+    // Scroll vers le haut après filtrage
+    if (filter !== 'all') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+// Mettre à jour le compteur dans le bouton "Tous"
+function updateVisibleCount(count) {
+    const allButton = document.querySelector('.filter-btn[onclick*="all"]');
+    if (allButton) {
+        const originalText = allButton.textContent.split('(')[0].trim();
+        allButton.innerHTML = `${originalText} (${count})`;
+    }
+}
+
+// Gestionnaires pour les filtres par propriétés
+document.getElementById('filter-mandatory').addEventListener('change', function() {
+    // Déclencher le filtre actuel
+    const activeButton = document.querySelector('.filter-btn.active');
+    if (activeButton) {
+        const filter = activeButton.getAttribute('onclick').match(/'([^']+)'/)[1];
+        filterFeeTypes(filter);
+    }
+});
+
+document.getElementById('filter-recurring').addEventListener('change', function() {
+    // Déclencher le filtre actuel
+    const activeButton = document.querySelector('.filter-btn.active');
+    if (activeButton) {
+        const filter = activeButton.getAttribute('onclick').match(/'([^']+)'/)[1];
+        filterFeeTypes(filter);
+    }
+});
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    // Compter initialement toutes les cartes
+    const totalCards = document.querySelectorAll('.fee-type-card').length;
+    updateVisibleCount(totalCards);
+});
+
+// Style pour le bouton de scroll vers le haut
+window.addEventListener('scroll', function() {
+    const scrollButton = document.getElementById('scroll-top');
+    if (scrollButton) {
+        if (window.pageYOffset > 300) {
+            scrollButton.style.display = 'block';
+        } else {
+            scrollButton.style.display = 'none';
+        }
+    }
+});
+
+function scrollToTop() {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+</script>
+
+<!-- Bouton de retour en haut -->
+<div id="scroll-top" style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+    <button onclick="scrollToTop()" 
+            class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L10 5.414 4.707 10.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+        </svg>
+    </button>
+</div>
+{% endblock %}

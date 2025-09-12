@@ -1,0 +1,392 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ course.subject.name }} - {{ course.classroom.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- En-tête du cours -->
+    <div class="bg-white shadow rounded-lg mb-6 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">{{ course.subject.name }}</h1>
+                    <p class="text-lg text-gray-600">{{ course.classroom.name }}</p>
+                    <p class="text-sm text-gray-500">
+                        {{ course.hours_per_week }}h/semaine • Année {{ course.academic_year.year }}
+                    </p>
+                </div>
+                <div class="flex space-x-3">
+                    <a href="{% url 'accounts:teacher_dashboard' %}" 
+                       class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                        <i class="fas fa-arrow-left mr-2"></i>Retour
+                    </a>
+                    <a href="{% url 'academic:document_subject_list' course.subject.id %}?classroom={{ course.classroom.id }}" 
+                       class="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                        <i class="fas fa-file-alt mr-2"></i>Documents
+                    </a>
+                    <a href="{% url 'academic:classroom_detail' course.classroom.id %}" 
+                       class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                        <i class="fas fa-users mr-2"></i>Voir la classe
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Statistiques rapides -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 p-6">
+            <div class="text-center">
+                <div class="text-3xl font-bold text-blue-600">{{ total_students }}</div>
+                <div class="text-sm text-gray-600">Étudiants</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold text-green-600">{{ class_average }}</div>
+                <div class="text-sm text-gray-600">Moyenne générale</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold text-purple-600">{{ attendance_stats.presence_rate }}%</div>
+                <div class="text-sm text-gray-600">Taux de présence</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold text-orange-600">{{ grades_this_month }}</div>
+                <div class="text-sm text-gray-600">Notes ce mois</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Liste des étudiants avec moyennes -->
+        <div class="lg:col-span-2">
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">
+                        <i class="fas fa-graduation-cap text-blue-500 mr-2"></i>
+                        Étudiants du cours ({{ total_students }})
+                    </h2>
+                </div>
+                
+                {% if students_with_grades %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Étudiant
+                                </th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Moyenne
+                                </th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Notes
+                                </th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Présence
+                                </th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for item in students_with_grades %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 h-10 w-10">
+                                            {% if item.student.user.avatar %}
+                                                <img class="h-10 w-10 rounded-full object-cover" src="{{ item.student.user.avatar.url }}" alt="">
+                                            {% else %}
+                                                <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                                    <i class="fas fa-user text-gray-600"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="ml-4">
+                                            <div class="text-sm font-medium text-gray-900">
+                                                {{ item.student.user.first_name }} {{ item.student.user.last_name }}
+                                            </div>
+                                            <div class="text-sm text-gray-500">
+                                                {{ item.student.user.email }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    {% if item.average %}
+                                        <span class="inline-flex px-2 py-1 text-sm font-medium rounded-full
+                                                   {% if item.average >= 16 %}bg-green-100 text-green-800
+                                                   {% elif item.average >= 12 %}bg-blue-100 text-blue-800
+                                                   {% elif item.average >= 10 %}bg-yellow-100 text-yellow-800
+                                                   {% else %}bg-red-100 text-red-800{% endif %}">
+                                            {{ item.average }}/20
+                                        </span>
+                                    {% else %}
+                                        <span class="text-gray-400">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                                    {{ item.grade_count }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    {% if item.total_attendance > 0 %}
+                                        <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full
+                                                   {% if item.attendance_rate >= 90 %}bg-green-100 text-green-800
+                                                   {% elif item.attendance_rate >= 75 %}bg-yellow-100 text-yellow-800
+                                                   {% else %}bg-red-100 text-red-800{% endif %}">
+                                            {{ item.attendance_rate }}%
+                                        </span>
+                                    {% else %}
+                                        <span class="text-gray-400">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    <div class="flex justify-center space-x-2">
+                                        <button onclick="addGrade({{ item.student.id }})" 
+                                                class="text-blue-600 hover:text-blue-900 text-sm">
+                                            <i class="fas fa-plus-circle"></i>
+                                        </button>
+                                        <button onclick="viewGrades({{ item.student.id }})" 
+                                                class="text-green-600 hover:text-green-900 text-sm">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-6 text-center text-gray-500">
+                    <i class="fas fa-users text-4xl mb-4 text-gray-300"></i>
+                    <p>Aucun étudiant inscrit dans ce cours.</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Section Documents -->
+            <div class="bg-white shadow rounded-lg overflow-hidden mt-6">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-semibold text-gray-900">
+                            <i class="fas fa-file-alt text-green-500 mr-2"></i>
+                            Documents de cours
+                        </h2>
+                        <div class="flex space-x-2">
+                            <a href="{% url 'academic:document_add' %}?subject={{ course.subject.id }}&classroom={{ course.classroom.id }}" 
+                               class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded-md transition-colors">
+                                <i class="fas fa-plus mr-1"></i>Ajouter
+                            </a>
+                            <a href="{% url 'academic:document_subject_list' course.subject.id %}?classroom={{ course.classroom.id }}" 
+                               class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded-md transition-colors">
+                                <i class="fas fa-eye mr-1"></i>Voir tout
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if documents %}
+                    <div class="divide-y divide-gray-200">
+                        {% for document in documents %}
+                            <div class="p-4 hover:bg-gray-50 transition-colors">
+                                <div class="flex items-start space-x-3">
+                                    <div class="flex-shrink-0">
+                                        <i class="{{ document.file_icon }} text-lg"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center space-x-2">
+                                            <h4 class="text-sm font-medium text-gray-900 truncate">{{ document.title }}</h4>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                {{ document.get_document_type_display }}
+                                            </span>
+                                        </div>
+                                        {% if document.description %}
+                                            <p class="mt-1 text-xs text-gray-600 truncate">{{ document.description|truncatewords:10 }}</p>
+                                        {% endif %}
+                                        <div class="mt-1 flex items-center space-x-3 text-xs text-gray-500">
+                                            {% if document.classroom %}
+                                                <span><i class="fas fa-users mr-1"></i>{{ document.classroom.name }}</span>
+                                            {% else %}
+                                                <span><i class="fas fa-globe mr-1"></i>Toutes les classes</span>
+                                            {% endif %}
+                                            <span><i class="fas fa-file mr-1"></i>{{ document.file_size_mb }} MB</span>
+                                            <span><i class="fas fa-eye mr-1"></i>{{ document.view_count }}</span>
+                                            <span><i class="fas fa-download mr-1"></i>{{ document.download_count }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        {% if document.is_accessible %}
+                                            <a href="{% url 'academic:document_view' document.id %}?action=view" 
+                                               class="text-blue-600 hover:text-blue-800 p-1" title="Voir">
+                                                <i class="fas fa-eye text-sm"></i>
+                                            </a>
+                                            {% if document.is_downloadable %}
+                                                <a href="{% url 'academic:document_view' document.id %}?action=download" 
+                                                   class="text-green-600 hover:text-green-800 p-1" title="Télécharger">
+                                                    <i class="fas fa-download text-sm"></i>
+                                                </a>
+                                            {% endif %}
+                                        {% endif %}
+                                        <a href="{% url 'academic:document_edit' document.id %}" 
+                                           class="text-gray-600 hover:text-gray-800 p-1" title="Modifier">
+                                            <i class="fas fa-edit text-sm"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% if documents.count == 5 %}
+                        <div class="px-6 py-3 bg-gray-50 text-center">
+                            <a href="{% url 'academic:document_subject_list' course.subject.id %}?classroom={{ course.classroom.id }}" 
+                               class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                Voir tous les documents →
+                            </a>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="p-6 text-center text-gray-500">
+                        <i class="fas fa-file-alt text-3xl mb-3 text-gray-300"></i>
+                        <p class="text-sm mb-3">Aucun document disponible pour ce cours.</p>
+                        <a href="{% url 'academic:document_add' %}?subject={{ course.subject.id }}&classroom={{ course.classroom.id }}" 
+                           class="inline-flex items-center bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-md transition-colors">
+                            <i class="fas fa-plus mr-2"></i>Ajouter le premier document
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Panneau latéral avec activités récentes -->
+        <div class="space-y-6">
+            <!-- Notes récentes -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <i class="fas fa-star text-yellow-500 mr-2"></i>
+                        Notes récentes
+                    </h3>
+                </div>
+                <div class="max-h-64 overflow-y-auto">
+                    {% if recent_grades %}
+                        {% for grade in recent_grades %}
+                        <div class="px-6 py-3 border-b border-gray-100 last:border-b-0">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ grade.student.user.first_name }} {{ grade.student.user.last_name }}
+                                    </div>
+                                    <div class="text-xs text-gray-500">
+                                        {{ grade.created_at|date:"d/m/Y H:i" }}
+                                    </div>
+                                </div>
+                                <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full
+                                           {% if grade.score >= 16 %}bg-green-100 text-green-800
+                                           {% elif grade.score >= 12 %}bg-blue-100 text-blue-800
+                                           {% elif grade.score >= 10 %}bg-yellow-100 text-yellow-800
+                                           {% else %}bg-red-100 text-red-800{% endif %}">
+                                    {{ grade.score }}/20
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="p-6 text-center text-gray-500">
+                            <i class="fas fa-star text-2xl mb-2 text-gray-300"></i>
+                            <p class="text-sm">Aucune note récente</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Présences récentes -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <i class="fas fa-calendar-check text-green-500 mr-2"></i>
+                        Présences récentes
+                    </h3>
+                </div>
+                <div class="max-h-64 overflow-y-auto">
+                    {% if recent_attendances %}
+                        {% for attendance in recent_attendances %}
+                        <div class="px-6 py-3 border-b border-gray-100 last:border-b-0">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ attendance.student.user.first_name }} {{ attendance.student.user.last_name }}
+                                    </div>
+                                    <div class="text-xs text-gray-500">
+                                        {{ attendance.date|date:"d/m/Y" }}
+                                    </div>
+                                </div>
+                                <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full
+                                           {% if attendance.status == 'PRESENT' %}bg-green-100 text-green-800
+                                           {% elif attendance.status == 'LATE' %}bg-yellow-100 text-yellow-800
+                                           {% elif attendance.status == 'EXCUSED' %}bg-blue-100 text-blue-800
+                                           {% else %}bg-red-100 text-red-800{% endif %}">
+                                    {% if attendance.status == 'PRESENT' %}Présent
+                                    {% elif attendance.status == 'LATE' %}Retard
+                                    {% elif attendance.status == 'EXCUSED' %}Excusé
+                                    {% else %}Absent{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="p-6 text-center text-gray-500">
+                            <i class="fas fa-calendar-check text-2xl mb-2 text-gray-300"></i>
+                            <p class="text-sm">Aucune présence récente</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Statistiques du mois -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <i class="fas fa-chart-bar text-purple-500 mr-2"></i>
+                        Statistiques du mois
+                    </h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Moyenne mensuelle</span>
+                        <span class="font-medium">{{ monthly_average }}/20</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Notes données</span>
+                        <span class="font-medium">{{ grades_this_month }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Taux de présence</span>
+                        <span class="font-medium">{{ attendance_stats.presence_rate }}%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Présents</span>
+                        <span class="font-medium text-green-600">{{ attendance_stats.present }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Absents</span>
+                        <span class="font-medium text-red-600">{{ attendance_stats.absent }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts pour les actions -->
+<script>
+function addGrade(studentId) {
+    // Redirection vers le formulaire d'ajout de note
+    window.location.href = `{% url 'academic:grade_add' %}?student=${studentId}&subject={{ course.subject.id }}&classroom={{ course.classroom.id }}`;
+}
+
+function viewGrades(studentId) {
+    // Redirection vers la liste des notes de l'étudiant
+    window.location.href = `{% url 'academic:grade_list' %}?student=${studentId}&subject={{ course.subject.id }}`;
+}
+</script>
+{% endblock %}

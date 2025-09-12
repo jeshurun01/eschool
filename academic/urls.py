@@ -25,6 +25,9 @@ urlpatterns = [
     path('classes/<int:classroom_id>/students/', views.classroom_students, name='classroom_students'),
     path('classes/<int:classroom_id>/timetable/', views.classroom_timetable, name='classroom_timetable'),
     
+    # Gestion des cours (TeacherAssignment)
+    path('courses/<int:assignment_id>/', views.course_detail, name='course_detail'),
+    
     # Gestion des emplois du temps
     path('timetables/', views.timetable_list, name='timetable_list'),
     path('timetables/create/', views.timetable_create, name='timetable_create'),
@@ -33,12 +36,22 @@ urlpatterns = [
     path('attendance/', views.attendance_list, name='attendance_list'),
     path('attendance/take/', views.attendance_take, name='attendance_take'),
     path('attendance/class/<int:classroom_id>/', views.attendance_class, name='attendance_class'),
+    path('api/classroom/<int:classroom_id>/students/', views.get_classroom_students, name='get_classroom_students'),
     
     # Gestion des notes
     path('grades/', views.grade_list, name='grade_list'),
     path('grades/add/', views.grade_add, name='grade_add'),
     path('grades/student/<int:student_id>/', views.student_grades, name='student_grades'),
     path('grades/class/<int:classroom_id>/', views.class_grades, name='class_grades'),
+    
+    # Gestion des documents
+    path('documents/', views.document_list, name='document_list'),
+    path('documents/add/', views.document_add, name='document_add'),
+    path('documents/<int:document_id>/', views.document_detail, name='document_detail'),
+    path('documents/<int:document_id>/edit/', views.document_edit, name='document_edit'),
+    path('documents/<int:document_id>/delete/', views.document_delete, name='document_delete'),
+    path('documents/<int:document_id>/view/', views.document_view, name='document_view'),
+    path('documents/subject/<int:subject_id>/', views.document_subject_list, name='document_subject_list'),
     
     # Bulletins
     path('reports/bulletin/<int:student_id>/', views.student_bulletin, name='student_bulletin'),

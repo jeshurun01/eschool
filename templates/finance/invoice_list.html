@@ -1,0 +1,586 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Liste des Factures{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center">
+                <a href="{% url 'accounts:dashboard' %}" 
+                   class="flex items-center text-blue-600 hover:text-blue-800 transition-colors mr-4">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    <span class="text-sm font-medium">Retour au tableau de bord</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Gestion des Factures</h1>
+                    <p class="mt-2 text-gray-600">Consultez et gérez les factures de scolarité</p>
+                </div>
+                
+                {% if user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'finance:invoice_create' %}" 
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        <svg class="-ml-1 mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                        </svg>
+                        Ajouter une facture
+                    </a>
+                    
+                    <a href="{% url 'finance:invoice_generate' %}" 
+                       class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        <svg class="-ml-1 mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                        Générer des factures
+                    </a>
+                    
+                    <a href="{% url 'finance:fee_type_list' %}" 
+                       class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        <svg class="-ml-1 mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" clip-rule="evenodd"/>
+                            <path d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9z"/>
+                            <path fill-rule="evenodd" d="M4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/>
+                        </svg>
+                        Types de frais
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Statistiques -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-file-invoice text-blue-600"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <div class="text-sm font-medium text-gray-500">Total des factures</div>
+                        <div class="text-2xl font-bold text-gray-900">{{ stats.total_invoices }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-check-circle text-green-600"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <div class="text-sm font-medium text-gray-500">Factures payées</div>
+                        <div class="text-2xl font-bold text-green-600">{{ stats.paid_invoices }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-clock text-yellow-600"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <div class="text-sm font-medium text-gray-500">En attente</div>
+                        <div class="text-2xl font-bold text-yellow-600">{{ stats.pending_invoices }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-exclamation-triangle text-red-600"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <div class="text-sm font-medium text-gray-500">En retard</div>
+                        <div class="text-2xl font-bold text-red-600">{{ stats.overdue_invoices }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Montants -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="text-center">
+                    <div class="text-sm font-medium text-gray-500 mb-2">Montant total</div>
+                    <div class="text-3xl font-bold text-gray-900">{{ stats.total_amount|floatformat:0 }} €</div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="text-center">
+                    <div class="text-sm font-medium text-gray-500 mb-2">Montant payé</div>
+                    <div class="text-3xl font-bold text-green-600">{{ stats.paid_amount|floatformat:0 }} €</div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="text-center">
+                    <div class="text-sm font-medium text-gray-500 mb-2">Montant en attente</div>
+                    <div class="text-3xl font-bold text-orange-600">{{ stats.pending_amount|floatformat:0 }} €</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtres et recherche -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+            <div class="p-6">
+                <form method="get" class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Recherche</label>
+                        <input type="text" name="search" value="{{ search_query }}"
+                               class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                               placeholder="Numéro de facture, nom d'élève...">
+                    </div>
+                    
+                    <div class="md:w-48">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                        <select name="status" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <option value="">Tous les statuts</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    {% if students %}
+                    <div class="md:w-64">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Élève</label>
+                        <select name="student" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <option value="">Tous les élèves</option>
+                            {% for student in students %}
+                                <option value="{{ student.id }}" {% if student_filter == student.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ student.user.get_full_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="flex items-end">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                            <i class="fas fa-search mr-2"></i>Filtrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Liste des factures -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+            {% if invoices %}
+                <!-- Barre d'actions en lot (visible seulement pour le staff) -->
+                {% if user.is_staff %}
+                <div class="border-b border-gray-200 p-4">
+                    <div class="mb-3">
+                        <h3 class="text-sm font-medium text-gray-900 mb-1">Actions en lot</h3>
+                        <p class="text-xs text-gray-600">Sélectionnez plusieurs factures pour modifier leur statut simultanément.</p>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="select-all" 
+                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <label for="select-all" class="ml-2 text-sm text-gray-700">
+                                Tout sélectionner
+                            </label>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3">
+                            <span class="text-sm text-gray-600" id="selected-count">0 sélectionnée(s)</span>
+                            
+                            <select id="status-select" 
+                                    class="rounded-md border-gray-300 text-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="">Changer le statut vers...</option>
+                                {% for value, label in status_choices %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            
+                            <button type="button" id="bulk-update-btn" disabled
+                                    class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                                <svg class="-ml-1 mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10.293 15.707a1 1 0 010-1.414L14.586 10l-4.293-4.293a1 1 0 111.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                                    <path fill-rule="evenodd" d="M3 10a1 1 0 011-1h10a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                Modifier
+                            </button>
+                            
+                            {% if user.is_superuser %}
+                            <button type="button" id="bulk-delete-btn" disabled
+                                    class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                                <svg class="-ml-1 mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clip-rule="evenodd"/>
+                                    <path fill-rule="evenodd" d="M4 5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 012 0v6a1 1 0 11-2 0V9zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V9z" clip-rule="evenodd"/>
+                                </svg>
+                                Supprimer
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                {% if user.is_staff %}
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <span class="sr-only">Sélection</span>
+                                </th>
+                                {% endif %}
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Facture
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Élève
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Date d'émission
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Date d'échéance
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Montant
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Statut
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for invoice in invoices %}
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    {% if user.is_staff %}
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="checkbox" name="selected_invoices" value="{{ invoice.id }}" 
+                                               class="invoice-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    </td>
+                                    {% endif %}
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-medium text-gray-900">
+                                            <a href="{% url 'finance:invoice_detail' invoice.id %}" 
+                                               class="text-blue-600 hover:text-blue-800 font-semibold transition-colors">
+                                                {{ invoice.invoice_number }}
+                                            </a>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-user text-blue-600 text-sm"></i>
+                                            </div>
+                                            <div class="ml-3">
+                                                <div class="text-sm font-medium text-gray-900">
+                                                    {{ invoice.student.user.get_full_name }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        {{ invoice.issue_date|date:"d/m/Y" }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        {{ invoice.due_date|date:"d/m/Y" }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        {{ invoice.total_amount|floatformat:2 }} €
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        {% if invoice.status == 'PAID' %}
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <i class="fas fa-check-circle mr-1"></i>Payée
+                                            </span>
+                                        {% elif invoice.status == 'SENT' %}
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                <i class="fas fa-clock mr-1"></i>Envoyée
+                                            </span>
+                                        {% elif invoice.status == 'OVERDUE' %}
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                <i class="fas fa-exclamation-triangle mr-1"></i>En retard
+                                            </span>
+                                        {% elif invoice.status == 'DRAFT' %}
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                <i class="fas fa-edit mr-1"></i>Brouillon
+                                            </span>
+                                        {% elif invoice.status == 'CANCELLED' %}
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                <i class="fas fa-times mr-1"></i>Annulée
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <div class="flex items-center space-x-2">
+                                            <a href="{% url 'finance:invoice_detail' invoice.id %}" 
+                                               class="text-blue-600 hover:text-blue-900 transition-colors"
+                                               title="Voir les détails">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if user.is_staff %}
+                                                <a href="{% url 'finance:invoice_edit' invoice.id %}" 
+                                                   class="text-yellow-600 hover:text-yellow-900 transition-colors"
+                                                   title="Modifier">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            {% endif %}
+                                            <a href="{% url 'finance:invoice_pdf' invoice.id %}" 
+                                               class="text-green-600 hover:text-green-900 transition-colors"
+                                               title="Télécharger PDF" target="_blank">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if page_obj.has_other_pages %}
+                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm text-gray-700">
+                                Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+                                ({{ page_obj.paginator.count }} factures au total)
+                            </div>
+                            <div class="flex space-x-2">
+                                {% if page_obj.has_previous %}
+                                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if student_filter %}&student={{ student_filter }}{% endif %}"
+                                       class="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors">
+                                        <i class="fas fa-chevron-left mr-1"></i>Précédent
+                                    </a>
+                                {% endif %}
+                                {% if page_obj.has_next %}
+                                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if student_filter %}&student={{ student_filter }}{% endif %}"
+                                       class="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors">
+                                        Suivant<i class="fas fa-chevron-right ml-1"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-12">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-file-invoice text-gray-400 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune facture trouvée</h3>
+                    <p class="text-gray-500">
+                        {% if search_query or status_filter or student_filter %}
+                            Aucune facture ne correspond à vos critères de recherche.
+                        {% else %}
+                            Il n'y a actuellement aucune facture dans le système.
+                        {% endif %}
+                    </p>
+                    {% if search_query or status_filter or student_filter %}
+                        <a href="{% url 'finance:invoice_list' %}" 
+                           class="inline-flex items-center mt-4 px-4 py-2 text-sm text-blue-600 hover:text-blue-800 transition-colors">
+                            <i class="fas fa-times mr-2"></i>Effacer les filtres
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if user.is_staff %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('select-all');
+    const invoiceCheckboxes = document.querySelectorAll('.invoice-checkbox');
+    const selectedCountSpan = document.getElementById('selected-count');
+    const bulkUpdateBtn = document.getElementById('bulk-update-btn');
+    const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+    const statusSelect = document.getElementById('status-select');
+
+    // Fonction pour mettre à jour le compteur et l'état des boutons
+    function updateBulkActions() {
+        const selectedCheckboxes = document.querySelectorAll('.invoice-checkbox:checked');
+        const selectedCount = selectedCheckboxes.length;
+        
+        // Mettre à jour le texte du compteur
+        selectedCountSpan.textContent = `${selectedCount} sélectionnée(s)`;
+        
+        // Activer/désactiver les boutons selon les sélections
+        const hasSelection = selectedCount > 0;
+        const hasStatus = statusSelect.value !== '';
+        
+        bulkUpdateBtn.disabled = !hasSelection || !hasStatus;
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.disabled = !hasSelection;
+        }
+        
+        // Mettre à jour l'état de "Tout sélectionner"
+        if (selectedCount === 0) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = false;
+        } else if (selectedCount === invoiceCheckboxes.length) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = true;
+        } else {
+            selectAllCheckbox.indeterminate = true;
+            selectAllCheckbox.checked = false;
+        }
+    }
+
+    // Gestionnaire pour "Tout sélectionner"
+    selectAllCheckbox.addEventListener('change', function() {
+        const isChecked = this.checked;
+        invoiceCheckboxes.forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
+        updateBulkActions();
+    });
+
+    // Gestionnaires pour les cases individuelles
+    invoiceCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActions);
+    });
+
+    // Gestionnaire pour le changement de statut
+    statusSelect.addEventListener('change', updateBulkActions);
+
+    // Fonction pour créer et soumettre un formulaire
+    function submitBulkAction(action) {
+        const selectedCheckboxes = document.querySelectorAll('.invoice-checkbox:checked');
+        console.log('submitBulkAction appelée:', action, 'Sélectionnées:', selectedCheckboxes.length);
+        
+        if (selectedCheckboxes.length === 0) {
+            alert('Veuillez sélectionner au moins une facture.');
+            return;
+        }
+
+        // Créer un formulaire dynamiquement
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = window.location.pathname;
+        
+        // Token CSRF
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        } else {
+            // Récupérer le token CSRF depuis les cookies
+            const csrfTokenFromCookie = getCookie('csrftoken');
+            if (csrfTokenFromCookie) {
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = csrfTokenFromCookie;
+                form.appendChild(csrfInput);
+            }
+        }
+        
+        // Action
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = action;
+        form.appendChild(actionInput);
+        
+        // Nouveau statut (pour l'action de mise à jour)
+        if (action === 'bulk_status_change') {
+            const newStatus = statusSelect.value;
+            if (!newStatus) {
+                alert('Veuillez sélectionner un nouveau statut.');
+                return;
+            }
+            
+            const statusInput = document.createElement('input');
+            statusInput.type = 'hidden';
+            statusInput.name = 'new_status';
+            statusInput.value = newStatus;
+            form.appendChild(statusInput);
+        }
+        
+        // IDs des factures sélectionnées
+        selectedCheckboxes.forEach(checkbox => {
+            const invoiceInput = document.createElement('input');
+            invoiceInput.type = 'hidden';
+            invoiceInput.name = 'selected_invoices';
+            invoiceInput.value = checkbox.value;
+            form.appendChild(invoiceInput);
+        });
+        
+        // Ajouter le formulaire au DOM et le soumettre
+        document.body.appendChild(form);
+        console.log('Soumission du formulaire...');
+        form.submit();
+    }
+
+    // Fonction pour récupérer un cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Gestionnaire pour le bouton de mise à jour
+    bulkUpdateBtn.addEventListener('click', function() {
+        const selectedCheckboxes = document.querySelectorAll('.invoice-checkbox:checked');
+        const newStatus = statusSelect.value;
+        const statusText = statusSelect.options[statusSelect.selectedIndex].text;
+        
+        if (confirm(`Êtes-vous sûr de vouloir changer le statut de ${selectedCheckboxes.length} facture(s) vers "${statusText}" ?`)) {
+            submitBulkAction('bulk_status_change');
+        }
+    });
+
+    // Gestionnaire pour le bouton de suppression (si présent)
+    if (bulkDeleteBtn) {
+        bulkDeleteBtn.addEventListener('click', function() {
+            const selectedCheckboxes = document.querySelectorAll('.invoice-checkbox:checked');
+            
+            if (confirm(`Êtes-vous sûr de vouloir supprimer ${selectedCheckboxes.length} facture(s) ? Cette action est irréversible.`)) {
+                submitBulkAction('bulk_delete');
+            }
+        });
+    }
+
+    // Initialiser l'état
+    updateBulkActions();
+});
+</script>
+{% endif %}
+
+{% endblock %}

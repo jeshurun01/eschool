@@ -397,7 +397,7 @@ def teacher_dashboard(request):
     
     # Présences du jour pour les classes de l'enseignant
     today_attendance = Attendance.objects.filter(
-        classroom__in=assigned_classes,
+        teacher=teacher,
         date=today
     ).select_related('student__user', 'classroom')
     
@@ -465,7 +465,7 @@ def teacher_dashboard(request):
     
     # Ajout des présences récentes
     recent_attendance = Attendance.objects.filter(
-        classroom__in=assigned_classes,
+        teacher=teacher,
         date__gte=week_ago
     ).select_related('student__user', 'classroom').order_by('-date')[:5]
     
@@ -495,10 +495,11 @@ def teacher_dashboard(request):
     
     recent_activities.sort(key=get_date, reverse=True)
     
-    # Classes avec le plus d'absences cette semaine
+    # Classes avec le plus d'absences cette semaine (pour cet enseignant)
     classes_with_absences = []
     for class_obj in assigned_classes:
         week_absences = Attendance.objects.filter(
+            teacher=teacher,
             classroom=class_obj,
             date__gte=week_ago,
             status='ABSENT'
@@ -1008,17 +1009,527 @@ def student_edit(request, student_id):
     }
     return render(request, 'accounts/student_edit.html', context)
 
+@login_required
+@admin_required
 def parent_list(request):
-    return HttpResponse("Liste des parents - En cours de développement")
+    """Liste des parents avec recherche et filtres"""
+    from django.core.paginator import Paginator
+    
+    # Récupérer tous les parents
+    parents = Parent.objects.select_related('user').prefetch_related('children__user')
+    
+    # Filtres de recherche
+    search_query = request.GET.get('search', '')
+    relationship_filter = request.GET.get('relationship', '')
+    has_children = request.GET.get('has_children', '')
+    
+    # Appliquer les filtres
+    if search_query:
+        parents = parents.filter(
+            Q(user__first_name__icontains=search_query) |
+            Q(user__last_name__icontains=search_query) |
+            Q(user__email__icontains=search_query) |
+            Q(profession__icontains=search_query) |
+            Q(workplace__icontains=search_query)
+        )
+    
+    if relationship_filter:
+        parents = parents.filter(relationship=relationship_filter)
+    
+    if has_children == 'with_children':
+        parents = parents.filter(children__isnull=False).distinct()
+    elif has_children == 'without_children':
+        parents = parents.filter(children__isnull=True)
+    
+    # Trier les résultats
+    sort_by = request.GET.get('sort', 'user__last_name')
+    if sort_by in ['user__last_name', '-user__last_name', 'user__first_name', '-user__first_name', 
+                   'relationship', '-relationship', 'created_at', '-created_at']:
+        parents = parents.order_by(sort_by)
+    else:
+        parents = parents.order_by('user__last_name')
+    
+    # Pagination
+    paginator = Paginator(parents, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistiques
+    total_parents = Parent.objects.count()
+    active_parents = Parent.objects.filter(user__is_active=True).count()
+    parents_with_children = Parent.objects.filter(children__isnull=False).distinct().count()
+    
+    context = {
+        'page_obj': page_obj,
+        'search_query': search_query,
+        'relationship_filter': relationship_filter,
+        'has_children': has_children,
+        'sort_by': sort_by,
+        'total_parents': total_parents,
+        'active_parents': active_parents,
+        'parents_with_children': parents_with_children,
+        'relationship_choices': Parent._meta.get_field('relationship').choices,
+    }
+    
+    return render(request, 'accounts/parent_list.html', context)
 
+
+@login_required
+@admin_required
 def parent_create(request):
-    return HttpResponse("Créer un parent - En cours de développement")
+    """Créer un nouveau parent"""
+    if request.method == 'POST':
+        user_form = AdminUserCreateForm(request.POST)
+        parent_form = ParentProfileForm(request.POST)
+        
+        if user_form.is_valid() and parent_form.is_valid():
+            # Créer l'utilisateur
+            user = user_form.save(commit=False)
+            user.role = 'PARENT'
+            user.save()
+            
+            # Créer le profil parent
+            parent = parent_form.save(commit=False)
+            parent.user = user
+            parent.save()
+            
+            messages.success(request, f'Parent {user.full_name} créé avec succès.')
+            return redirect('accounts:parent_detail', parent_id=parent.id)
+        else:
+            messages.error(request, 'Erreur lors de la création du parent. Vérifiez les informations.')
+    else:
+        user_form = AdminUserCreateForm()
+        parent_form = ParentProfileForm()
+    
+    context = {
+        'user_form': user_form,
+        'parent_form': parent_form,
+    }
+    
+    return render(request, 'accounts/parent_create.html', context)
 
+
+@login_required
+@admin_required
 def parent_detail(request, parent_id):
-    return HttpResponse(f"Détails du parent {parent_id} - En cours de développement")
+    """Détails d'un parent"""
+    parent = get_object_or_404(Parent, id=parent_id)
+    
+    # Statistiques des enfants
+    children = parent.children.all()
+    children_data = []
+    
+    for child in children:
+        # Récupérer les informations académiques
+        enrollments = Enrollment.objects.filter(student=child).select_related('classroom', 'classroom__level')
+        current_enrollment = enrollments.filter(
+            classroom__academic_year__is_current=True
+        ).first() if enrollments.exists() else None
+        
+        # Récupérer les factures récentes
+        recent_invoices = Invoice.objects.filter(
+            student=child
+        ).order_by('-created_at')[:3]
+        
+        # Récupérer les présences récentes
+        recent_attendance = Attendance.objects.filter(
+            student=child
+        ).order_by('-date')[:5]
+        
+        children_data.append({
+            'student': child,
+            'current_enrollment': current_enrollment,
+            'recent_invoices': recent_invoices,
+            'recent_attendance': recent_attendance,
+        })
+    
+    # Statistiques financières
+    total_invoices = Invoice.objects.filter(student__in=children).count()
+    total_amount = Invoice.objects.filter(student__in=children).aggregate(
+        total=Sum('total_amount')
+    )['total'] or 0
+    paid_amount = Payment.objects.filter(
+        invoice__student__in=children
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    
+    context = {
+        'parent': parent,
+        'children_data': children_data,
+        'total_invoices': total_invoices,
+        'total_amount': total_amount,
+        'paid_amount': paid_amount,
+        'balance': total_amount - paid_amount,
+    }
+    
+    return render(request, 'accounts/parent_detail.html', context)
 
+
+@login_required
+@admin_required
+def admin_children_overview(request):
+    """Vue d'ensemble de tous les enfants pour les administrateurs"""
+    # Filtres
+    parent_id = request.GET.get('parent')
+    class_id = request.GET.get('class')
+    search = request.GET.get('search', '').strip()
+    
+    # Base queryset
+    students = Student.objects.select_related('user', 'current_class').all()
+    
+    # Applique les filtres
+    if parent_id:
+        students = students.filter(parents__id=parent_id)
+    
+    if class_id:
+        students = students.filter(current_class_id=class_id)
+    
+        if search:
+            students = students.filter(
+                Q(user__first_name__icontains=search) |
+                Q(user__last_name__icontains=search) |
+                Q(matricule__icontains=search)
+            )    # Pagination
+    paginator = Paginator(students, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Préparer les données détaillées pour chaque enfant
+    children_data = []
+    today = date.today()
+    start_of_month = today.replace(day=1)
+    
+    for student in page_obj:
+        # Informations académiques récentes
+        recent_grades = Grade.objects.filter(
+            student=student,
+            created_at__gte=start_of_month
+        ).select_related('subject')
+        
+        average_grade = recent_grades.aggregate(avg=Avg('score'))['avg'] or 0
+        
+        # Présences du mois
+        monthly_attendance = Attendance.objects.filter(
+            student=student,
+            date__gte=start_of_month
+        )
+        
+        attendance_rate = 0
+        if monthly_attendance.exists():
+            present_count = monthly_attendance.filter(status='PRESENT').count()
+            attendance_rate = round((present_count / monthly_attendance.count()) * 100, 1)
+        
+        # Situation financière
+        pending_invoices = Invoice.objects.filter(
+            student=student,
+            status__in=['DRAFT', 'SENT']
+        )
+        
+        overdue_invoices = Invoice.objects.filter(
+            student=student,
+            status='OVERDUE'
+        )
+        
+        total_pending = pending_invoices.aggregate(total=Sum('total_amount'))['total'] or 0
+        total_overdue = overdue_invoices.aggregate(total=Sum('total_amount'))['total'] or 0
+        
+        # Parents
+        parents = student.parents.all()
+        
+        # Inscription actuelle
+        current_enrollment = Enrollment.objects.filter(
+            student=student,
+            is_active=True
+        ).select_related('classroom', 'classroom__level').first()
+        
+        children_data.append({
+            'student': student,
+            'current_enrollment': current_enrollment,
+            'parents': parents,
+            'recent_grades_count': recent_grades.count(),
+            'average_grade': round(average_grade, 2),
+            'attendance_rate': attendance_rate,
+            'total_pending': total_pending,
+            'total_overdue': total_overdue,
+            'financial_status': 'danger' if total_overdue > 0 else 'warning' if total_pending > 0 else 'success',
+            'academic_status': 'excellent' if average_grade >= 16 else 'good' if average_grade >= 12 else 'needs_improvement' if average_grade >= 8 else 'poor'
+        })
+    
+    # Statistiques globales
+    total_students = students.count()
+    total_with_parents = students.filter(parents__isnull=False).distinct().count()
+    total_without_parents = total_students - total_with_parents
+    
+    # Données pour les filtres
+    all_parents = Parent.objects.select_related('user').all()
+    all_classes = ClassRoom.objects.select_related('level').all()
+    
+    context = {
+        'page_obj': page_obj,
+        'children_data': children_data,
+        'total_students': total_students,
+        'total_with_parents': total_with_parents,
+        'total_without_parents': total_without_parents,
+        'all_parents': all_parents,
+        'all_classes': all_classes,
+        'current_parent': parent_id,
+        'current_class': class_id,
+        'search_query': search,
+        'start_of_month': start_of_month,
+    }
+    
+    return render(request, 'accounts/admin_children_overview.html', context)
+
+
+@login_required
+@admin_required
 def parent_edit(request, parent_id):
-    return HttpResponse(f"Modifier le parent {parent_id} - En cours de développement")
+    """Modifier un parent"""
+    parent = get_object_or_404(Parent, id=parent_id)
+    
+    if request.method == 'POST':
+        user_form = ProfileEditForm(request.POST, request.FILES, instance=parent.user)
+        parent_form = ParentProfileForm(request.POST, instance=parent)
+        
+        if user_form.is_valid() and parent_form.is_valid():
+            user_form.save()
+            parent_form.save()
+            
+            messages.success(request, f'Profil de {parent.user.full_name} mis à jour avec succès.')
+            return redirect('accounts:parent_detail', parent_id=parent.id)
+        else:
+            messages.error(request, 'Erreur lors de la mise à jour. Vérifiez les informations.')
+    else:
+        user_form = ProfileEditForm(instance=parent.user)
+        parent_form = ParentProfileForm(instance=parent)
+    
+    context = {
+        'parent': parent,
+        'user_form': user_form,
+        'parent_form': parent_form,
+    }
+    
+    return render(request, 'accounts/parent_edit.html', context)
+
+
+@login_required
+@admin_required
+@require_http_methods(["POST"])
+def parent_delete(request, parent_id):
+    """Supprimer un parent"""
+    parent = get_object_or_404(Parent, id=parent_id)
+    
+    # Vérifier si le parent a des enfants
+    if parent.children.exists():
+        messages.error(request, f'Impossible de supprimer {parent.user.full_name}. Ce parent a des enfants associés.')
+        return redirect('accounts:parent_detail', parent_id=parent.id)
+    
+    parent_name = parent.user.full_name
+    user = parent.user
+    
+    # Supprimer le parent et l'utilisateur
+    parent.delete()
+    user.delete()
+    
+    messages.success(request, f'Parent {parent_name} supprimé avec succès.')
+    return redirect('accounts:parent_list')
+
+
+@login_required
+@admin_required
+def parent_assign_children(request, parent_id):
+    """Assigner des enfants à un parent"""
+    parent = get_object_or_404(Parent, id=parent_id)
+    
+    if request.method == 'POST':
+        student_ids = request.POST.getlist('students')
+        action = request.POST.get('action')
+        
+        if action == 'add':
+            # Ajouter des enfants
+            students = Student.objects.filter(id__in=student_ids)
+            for student in students:
+                parent.children.add(student)
+            messages.success(request, f'{len(students)} enfant(s) ajouté(s) à {parent.user.full_name}.')
+        
+        elif action == 'remove':
+            # Retirer des enfants
+            students = Student.objects.filter(id__in=student_ids)
+            for student in students:
+                parent.children.remove(student)
+            messages.success(request, f'{len(students)} enfant(s) retiré(s) de {parent.user.full_name}.')
+        
+        return redirect('accounts:parent_detail', parent_id=parent.id)
+    
+    # Obtenir les enfants actuels et les enfants disponibles
+    current_children = parent.children.all()
+    available_students = Student.objects.exclude(
+        id__in=current_children.values_list('id', flat=True)
+    ).select_related('user')
+    
+    # Recherche
+    search_query = request.GET.get('search', '')
+    if search_query:
+        available_students = available_students.filter(
+            Q(user__first_name__icontains=search_query) |
+            Q(user__last_name__icontains=search_query) |
+            Q(matricule__icontains=search_query)
+        )
+    
+    context = {
+        'parent': parent,
+        'current_children': current_children,
+        'available_students': available_students,
+        'search_query': search_query,
+    }
+    
+    return render(request, 'accounts/parent_assign_children.html', context)
+
+
+@login_required
+@admin_required
+@require_http_methods(["POST"])
+def parent_toggle_active(request, parent_id):
+    """Activer/désactiver un parent"""
+    parent = get_object_or_404(Parent, id=parent_id)
+    
+    parent.user.is_active = not parent.user.is_active
+    parent.user.save()
+    
+    status = "activé" if parent.user.is_active else "désactivé"
+    messages.success(request, f'Parent {parent.user.full_name} {status} avec succès.')
+    
+    return redirect('accounts:parent_detail', parent_id=parent.id)
+
+
+@login_required
+@admin_required
+def parent_bulk_import(request):
+    """Import en masse de parents via CSV"""
+    if request.method == 'POST':
+        csv_file = request.FILES.get('csv_file')
+        
+        if not csv_file:
+            messages.error(request, 'Veuillez sélectionner un fichier CSV.')
+            return render(request, 'accounts/parent_bulk_import.html')
+        
+        if not csv_file.name.endswith('.csv'):
+            messages.error(request, 'Le fichier doit être au format CSV.')
+            return render(request, 'accounts/parent_bulk_import.html')
+        
+        try:
+            import csv
+            import io
+            
+            # Lire le fichier CSV
+            file_data = csv_file.read().decode('utf-8')
+            csv_data = csv.DictReader(io.StringIO(file_data))
+            
+            created_count = 0
+            error_count = 0
+            errors = []
+            
+            for row_num, row in enumerate(csv_data, start=2):  # Start at 2 because row 1 is header
+                try:
+                    # Validation des données requises
+                    required_fields = ['first_name', 'last_name', 'email', 'relationship']
+                    missing_fields = [field for field in required_fields if not row.get(field, '').strip()]
+                    
+                    if missing_fields:
+                        errors.append(f"Ligne {row_num}: Champs manquants: {', '.join(missing_fields)}")
+                        error_count += 1
+                        continue
+                    
+                    # Vérifier si l'email existe déjà
+                    if User.objects.filter(email=row['email'].strip()).exists():
+                        errors.append(f"Ligne {row_num}: L'email {row['email'].strip()} existe déjà")
+                        error_count += 1
+                        continue
+                    
+                    # Créer l'utilisateur
+                    user = User.objects.create_user(
+                        email=row['email'].strip(),
+                        password=row.get('password', 'password123').strip() or 'password123',
+                        first_name=row['first_name'].strip(),
+                        last_name=row['last_name'].strip(),
+                        phone=row.get('phone', '').strip(),
+                        role='PARENT',
+                        is_active=True
+                    )
+                    
+                    # Créer le profil parent
+                    parent = Parent.objects.create(
+                        user=user,
+                        relationship=row['relationship'].strip().upper(),
+                        profession=row.get('profession', '').strip(),
+                        workplace=row.get('workplace', '').strip()
+                    )
+                    
+                    created_count += 1
+                    
+                except Exception as e:
+                    errors.append(f"Ligne {row_num}: Erreur - {str(e)}")
+                    error_count += 1
+            
+            # Messages de résultat
+            if created_count > 0:
+                messages.success(request, f'{created_count} parent(s) créé(s) avec succès.')
+            
+            if error_count > 0:
+                messages.warning(request, f'{error_count} erreur(s) détectée(s). Voir les détails ci-dessous.')
+                for error in errors[:10]:  # Afficher seulement les 10 premières erreurs
+                    messages.error(request, error)
+                
+                if len(errors) > 10:
+                    messages.info(request, f'... et {len(errors) - 10} autres erreurs.')
+            
+            if created_count > 0:
+                return redirect('accounts:parent_list')
+                
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la lecture du fichier CSV: {str(e)}')
+    
+    return render(request, 'accounts/parent_bulk_import.html')
+
+
+@login_required
+@admin_required  
+def parent_export_csv(request):
+    """Export des parents en format CSV"""
+    import csv
+    from django.http import HttpResponse
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="parents_export.csv"'
+    
+    writer = csv.writer(response)
+    
+    # En-têtes
+    writer.writerow([
+        'ID', 'Prénom', 'Nom', 'Email', 'Téléphone', 'Relation',
+        'Profession', 'Lieu de travail', 'Nombre d\'enfants', 'Actif',
+        'Date création'
+    ])
+    
+    # Données
+    parents = Parent.objects.select_related('user').prefetch_related('children')
+    
+    for parent in parents:
+        writer.writerow([
+            parent.id,
+            parent.user.first_name,
+            parent.user.last_name,
+            parent.user.email,
+            parent.user.phone or '',
+            parent.get_relationship_display(),
+            parent.profession or '',
+            parent.workplace or '',
+            parent.children.count(),
+            'Oui' if parent.user.is_active else 'Non',
+            parent.created_at.strftime('%Y-%m-%d %H:%M')
+        ])
+    
+    return response
+
 
 @user_passes_test(is_admin_or_staff)
 def teacher_list(request):
@@ -1183,3 +1694,576 @@ def teacher_edit(request, teacher_id):
         'subjects': subjects,
     }
     return render(request, 'accounts/teacher_edit.html', context)
+
+
+# ===== NOUVELLES VUES SPÉCIALISÉES POUR LES ÉLÈVES =====
+
+@login_required
+def student_grades_detail(request):
+    """Vue détaillée des notes par matière pour l'élève"""
+    if request.user.role != 'STUDENT':
+        messages.error(request, 'Accès non autorisé.')
+        return redirect('accounts:dashboard')
+    
+    try:
+        student = request.user.student_profile
+    except Student.DoesNotExist:
+        messages.error(request, 'Profil étudiant non trouvé.')
+        return redirect('accounts:dashboard')
+    
+    # Récupération des notes par matière
+    grades_by_subject = {}
+    subjects = Subject.objects.filter(grades__student=student).distinct()
+    
+    for subject in subjects:
+        subject_grades = Grade.objects.filter(
+            student=student, 
+            subject=subject
+        ).order_by('-created_at')
+        
+        # Calculs statistiques
+        avg_score = subject_grades.aggregate(avg=Avg('score'))['avg'] or 0
+        best_score = subject_grades.order_by('-score').first()
+        recent_trend = subject_grades[:3]
+        
+        grades_by_subject[subject] = {
+            'grades': subject_grades,
+            'average': round(avg_score, 2),
+            'percentage': round((avg_score / 20) * 100, 1),
+            'best_score': best_score.score if best_score else 0,
+            'total_evaluations': subject_grades.count(),
+            'recent_trend': recent_trend,
+            'improvement': calculate_improvement(recent_trend) if len(recent_trend) >= 2 else 0
+        }
+    
+    # Moyenne générale
+    all_grades = Grade.objects.filter(student=student)
+    general_average = all_grades.aggregate(avg=Avg('score'))['avg'] or 0
+    
+    context = {
+        'student': student,
+        'grades_by_subject': grades_by_subject,
+        'general_average': round(general_average, 2),
+        'general_percentage': round((general_average / 20) * 100, 1),
+        'total_subjects': subjects.count(),
+        'total_evaluations': all_grades.count(),
+    }
+    
+    return render(request, 'accounts/student_grades_detail.html', context)
+
+
+@login_required  
+def student_attendance_detail(request):
+    """Vue détaillée des présences pour l'élève"""
+    if request.user.role != 'STUDENT':
+        messages.error(request, 'Accès non autorisé.')
+        return redirect('accounts:dashboard')
+    
+    try:
+        student = request.user.student_profile
+    except Student.DoesNotExist:
+        messages.error(request, 'Profil étudiant non trouvé.')
+        return redirect('accounts:dashboard')
+    
+    # Filtrage par période
+    period = request.GET.get('period', 'month')
+    today = date.today()
+    
+    if period == 'week':
+        start_date = today - timedelta(days=7)
+    elif period == 'month':
+        start_date = today - timedelta(days=30)
+    elif period == 'semester':
+        start_date = today - timedelta(days=120)
+    else:
+        start_date = today - timedelta(days=30)
+    
+    # Récupération des présences
+    attendances = Attendance.objects.filter(
+        student=student,
+        date__gte=start_date
+    ).order_by('-date')
+    
+    # Statistiques
+    total_days = attendances.count()
+    present_days = attendances.filter(status='PRESENT').count()
+    absent_days = attendances.filter(status='ABSENT').count()
+    late_days = attendances.filter(status='LATE').count()
+    
+    attendance_rate = round((present_days / total_days * 100), 1) if total_days > 0 else 0
+    
+    # Présences par matière
+    attendance_by_subject = {}
+    subjects = Subject.objects.filter(attendance__student=student).distinct()
+    
+    for subject in subjects:
+        subject_attendances = attendances.filter(subject=subject)
+        subject_present = subject_attendances.filter(status='PRESENT').count()
+        subject_total = subject_attendances.count()
+        subject_rate = round((subject_present / subject_total * 100), 1) if subject_total > 0 else 0
+        
+        attendance_by_subject[subject] = {
+            'total': subject_total,
+            'present': subject_present,
+            'absent': subject_attendances.filter(status='ABSENT').count(),
+            'late': subject_attendances.filter(status='LATE').count(),
+            'rate': subject_rate
+        }
+    
+    # Tendance hebdomadaire
+    weekly_trend = []
+    for i in range(7):
+        day_date = today - timedelta(days=i)
+        day_attendance = attendances.filter(date=day_date).first()
+        weekly_trend.append({
+            'date': day_date,
+            'status': day_attendance.status if day_attendance else 'NO_CLASS',
+            'subject': day_attendance.subject.name if day_attendance and day_attendance.subject else None
+        })
+    
+    context = {
+        'student': student,
+        'attendances': attendances[:20],  # 20 dernières
+        'total_days': total_days,
+        'present_days': present_days,
+        'absent_days': absent_days,
+        'late_days': late_days,
+        'attendance_rate': attendance_rate,
+        'attendance_by_subject': attendance_by_subject,
+        'weekly_trend': reversed(weekly_trend),
+        'period': period,
+        'start_date': start_date,
+    }
+    
+    return render(request, 'accounts/student_attendance_detail.html', context)
+
+
+@login_required
+def student_finance_detail(request):
+    """Vue détaillée des finances pour l'élève"""
+    if request.user.role != 'STUDENT':
+        messages.error(request, 'Accès non autorisé.')
+        return redirect('accounts:dashboard')
+    
+    try:
+        student = request.user.student_profile
+    except Student.DoesNotExist:
+        messages.error(request, 'Profil étudiant non trouvé.')
+        return redirect('accounts:dashboard')
+    
+    # Factures par statut
+    pending_invoices = Invoice.objects.filter(
+        student=student,
+        status__in=['DRAFT', 'SENT']
+    ).order_by('-due_date')
+    
+    paid_invoices = Invoice.objects.filter(
+        student=student,
+        status='PAID'
+    ).order_by('-issue_date')
+    
+    overdue_invoices = Invoice.objects.filter(
+        student=student,
+        status='OVERDUE'
+    ).order_by('-due_date')
+    
+    # Statistiques financières
+    total_pending = pending_invoices.aggregate(total=Sum('total_amount'))['total'] or 0
+    total_paid = paid_invoices.aggregate(total=Sum('total_amount'))['total'] or 0
+    total_overdue = overdue_invoices.aggregate(total=Sum('total_amount'))['total'] or 0
+    
+    # Historique des paiements
+    recent_payments = Payment.objects.filter(
+        invoice__student=student,
+        status='COMPLETED'
+    ).select_related('invoice').order_by('-payment_date')[:10]
+    
+    # Prochaines échéances
+    upcoming_due = pending_invoices.filter(
+        due_date__lte=date.today() + timedelta(days=30)
+    ).order_by('due_date')[:5]
+    
+    context = {
+        'student': student,
+        'pending_invoices': pending_invoices,
+        'paid_invoices': paid_invoices[:10],  # 10 dernières
+        'overdue_invoices': overdue_invoices,
+        'total_pending': total_pending,
+        'total_paid': total_paid,
+        'total_overdue': total_overdue,
+        'recent_payments': recent_payments,
+        'upcoming_due': upcoming_due,
+        'balance_status': 'danger' if total_overdue > 0 else 'warning' if total_pending > 0 else 'success'
+    }
+    
+    return render(request, 'accounts/student_finance_detail.html', context)
+
+
+@login_required
+def student_academic_calendar(request):
+    """Calendrier académique pour l'élève avec devoirs et examens"""
+    if request.user.role != 'STUDENT':
+        messages.error(request, 'Accès non autorisé.')
+        return redirect('accounts:dashboard')
+    
+    try:
+        student = request.user.student_profile
+    except Student.DoesNotExist:
+        messages.error(request, 'Profil étudiant non trouvé.')
+        return redirect('accounts:dashboard')
+    
+    # Simulation d'événements (à remplacer par vrai modèle Assignment/Exam)
+    today = date.today()
+    events = []
+    
+    # Événements simulés pour les 30 prochains jours
+    for i in range(30):
+        event_date = today + timedelta(days=i)
+        
+        # Simulation aléatoire d'événements
+        if i % 7 == 1:  # Examens le lundi
+            events.append({
+                'date': event_date,
+                'type': 'exam',
+                'title': f'Examen Mathématiques',
+                'description': 'Examen trimestriel',
+                'subject': 'Mathématiques',
+                'time': '08:00',
+                'duration': 120,
+                'importance': 'high'
+            })
+        
+        if i % 5 == 3:  # Devoirs le jeudi
+            events.append({
+                'date': event_date,
+                'type': 'assignment',
+                'title': f'Devoir Français',
+                'description': 'Rédaction à rendre',
+                'subject': 'Français',
+                'time': '14:00',
+                'duration': 60,
+                'importance': 'medium'
+            })
+    
+    # Grouper par date
+    events_by_date = {}
+    for event in events:
+        date_str = event['date'].strftime('%Y-%m-%d')
+        if date_str not in events_by_date:
+            events_by_date[date_str] = []
+        events_by_date[date_str].append(event)
+    
+    context = {
+        'student': student,
+        'events': events,
+        'events_by_date': events_by_date,
+        'current_month': today.strftime('%B %Y'),
+        'today': today,
+    }
+    
+    return render(request, 'accounts/student_calendar.html', context)
+
+
+def calculate_improvement(grades_list):
+    """Calcule l'amélioration entre les notes récentes"""
+    if len(grades_list) < 2:
+        return 0
+    
+    latest = grades_list[0].score
+    previous = grades_list[1].score
+    return latest - previous
+
+
+# ===== NOUVELLES VUES SPÉCIALISÉES POUR LES PARENTS =====
+
+@login_required
+def parent_children_overview(request):
+    """Vue d'ensemble détaillée de tous les enfants pour le parent"""
+    if request.user.role != 'PARENT':
+        messages.error(request, 'Accès non autorisé.')
+        return redirect('accounts:dashboard')
+    
+    try:
+        parent = request.user.parent_profile
+    except Parent.DoesNotExist:
+        messages.error(request, 'Profil parent non trouvé.')
+        return redirect('accounts:dashboard')
+    
+    children = parent.children.all()
+    
+    if not children.exists():
+        messages.info(request, 'Aucun enfant associé à votre compte.')
+        return redirect('accounts:dashboard')
+    
+    # Période de comparaison
+    period = request.GET.get('period', 'month')
+    today = date.today()
+    
+    if period == 'week':
+        start_date = today - timedelta(days=7)
+    elif period == 'month':
+        start_date = today - timedelta(days=30)
+    elif period == 'semester':
+        start_date = today - timedelta(days=120)
+    else:
+        start_date = today - timedelta(days=30)
+    
+    children_detailed = []
+    
+    for child in children:
+        # Statistiques académiques
+        recent_grades = Grade.objects.filter(
+            student=child,
+            created_at__gte=start_date
+        ).select_related('subject')
+        
+        average_grade = recent_grades.aggregate(avg=Avg('score'))['avg'] or 0
+        best_grade = recent_grades.order_by('-score').first()
+        worst_grade = recent_grades.order_by('score').first()
+        
+        # Statistiques de présence
+        attendances = Attendance.objects.filter(
+            student=child,
+            date__gte=start_date
+        )
+        
+        attendance_rate = 0
+        if attendances.exists():
+            present_count = attendances.filter(status='PRESENT').count()
+            attendance_rate = round((present_count / attendances.count()) * 100, 1)
+        
+        # Situation financière
+        pending_invoices = Invoice.objects.filter(
+            student=child,
+            status__in=['DRAFT', 'SENT']
+        )
+        overdue_invoices = Invoice.objects.filter(
+            student=child,
+            status='OVERDUE'
+        )
+        
+        total_pending = pending_invoices.aggregate(total=Sum('total_amount'))['total'] or 0
+        total_overdue = overdue_invoices.aggregate(total=Sum('total_amount'))['total'] or 0
+        
+        # Performance par matière
+        subjects_performance = []
+        subjects = Subject.objects.filter(grades__student=child).distinct()
+        
+        for subject in subjects:
+            subject_grades = recent_grades.filter(subject=subject)
+            if subject_grades.exists():
+                subject_avg = subject_grades.aggregate(avg=Avg('score'))['avg']
+                subjects_performance.append({
+                    'subject': subject,
+                    'average': round(subject_avg, 2),
+                    'grades_count': subject_grades.count(),
+                    'best_score': subject_grades.order_by('-score').first().score,
+                    'trend': 'up' if subject_avg >= 12 else 'down'
+                })
+        
+        child_data = {
+            'student': child,
+            'period_grades': recent_grades.count(),
+            'average_grade': round(average_grade, 2),
+            'best_grade': best_grade.score if best_grade else 0,
+            'worst_grade': worst_grade.score if worst_grade else 0,
+            'attendance_rate': attendance_rate,
+            'total_pending': total_pending,
+            'total_overdue': total_overdue,
+            'subjects_performance': subjects_performance,
+            'financial_status': 'danger' if total_overdue > 0 else 'warning' if total_pending > 0 else 'success'
+        }
+        
+        children_detailed.append(child_data)
+    
+    # Calcul des statistiques globales
+    total_pending_amount = sum(child['total_pending'] for child in children_detailed)
+    total_overdue_amount = sum(child['total_overdue'] for child in children_detailed)
+    
+    # Calcul de la moyenne globale avec protection contre division par zéro
+    children_with_grades = [child for child in children_detailed if child['average_grade'] > 0]
+    if children_with_grades:
+        average_grade_global = sum(child['average_grade'] for child in children_with_grades) / len(children_with_grades)
+    else:
+        average_grade_global = 0
+    
+    # Calcul du taux de présence moyen avec protection contre division par zéro
+    if children_detailed:
+        average_attendance_global = sum(child['attendance_rate'] for child in children_detailed) / len(children_detailed)
+    else:
+        average_attendance_global = 0
+    
+    context = {
+        'parent': parent,
+        'children_detailed': children_detailed,
+        'period': period,
+        'start_date': start_date,
+        'total_children': children.count(),
+        'total_pending_amount': total_pending_amount,
+        'total_overdue_amount': total_overdue_amount,
+        'average_grade_global': round(average_grade_global, 1),
+        'average_attendance_global': round(average_attendance_global, 1),
+    }
+    
+    return render(request, 'accounts/parent_children_overview.html', context)
+
+
+@login_required
+def parent_child_detail(request, child_id):
+    """Vue détaillée d'un enfant spécifique pour le parent"""
+    if request.user.role != 'PARENT':
+        messages.error(request, 'Accès non autorisé.')
+        return redirect('accounts:dashboard')
+    
+    try:
+        parent = request.user.parent_profile
+        child = get_object_or_404(Student, id=child_id, parents=parent)
+    except Parent.DoesNotExist:
+        messages.error(request, 'Profil parent non trouvé.')
+        return redirect('accounts:dashboard')
+    
+    # Section sélectionnée (notes, présences, finances)
+    section = request.GET.get('section', 'overview')
+    
+    # Données de base
+    today = date.today()
+    month_ago = today - timedelta(days=30)
+    
+    # Données académiques
+    recent_grades = Grade.objects.filter(
+        student=child
+    ).select_related('subject', 'teacher').order_by('-created_at')[:10]
+    
+    average_grade = Grade.objects.filter(student=child).aggregate(avg=Avg('score'))['avg'] or 0
+    
+    # Données de présence
+    all_recent_attendances = Attendance.objects.filter(
+        student=child,
+        date__gte=month_ago
+    ).order_by('-date')
+    
+    # Calculer les stats avant le slicing
+    attendance_stats = {
+        'present': all_recent_attendances.filter(status='PRESENT').count(),
+        'absent': all_recent_attendances.filter(status='ABSENT').count(),
+        'late': all_recent_attendances.filter(status='LATE').count(),
+    }
+    
+    total_days = all_recent_attendances.count()
+    attendance_rate = round((attendance_stats['present'] / total_days * 100), 1) if total_days > 0 else 0
+    
+    # Limiter à 15 pour l'affichage
+    recent_attendances = all_recent_attendances[:15]
+    
+    # Données financières
+    pending_invoices = Invoice.objects.filter(
+        student=child,
+        status__in=['DRAFT', 'SENT']
+    ).order_by('-due_date')
+    
+    paid_invoices = Invoice.objects.filter(
+        student=child,
+        status='PAID'
+    ).order_by('-issue_date')[:5]
+    
+    total_pending = pending_invoices.aggregate(total=Sum('total_amount'))['total'] or 0
+    
+    # Prochains événements (simulation)
+    upcoming_events = [
+        {
+            'type': 'exam',
+            'title': 'Examen de Mathématiques',
+            'date': today + timedelta(days=3),
+            'time': '08:00',
+            'importance': 'high'
+        },
+        {
+            'type': 'assignment',
+            'title': 'Devoir de Français',
+            'date': today + timedelta(days=7),
+            'time': '14:00',
+            'importance': 'medium'
+        }
+    ]
+    
+    context = {
+        'parent': parent,
+        'child': child,
+        'section': section,
+        'recent_grades': recent_grades,
+        'average_grade': round(average_grade, 2),
+        'recent_attendances': recent_attendances,
+        'attendance_stats': attendance_stats,
+        'attendance_rate': attendance_rate,
+        'pending_invoices': pending_invoices,
+        'paid_invoices': paid_invoices,
+        'total_pending': total_pending,
+        'upcoming_events': upcoming_events,
+    }
+    
+    return render(request, 'accounts/parent_child_detail.html', context)
+
+
+@login_required
+def parent_communication_center(request):
+    """Centre de communication pour les parents"""
+    if request.user.role != 'PARENT':
+        messages.error(request, 'Accès non autorisé.')
+        return redirect('accounts:dashboard')
+    
+    try:
+        parent = request.user.parent_profile
+    except Parent.DoesNotExist:
+        messages.error(request, 'Profil parent non trouvé.')
+        return redirect('accounts:dashboard')
+    
+    children = parent.children.all()
+    
+    # Messages récents par enfant (simulation)
+    messages_by_child = {}
+    for child in children:
+        messages_by_child[child] = [
+            {
+                'from': 'M. Dupont (Mathématiques)',
+                'subject': f'Progression de {child.user.first_name}',
+                'preview': 'Votre enfant fait de beaux progrès en mathématiques...',
+                'date': timezone.now() - timedelta(days=2),
+                'read': False,
+                'type': 'teacher'
+            },
+            {
+                'from': 'Administration',
+                'subject': 'Rappel: Réunion parents-professeurs',
+                'preview': 'La réunion aura lieu le vendredi 15 septembre...',
+                'date': timezone.now() - timedelta(days=5),
+                'read': True,
+                'type': 'admin'
+            }
+        ]
+    
+    # Notifications importantes
+    notifications = [
+        {
+            'type': 'warning',
+            'title': 'Paiement en attente',
+            'message': 'Une facture est en attente de paiement',
+            'action': 'Voir les factures',
+            'link': '#'
+        },
+        {
+            'type': 'info',
+            'title': 'Nouvelle note disponible',
+            'message': 'Une nouvelle note a été ajoutée',
+            'action': 'Voir les notes',
+            'link': '#'
+        }
+    ]
+    
+    context = {
+        'parent': parent,
+        'children': children,
+        'messages_by_child': messages_by_child,
+        'notifications': notifications,
+    }
+    
+    return render(request, 'accounts/parent_communication_center.html', context)
