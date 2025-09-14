@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Niveaux Scolaires - eSchool{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- En-tête -->
+        <div class="mb-8">
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900 mb-2 flex items-center">
+                            <span class="material-icons mr-3 text-blue-600 text-4xl">school</span>
+                            Gestion des Niveaux Scolaires
+                        </h1>
+                        <p class="text-gray-600">Administrer les niveaux d'enseignement de l'établissement</p>
+                    </div>
+                    <div class="mt-4 md:mt-0">
+                        <a href="{% url 'academic:level_create' %}" 
+                           class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center">
+                            <span class="material-icons mr-2">add</span>
+                            Nouveau Niveau
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Liste des niveaux -->
+        <div class="bg-white rounded-lg shadow-sm">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900">
+                    Niveaux Scolaires ({{ levels.count }} niveau{{ levels.count|pluralize:"x" }})
+                </h2>
+            </div>
+            
+            {% if levels %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Ordre
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Niveau
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Description
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Classes
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Créé le
+                                </th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for level in levels %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                                            {{ level.order }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0">
+                                            <span class="material-icons text-gray-400">school</span>
+                                        </div>
+                                        <div class="ml-4">
+                                            <div class="text-sm font-medium text-gray-900">{{ level.name }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="text-sm text-gray-900">
+                                        {% if level.description %}
+                                            {{ level.description|truncatechars:80 }}
+                                        {% else %}
+                                            <span class="text-gray-400 italic">Aucune description</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <div class="flex items-center">
+                                        <span class="material-icons mr-1 text-xs">class</span>
+                                        {{ level.classrooms.count }} classe{{ level.classrooms.count|pluralize }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ level.created_at|date:"d/m/Y" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <div class="flex items-center justify-end space-x-2">
+                                        <a href="#" 
+                                           class="text-blue-600 hover:text-blue-900 flex items-center">
+                                            <span class="material-icons text-sm">visibility</span>
+                                        </a>
+                                        <a href="#" 
+                                           class="text-yellow-600 hover:text-yellow-900 flex items-center">
+                                            <span class="material-icons text-sm">edit</span>
+                                        </a>
+                                        {% if level.classrooms.count == 0 %}
+                                        <button onclick="confirmDelete('{{ level.name }}', '#')" 
+                                                class="text-red-600 hover:text-red-900 flex items-center">
+                                            <span class="material-icons text-sm">delete</span>
+                                        </button>
+                                        {% else %}
+                                        <span class="text-gray-400 flex items-center" title="Impossible de supprimer : niveau utilisé par des classes">
+                                            <span class="material-icons text-sm">lock</span>
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="p-8 text-center">
+                    <div class="text-gray-400 mb-4">
+                        <span class="material-icons" style="font-size: 4rem;">school</span>
+                    </div>
+                    <h3 class="text-xl font-medium text-gray-900 mb-2">Aucun niveau scolaire</h3>
+                    <p class="text-gray-600 mb-4">Créez votre premier niveau scolaire pour commencer.</p>
+                    <a href="{% url 'academic:level_create' %}" 
+                       class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 inline-flex items-center">
+                        <span class="material-icons mr-2">add</span>
+                        Créer le premier niveau
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Informations supplémentaires -->
+        {% if levels %}
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-blue-600 text-2xl">trending_up</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Total des niveaux</p>
+                        <p class="text-2xl font-semibold text-gray-900">{{ levels.count }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-green-600 text-2xl">class</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Classes associées</p>
+                        <p class="text-2xl font-semibold text-gray-900">
+                            {% with total_classes=0 %}
+                                {% for level in levels %}
+                                    {% with total_classes=total_classes|add:level.classrooms.count %}{% endwith %}
+                                {% endfor %}
+                                {{ total_classes }}
+                            {% endwith %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-purple-600 text-2xl">sort</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Ordre max</p>
+                        <p class="text-2xl font-semibold text-gray-900">
+                            {% if levels %}{{ levels.last.order }}{% else %}0{% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function confirmDelete(name, url) {
+    if (confirm(`Êtes-vous sûr de vouloir supprimer le niveau "${name}" ?\n\nCette action est irréversible.`)) {
+        window.location.href = url;
+    }
+}
+</script>
+{% endblock %}

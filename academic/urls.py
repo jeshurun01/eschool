@@ -16,6 +16,10 @@ urlpatterns = [
     path('subjects/', views.subject_list, name='subject_list'),
     path('subjects/create/', views.subject_create, name='subject_create'),
     
+    # Gestion des enseignants
+    path('teachers/', views.teacher_list, name='teacher_list'),
+    path('teachers/create/', views.teacher_create, name='teacher_create'),
+    
     # Gestion des classes
     path('classes/', views.classroom_list, name='classroom_list'),
     path('classes/create/', views.classroom_create, name='classroom_create'),

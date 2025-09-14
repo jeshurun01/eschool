@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Création réussie</title>
+</head>
+<body>
+    <script>
+        // Envoyer un message à la fenêtre parent pour rafraîchir
+        if (window.opener) {
+            window.opener.postMessage('{{ message }}', '*');
+            window.close();
+        } else {
+            // Si pas de fenêtre parent, rediriger
+            window.location.href = '{% url "academic:classroom_list" %}';
+        }
+    </script>
+    <div style="text-align: center; padding: 20px; font-family: Arial, sans-serif;">
+        <h2>✅ Création réussie !</h2>
+        <p>Cette fenêtre va se fermer automatiquement...</p>
+        <script>
+            setTimeout(function() {
+                window.close();
+            }, 2000);
+        </script>
+    </div>
+</body>
+</html>

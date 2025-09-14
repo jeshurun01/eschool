@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Nouvelle Matière - eSchool{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- En-tête -->
+        <div class="mb-8">
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <span class="material-icons mr-3 text-orange-600 text-4xl">subject</span>
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900">
+                            {% if is_popup %}
+                                Ajouter une Matière
+                            {% else %}
+                                Créer une Nouvelle Matière
+                            {% endif %}
+                        </h1>
+                        <p class="text-gray-600">Enregistrer une nouvelle matière d'enseignement</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-6 p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% elif message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+                    <div class="flex items-center">
+                        <span class="material-icons mr-2">
+                            {% if message.tags == 'error' %}error
+                            {% elif message.tags == 'success' %}check_circle
+                            {% else %}info{% endif %}
+                        </span>
+                        {{ message }}
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Formulaire -->
+        <div class="bg-white rounded-lg shadow-sm p-8">
+            <form method="post" class="space-y-8">
+                {% csrf_token %}
+                
+                <!-- Informations de base -->
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                        <span class="material-icons mr-2 text-orange-600">info</span>
+                        Informations de la Matière
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 gap-6">
+                        <!-- Nom de la matière -->
+                        <div>
+                            <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+                                Nom de la matière <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" 
+                                   id="name" 
+                                   name="name" 
+                                   required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                   placeholder="Ex: Mathématiques, Français, Histoire...">
+                            <p class="mt-1 text-sm text-gray-500">
+                                Nom complet de la matière enseignée
+                            </p>
+                        </div>
+                        
+                        <!-- Code de la matière -->
+                        <div>
+                            <label for="code" class="block text-sm font-medium text-gray-700 mb-2">
+                                Code de la matière
+                            </label>
+                            <input type="text" 
+                                   id="code" 
+                                   name="code" 
+                                   maxlength="10"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                   placeholder="Ex: MATH, FR, HIST..."
+                                   style="text-transform: uppercase;">
+                            <p class="mt-1 text-sm text-gray-500">
+                                Code court pour identifier la matière (optionnel)
+                            </p>
+                        </div>
+                        
+                        <!-- Description -->
+                        <div>
+                            <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+                                Description
+                            </label>
+                            <textarea id="description" 
+                                      name="description" 
+                                      rows="4"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                      placeholder="Description détaillée de la matière, objectifs, contenu..."></textarea>
+                            <p class="mt-1 text-sm text-gray-500">
+                                Description optionnelle de la matière et de ses objectifs
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuration avancée -->
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                        <span class="material-icons mr-2 text-orange-600">settings</span>
+                        Configuration Avancée
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Coefficient -->
+                        <div>
+                            <label for="coefficient" class="block text-sm font-medium text-gray-700 mb-2">
+                                Coefficient
+                            </label>
+                            <input type="number" 
+                                   id="coefficient" 
+                                   name="coefficient" 
+                                   min="0.5" 
+                                   max="10" 
+                                   step="0.5"
+                                   value="1"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+                            <p class="mt-1 text-sm text-gray-500">
+                                Coefficient pour le calcul des moyennes
+                            </p>
+                        </div>
+                        
+                        <!-- Couleur -->
+                        <div>
+                            <label for="color" class="block text-sm font-medium text-gray-700 mb-2">
+                                Couleur d'affichage
+                            </label>
+                            <div class="flex items-center space-x-3">
+                                <input type="color" 
+                                       id="color" 
+                                       name="color" 
+                                       value="#3B82F6"
+                                       class="h-10 w-20 border border-gray-300 rounded-md cursor-pointer">
+                                <span class="text-sm text-gray-500">
+                                    Couleur utilisée dans les emplois du temps et graphiques
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Options -->
+                    <div class="mt-6 space-y-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" 
+                                   id="is_active" 
+                                   name="is_active" 
+                                   checked
+                                   class="rounded border-gray-300 text-orange-600 focus:ring-orange-500">
+                            <label for="is_active" class="ml-2 text-sm text-gray-700">
+                                Matière active (disponible pour les enseignants)
+                            </label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" 
+                                   id="has_practical_work" 
+                                   name="has_practical_work"
+                                   class="rounded border-gray-300 text-orange-600 focus:ring-orange-500">
+                            <label for="has_practical_work" class="ml-2 text-sm text-gray-700">
+                                Inclut des travaux pratiques
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
+                    <a href="{% if is_popup %}#{% else %}{% url 'academic:subject_list' %}{% endif %}" 
+                       class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center">
+                        <span class="material-icons mr-2">cancel</span>
+                        {% if is_popup %}Fermer{% else %}Annuler{% endif %}
+                    </a>
+                    <button type="submit" 
+                            class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center">
+                        <span class="material-icons mr-2">save</span>
+                        Créer la matière
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Suggestions de matières courantes -->
+        {% if not is_popup %}
+        <div class="mt-8 bg-blue-50 rounded-lg p-6">
+            <h3 class="text-lg font-medium text-blue-900 mb-4 flex items-center">
+                <span class="material-icons mr-2">lightbulb</span>
+                Suggestions de Matières Courantes
+            </h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="text-sm text-blue-800">
+                    <strong>Sciences:</strong><br>
+                    • Mathématiques<br>
+                    • Physique-Chimie<br>
+                    • SVT<br>
+                    • Informatique
+                </div>
+                <div class="text-sm text-blue-800">
+                    <strong>Langues:</strong><br>
+                    • Français<br>
+                    • Anglais<br>
+                    • Espagnol<br>
+                    • Allemand
+                </div>
+                <div class="text-sm text-blue-800">
+                    <strong>Sciences Humaines:</strong><br>
+                    • Histoire<br>
+                    • Géographie<br>
+                    • Philosophie<br>
+                    • Économie
+                </div>
+                <div class="text-sm text-blue-800">
+                    <strong>Arts & Sport:</strong><br>
+                    • EPS<br>
+                    • Arts Plastiques<br>
+                    • Musique<br>
+                    • Théâtre
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Auto-génération du code à partir du nom
+document.getElementById('name').addEventListener('input', function() {
+    const codeField = document.getElementById('code');
+    if (!codeField.value) {
+        // Générer un code automatique
+        let code = this.value
+            .toUpperCase()
+            .replace(/[ÀÁÂÃÄÅ]/g, 'A')
+            .replace(/[ÈÉÊË]/g, 'E')
+            .replace(/[ÌÍÎÏ]/g, 'I')
+            .replace(/[ÒÓÔÕÖ]/g, 'O')
+            .replace(/[ÙÚÛÜ]/g, 'U')
+            .replace(/[ÇÑ]/g, 'C')
+            .replace(/[^A-Z]/g, '')
+            .substring(0, 6);
+        
+        codeField.value = code;
+    }
+});
+
+// Forcer majuscules sur le code
+document.getElementById('code').addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+});
+</script>
+{% endblock %}

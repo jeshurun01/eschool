@@ -7,8 +7,9 @@ from django.db import models
 from django.core.paginator import Paginator
 from django.utils import timezone
 from django.urls import reverse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from django.core.validators import MinValueValidator
+from django.contrib.auth import get_user_model
 
 # Import RBAC
 from core.decorators.permissions import (
@@ -22,6 +23,8 @@ from .models import (
     Document, DocumentAccess
 )
 from accounts.models import Teacher, Student
+
+User = get_user_model()
 
 
 @login_required
@@ -377,25 +380,199 @@ def enrollment_manage(request, classroom_id):
     return render(request, 'academic/enrollment_manage.html', context)
 
 
-# Vues temporaires (placeholder) - À implémenter plus tard
+# Vues pour la gestion des années scolaires et niveaux
 
+@admin_required
 def academic_year_list(request):
-    return HttpResponse("Liste des années scolaires - En cours de développement")
+    """Liste des années scolaires"""
+    academic_years = AcademicYear.objects.all().order_by('-start_date')
+    
+    context = {
+        'academic_years': academic_years,
+    }
+    return render(request, 'academic/academic_year_list.html', context)
 
+@admin_required
 def academic_year_create(request):
-    return HttpResponse("Créer une année scolaire - En cours de développement")
+    """Créer une année scolaire"""
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        is_current = request.POST.get('is_current') == 'on'
+        
+        if name and start_date and end_date:
+            try:
+                academic_year = AcademicYear.objects.create(
+                    name=name,
+                    start_date=start_date,
+                    end_date=end_date,
+                    is_current=is_current
+                )
+                messages.success(request, f'Année scolaire "{academic_year.name}" créée avec succès.')
+                
+                # Si c'est une popup, fermer et rafraîchir
+                if request.GET.get('popup'):
+                    return render(request, 'academic/popup_close.html', {
+                        'message': 'refresh_academic_years'
+                    })
+                
+                return redirect('academic:academic_year_list')
+            except Exception as e:
+                messages.error(request, f'Erreur lors de la création : {str(e)}')
+        else:
+            messages.error(request, 'Veuillez remplir tous les champs obligatoires.')
+    
+    context = {
+        'is_popup': request.GET.get('popup', False)
+    }
+    return render(request, 'academic/academic_year_create.html', context)
 
+@admin_required
 def level_list(request):
-    return HttpResponse("Liste des niveaux - En cours de développement")
+    """Liste des niveaux"""
+    levels = Level.objects.all().order_by('order')
+    
+    context = {
+        'levels': levels,
+    }
+    return render(request, 'academic/level_list.html', context)
 
+@admin_required
 def level_create(request):
-    return HttpResponse("Créer un niveau - En cours de développement")
+    """Créer un niveau"""
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description', '')
+        order = request.POST.get('order', 1)
+        
+        if name:
+            try:
+                level = Level.objects.create(
+                    name=name,
+                    description=description,
+                    order=int(order) if order else 1
+                )
+                messages.success(request, f'Niveau "{level.name}" créé avec succès.')
+                
+                # Si c'est une popup, fermer et rafraîchir
+                if request.GET.get('popup'):
+                    return render(request, 'academic/popup_close.html', {
+                        'message': 'refresh_levels'
+                    })
+                
+                return redirect('academic:level_list')
+            except Exception as e:
+                messages.error(request, f'Erreur lors de la création : {str(e)}')
+        else:
+            messages.error(request, 'Le nom du niveau est obligatoire.')
+    
+    # Calculer le prochain numéro d'ordre
+    next_order = Level.objects.count() + 1
+    
+    context = {
+        'next_order': next_order,
+        'is_popup': request.GET.get('popup', False)
+    }
+    return render(request, 'academic/level_create.html', context)
 
 def subject_list(request):
-    return HttpResponse("Liste des matières - En cours de développement")
+    """Liste des matières avec filtres"""
+    subjects = Subject.objects.prefetch_related('teachers').all()
+    
+    # Filtrage par statut
+    status = request.GET.get('status')
+    if status == 'active':
+        subjects = subjects.filter(is_active=True)
+    elif status == 'inactive':
+        subjects = subjects.filter(is_active=False)
+    
+    # Recherche
+    search = request.GET.get('search')
+    if search and search.strip():
+        subjects = subjects.filter(
+            Q(name__icontains=search) |
+            Q(code__icontains=search) |
+            Q(description__icontains=search)
+        )
+    
+    # Ordre
+    subjects = subjects.order_by('name')
+    
+    # Statistiques
+    active_subjects_count = Subject.objects.filter(is_active=True).count()
+    subjects_with_teachers = Subject.objects.filter(teachers__isnull=False).distinct().count()
+    
+    # Coefficient moyen
+    average_coefficient = Subject.objects.aggregate(
+        avg_coef=models.Avg('coefficient')
+    )['avg_coef']
+    
+    context = {
+        'subjects': subjects,
+        'search': search,
+        'current_status': status,
+        'active_subjects_count': active_subjects_count,
+        'subjects_with_teachers': subjects_with_teachers,
+        'average_coefficient': average_coefficient,
+    }
+    
+    return render(request, 'academic/subject_list.html', context)
 
 def subject_create(request):
-    return HttpResponse("Créer une matière - En cours de développement")
+    """Créer une nouvelle matière"""
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        code = request.POST.get('code', '').strip()
+        description = request.POST.get('description', '').strip()
+        coefficient = request.POST.get('coefficient', '1')
+        color = request.POST.get('color', '#3B82F6')
+        is_active = request.POST.get('is_active') == 'on'
+        has_practical_work = request.POST.get('has_practical_work') == 'on'
+        
+        if not name:
+            messages.error(request, 'Le nom de la matière est obligatoire.')
+        elif Subject.objects.filter(name=name).exists():
+            messages.error(request, 'Une matière avec ce nom existe déjà.')
+        elif code and Subject.objects.filter(code=code).exists():
+            messages.error(request, 'Une matière avec ce code existe déjà.')
+        else:
+            try:
+                coefficient = float(coefficient)
+                if coefficient <= 0:
+                    messages.error(request, 'Le coefficient doit être supérieur à 0.')
+                else:
+                    # Créer la matière
+                    subject = Subject.objects.create(
+                        name=name,
+                        code=code if code else None,
+                        description=description if description else None,
+                        coefficient=coefficient,
+                        color=color,
+                        is_active=is_active
+                    )
+                    
+                    messages.success(request, f'Matière "{name}" créée avec succès.')
+                    
+                    # Check if this is a popup (for integration with teacher creation)
+                    if request.GET.get('popup'):
+                        return render(request, 'academic/popup_close.html', {
+                            'message': f'Matière "{name}" créée avec succès.',
+                            'refresh_parent': True
+                        })
+                    
+                    return redirect('academic:subject_list')
+                    
+            except ValueError:
+                messages.error(request, 'Coefficient invalide.')
+            except Exception as e:
+                messages.error(request, f'Erreur lors de la création: {str(e)}')
+    
+    context = {
+        'is_popup': request.GET.get('popup', False)
+    }
+    
+    return render(request, 'academic/subject_create.html', context)
 
 def classroom_students(request, classroom_id):
     return HttpResponse(f"Élèves de la classe {classroom_id} - En cours de développement")
@@ -1734,3 +1911,137 @@ def document_detail(request, document_id):
     }
     
     return render(request, 'academic/document_detail.html', context)
+
+
+# Vues pour la gestion des enseignants
+
+@admin_required
+def teacher_list(request):
+    """Liste des enseignants avec filtres"""
+    teachers = Teacher.objects.select_related('user').prefetch_related('subjects')
+    
+    # Filtrage par matière
+    subject = request.GET.get('subject')
+    if subject and subject != 'None' and subject.strip():
+        try:
+            teachers = teachers.filter(subjects__id=int(subject))
+        except (ValueError, TypeError):
+            pass
+    
+    # Recherche
+    search = request.GET.get('search')
+    if search and search != 'None' and search.strip():
+        teachers = teachers.filter(
+            Q(user__first_name__icontains=search) |
+            Q(user__last_name__icontains=search) |
+            Q(user__email__icontains=search) |
+            Q(employee_id__icontains=search) |
+            Q(subjects__name__icontains=search)
+        ).distinct()
+    
+    # Ordre
+    teachers = teachers.order_by('user__last_name', 'user__first_name')
+    
+    # Pagination
+    paginator = Paginator(teachers, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistiques
+    teachers_with_assignments = Teacher.objects.filter(
+        teacherassignment__isnull=False
+    ).distinct().count()
+    
+    available_teachers = Teacher.objects.exclude(
+        teacherassignment__isnull=False
+    ).count()
+    
+    # Données pour les filtres
+    subjects = Subject.objects.all()
+    
+    context = {
+        'teachers': page_obj,
+        'subjects': subjects,
+        'current_subject': subject,
+        'search': search,
+        'teachers_with_assignments': teachers_with_assignments,
+        'available_teachers': available_teachers,
+    }
+    
+    return render(request, 'academic/teacher_list.html', context)
+
+@admin_required
+def teacher_create(request):
+    """Créer un nouvel enseignant"""
+    if request.method == 'POST':
+        # Récupération des données
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        employee_id = request.POST.get('employee_id', '').strip()
+        hire_date = request.POST.get('hire_date')
+        password = request.POST.get('password')
+        password_confirm = request.POST.get('password_confirm')
+        subject_ids = request.POST.getlist('subjects')
+        
+        # Validation
+        if not all([first_name, last_name, email, password, password_confirm]):
+            messages.error(request, 'Tous les champs obligatoires doivent être remplis.')
+        elif password != password_confirm:
+            messages.error(request, 'Les mots de passe ne correspondent pas.')
+        elif len(password) < 8:
+            messages.error(request, 'Le mot de passe doit contenir au moins 8 caractères.')
+        elif User.objects.filter(email=email).exists():
+            messages.error(request, 'Un utilisateur avec cette adresse email existe déjà.')
+        elif employee_id and Teacher.objects.filter(employee_id=employee_id).exists():
+            messages.error(request, 'Un enseignant avec cet identifiant employé existe déjà.')
+        else:
+            try:
+                # Créer l'utilisateur
+                user = User.objects.create_user(
+                    username=email,
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    password=password,
+                    role='TEACHER'
+                )
+                
+                # Créer le profil enseignant
+                teacher = Teacher.objects.create(
+                    user=user,
+                    employee_id=employee_id if employee_id else None,
+                    phone=phone if phone else None,
+                    hire_date=hire_date if hire_date else None
+                )
+                
+                # Assigner les matières
+                if subject_ids:
+                    subjects = Subject.objects.filter(id__in=subject_ids)
+                    teacher.subjects.set(subjects)
+                
+                messages.success(request, f'Enseignant "{user.get_full_name()}" créé avec succès.')
+                
+                # Check if this is a popup (for integration with classroom creation)
+                if request.GET.get('popup'):
+                    return render(request, 'academic/popup_close.html', {
+                        'message': f'Enseignant "{user.get_full_name()}" créé avec succès.',
+                        'refresh_parent': True
+                    })
+                
+                return redirect('academic:teacher_list')
+                
+            except Exception as e:
+                messages.error(request, f'Erreur lors de la création: {str(e)}')
+    
+    # Données pour le formulaire
+    subjects = Subject.objects.all().order_by('name')
+    
+    context = {
+        'subjects': subjects,
+        'today': date.today(),
+        'is_popup': request.GET.get('popup', False)
+    }
+    
+    return render(request, 'academic/teacher_create.html', context)

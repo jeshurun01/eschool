@@ -1647,6 +1647,7 @@ def teacher_create(request):
     
     # Générer un ID employé unique
     import random
+    from datetime import date
     employee_id = f"EMP{random.randint(1000, 9999)}"
     while Teacher.objects.filter(employee_id=employee_id).exists():
         employee_id = f"EMP{random.randint(1000, 9999)}"
@@ -1654,6 +1655,8 @@ def teacher_create(request):
     context = {
         'subjects': subjects,
         'suggested_employee_id': employee_id,
+        'today': date.today(),
+        'is_popup': request.GET.get('popup', False)
     }
     return render(request, 'accounts/teacher_create.html', context)
 

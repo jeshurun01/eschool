@@ -12,19 +12,22 @@
             <nav class="flex mb-4" aria-label="Breadcrumb">
                 <ol class="inline-flex items-center space-x-1 md:space-x-3">
                     <li class="inline-flex items-center">
-                        <a href="{% url 'academic:classroom_list' %}" class="text-gray-700 hover:text-blue-600">
-                            <i class="fas fa-chalkboard-teacher mr-2"></i>Classes
+                        <a href="{% url 'academic:classroom_list' %}" class="text-gray-700 hover:text-blue-600 flex items-center">
+                            <span class="material-icons mr-2 text-sm">meeting_room</span>Classes
                         </a>
                     </li>
                     <li>
                         <div class="flex items-center">
-                            <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                            <span class="material-icons text-gray-400 mx-2 text-sm">chevron_right</span>
                             <span class="text-gray-500">Créer une classe</span>
                         </div>
                     </li>
                 </ol>
             </nav>
-            <h1 class="text-3xl font-bold text-gray-900">Créer une nouvelle classe</h1>
+            <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+                <span class="material-icons mr-3 text-blue-600">add_circle</span>
+                Créer une nouvelle classe
+            </h1>
         </div>
 
         <!-- Formulaire -->
@@ -76,9 +79,26 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Niveau -->
                     <div>
-                        <label for="create-level" class="block text-sm font-medium text-gray-700 mb-2">
-                            Niveau <span class="text-red-500">*</span>
-                        </label>
+                        <div class="flex items-center justify-between mb-2">
+                            <label for="create-level" class="block text-sm font-medium text-gray-700">
+                                Niveau <span class="text-red-500">*</span>
+                            </label>
+                            <div class="flex items-center space-x-2">
+                                <a href="{% url 'academic:level_list' %}" 
+                                   class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors duration-200"
+                                   title="Voir tous les niveaux">
+                                    <span class="material-icons text-xs mr-1">list</span>
+                                    Voir tout
+                                </a>
+                                <a href="{% url 'academic:level_create' %}" 
+                                   target="_blank"
+                                   class="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors duration-200"
+                                   title="Créer un nouveau niveau">
+                                    <span class="material-icons text-xs mr-1">add</span>
+                                    Nouveau niveau
+                                </a>
+                            </div>
+                        </div>
                         <select id="create-level" 
                                 name="level" 
                                 required
@@ -88,13 +108,36 @@
                                 <option value="{{ level.id }}">{{ level.name }}</option>
                             {% endfor %}
                         </select>
+                        {% if not levels %}
+                        <p class="mt-1 text-sm text-amber-600">
+                            <span class="material-icons text-xs mr-1">warning</span>
+                            Aucun niveau disponible. Créez d'abord un niveau.
+                        </p>
+                        {% endif %}
                     </div>
                     
                     <!-- Année académique -->
                     <div>
-                        <label for="create-academic-year" class="block text-sm font-medium text-gray-700 mb-2">
-                            Année académique <span class="text-red-500">*</span>
-                        </label>
+                        <div class="flex items-center justify-between mb-2">
+                            <label for="create-academic-year" class="block text-sm font-medium text-gray-700">
+                                Année académique <span class="text-red-500">*</span>
+                            </label>
+                            <div class="flex items-center space-x-2">
+                                <a href="{% url 'academic:academic_year_list' %}" 
+                                   class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors duration-200"
+                                   title="Voir toutes les années">
+                                    <span class="material-icons text-xs mr-1">list</span>
+                                    Voir tout
+                                </a>
+                                <a href="{% url 'academic:academic_year_create' %}" 
+                                   target="_blank"
+                                   class="inline-flex items-center px-2 py-1 text-xs font-medium text-green-600 bg-green-100 rounded-md hover:bg-green-200 transition-colors duration-200"
+                                   title="Créer une nouvelle année académique">
+                                    <span class="material-icons text-xs mr-1">add</span>
+                                    Nouvelle année
+                                </a>
+                            </div>
+                        </div>
                         <select id="create-academic-year" 
                                 name="academic_year" 
                                 required
@@ -107,6 +150,12 @@
                                 </option>
                             {% endfor %}
                         </select>
+                        {% if not academic_years %}
+                        <p class="mt-1 text-sm text-amber-600">
+                            <span class="material-icons text-xs mr-1">warning</span>
+                            Aucune année académique disponible. Créez d'abord une année.
+                        </p>
+                        {% endif %}
                     </div>
                 </div>
                 
@@ -114,9 +163,26 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Professeur principal -->
                     <div>
-                        <label for="head_teacher" class="block text-sm font-medium text-gray-700 mb-2">
-                            Professeur principal
-                        </label>
+                        <div class="flex items-center justify-between mb-2">
+                            <label for="head_teacher" class="block text-sm font-medium text-gray-700">
+                                Professeur principal
+                            </label>
+                            <div class="flex items-center space-x-2">
+                                <a href="{% url 'academic:teacher_list' %}" 
+                                   class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors duration-200"
+                                   title="Voir tous les enseignants">
+                                    <span class="material-icons text-xs mr-1">list</span>
+                                    Voir tout
+                                </a>
+                                <a href="{% url 'academic:teacher_create' %}" 
+                                   target="_blank"
+                                   class="inline-flex items-center px-2 py-1 text-xs font-medium text-purple-600 bg-purple-100 rounded-md hover:bg-purple-200 transition-colors duration-200"
+                                   title="Créer un nouvel enseignant">
+                                    <span class="material-icons text-xs mr-1">add</span>
+                                    Nouvel enseignant
+                                </a>
+                            </div>
+                        </div>
                         <select id="head_teacher" 
                                 name="head_teacher"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -128,9 +194,16 @@
                                 </option>
                             {% endfor %}
                         </select>
+                        {% if not teachers %}
+                        <p class="mt-1 text-sm text-amber-600">
+                            <span class="material-icons text-xs mr-1">warning</span>
+                            Aucun enseignant disponible. Créez d'abord un enseignant.
+                        </p>
+                        {% else %}
                         <p class="mt-1 text-sm text-gray-500">
                             Enseignant responsable de la classe
                         </p>
+                        {% endif %}
                     </div>
                     
                     <!-- Numéro de salle -->
@@ -153,7 +226,7 @@
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <div class="flex">
                         <div class="flex-shrink-0">
-                            <i class="fas fa-info-circle text-blue-400"></i>
+                            <span class="material-icons text-blue-400">info</span>
                         </div>
                         <div class="ml-3">
                             <h3 class="text-sm font-medium text-blue-800">
@@ -174,12 +247,13 @@
                 <!-- Actions -->
                 <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
                     <a href="{% url 'academic:classroom_list' %}" 
-                       class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                       class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center">
+                        <span class="material-icons mr-2 text-sm">cancel</span>
                         Annuler
                     </a>
                     <button type="submit"
-                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        <i class="fas fa-save mr-2"></i>
+                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center">
+                        <span class="material-icons mr-2 text-sm">save</span>
                         Créer la classe
                     </button>
                 </div>
@@ -193,8 +267,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Validation côté client
     const form = document.querySelector('form');
     const nameInput = document.getElementById('name');
-    const levelSelect = document.getElementById('level');
-    const academicYearSelect = document.getElementById('academic_year');
+    const levelSelect = document.getElementById('create-level');
+    const academicYearSelect = document.getElementById('create-academic-year');
     
     form.addEventListener('submit', function(e) {
         let isValid = true;
@@ -232,6 +306,57 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('change', function() {
             this.classList.remove('border-red-500');
         });
+    });
+    
+    // Fonction pour rafraîchir les listes après création
+    function refreshSelects() {
+        // Recharger les niveaux
+        fetch('{% url "academic:level_list" %}?format=json')
+            .then(response => response.json())
+            .then(data => {
+                if (data.levels) {
+                    const currentValue = levelSelect.value;
+                    levelSelect.innerHTML = '<option value="">Sélectionnez un niveau</option>';
+                    data.levels.forEach(level => {
+                        const option = document.createElement('option');
+                        option.value = level.id;
+                        option.textContent = level.name;
+                        if (level.id == currentValue) option.selected = true;
+                        levelSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => console.log('Erreur lors du rechargement des niveaux'));
+        
+        // Recharger les années académiques
+        fetch('{% url "academic:academic_year_list" %}?format=json')
+            .then(response => response.json())
+            .then(data => {
+                if (data.academic_years) {
+                    const currentValue = academicYearSelect.value;
+                    academicYearSelect.innerHTML = '<option value="">Sélectionnez une année</option>';
+                    data.academic_years.forEach(year => {
+                        const option = document.createElement('option');
+                        option.value = year.id;
+                        option.textContent = year.name + (year.is_current ? ' (Année courante)' : '');
+                        if (year.id == currentValue || year.is_current) option.selected = true;
+                        academicYearSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => console.log('Erreur lors du rechargement des années académiques'));
+    }
+    
+    // Écouter les messages des fenêtres popup pour rafraîchir
+    window.addEventListener('message', function(event) {
+        if (event.data === 'refresh_levels' || event.data === 'refresh_academic_years') {
+            setTimeout(refreshSelects, 1000); // Délai pour laisser le temps à la création
+        }
+    });
+    
+    // Rafraîchir quand on revient sur la fenêtre (focus)
+    window.addEventListener('focus', function() {
+        refreshSelects();
     });
 });
 </script>
