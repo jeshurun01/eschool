@@ -10,8 +10,9 @@ from django.views.decorators.csrf import csrf_protect
 from django.utils import timezone
 from datetime import date, timedelta
 from .models import User, Student, Parent, Teacher
-from academic.models import ClassRoom, Subject, Grade, Attendance, Enrollment
-from finance.models import Invoice, Payment
+from academic.models import ClassRoom, Subject, Attendance, Enrollment, Level, Grade
+from finance.models import Invoice, Payment, FeeStructure
+from communication.models import Announcement, Message
 from .forms import (
     UserRegistrationForm, CustomLoginForm, ProfileEditForm,
     StudentProfileForm, TeacherProfileForm, ParentProfileForm,
@@ -121,6 +122,7 @@ def dashboard(request):
 def admin_dashboard(request):
     """Dashboard spécialisé pour les administrateurs"""
     today = date.today()
+    now = timezone.now()
     week_ago = today - timedelta(days=7)
     month_ago = today - timedelta(days=30)
     
@@ -197,6 +199,7 @@ def admin_dashboard(request):
         'academic_stats': academic_stats,
         'chart_data': chart_data,
         'today': today,
+        'now': now,
     }
     
     return render(request, 'accounts/admin_dashboard.html', context)
@@ -1093,12 +1096,23 @@ def parent_create(request):
             parent.user = user
             parent.save()
             
-            messages.success(request, f'Parent {user.full_name} créé avec succès.')
+            messages.success(request, f'Parent {user.get_full_name()} créé avec succès.')
             return redirect('accounts:parent_detail', parent_id=parent.id)
         else:
+            # Afficher les erreurs de débogage
+            if not user_form.is_valid():
+                for field, errors in user_form.errors.items():
+                    for error in errors:
+                        messages.error(request, f'Erreur dans {field}: {error}')
+            
+            if not parent_form.is_valid():
+                for field, errors in parent_form.errors.items():
+                    for error in errors:
+                        messages.error(request, f'Erreur dans {field}: {error}')
+            
             messages.error(request, 'Erreur lors de la création du parent. Vérifiez les informations.')
     else:
-        user_form = AdminUserCreateForm()
+        user_form = AdminUserCreateForm(initial={'role': 'PARENT'})
         parent_form = ParentProfileForm()
     
     context = {

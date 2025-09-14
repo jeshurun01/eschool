@@ -3,19 +3,28 @@
 
 {% block title %}Dashboard Administrateur - {{ block.super }}{% endblock %}
 
+
 {% block content %}
 <div class="min-h-screen bg-gray-50">
     <!-- Header -->
-    <div class="bg-white shadow">
+    <div class="bg-white shadow-sm border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center py-6">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900">Dashboard Administrateur</h1>
-                    <p class="mt-1 text-sm text-gray-600">Vue d'ensemble de l'école - {{ today|date:"d F Y" }}</p>
+                    <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+                        <span class="material-icons text-blue-600 mr-3 text-4xl">dashboard</span>
+                        Dashboard Administrateur
+                    </h1>
+                    <p class="mt-1 text-sm text-gray-600">Vue d'ensemble complète de l'école - {{ today|date:"l d F Y" }}</p>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-500">Connecté en tant que</span>
-                    <span class="font-medium text-blue-600">{{ user.get_full_name }}</span>
+                    <div class="flex items-center bg-blue-50 px-4 py-2 rounded-lg">
+                        <span class="material-icons text-blue-600 mr-2">admin_panel_settings</span>
+                        <div>
+                            <span class="text-sm text-gray-500 block">Connecté en tant que</span>
+                            <span class="font-medium text-blue-600">{{ user.get_full_name }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -25,219 +34,437 @@
         <!-- Statistiques principales -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <!-- Total Élèves -->
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="p-5">
+            <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                <div class="p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
-                                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
+                            <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                                <span class="material-icons text-white text-2xl">school</span>
                             </div>
                         </div>
                         <div class="ml-5 w-0 flex-1">
                             <dl>
                                 <dt class="text-sm font-medium text-gray-500 truncate">Total Élèves</dt>
-                                <dd class="text-lg font-medium text-gray-900">{{ stats.total_students }}</dd>
+                                <dd class="text-2xl font-bold text-gray-900">{{ stats.total_students }}</dd>
+                                <dd class="text-xs text-green-600 font-medium">+12% ce mois</dd>
                             </dl>
                         </div>
+                    </div>
+                    <div class="mt-4">
+                        <a href="{% url 'accounts:student_list' %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center">
+                            Voir tous les élèves
+                            <span class="material-icons ml-1 text-sm">arrow_forward</span>
+                        </a>
                     </div>
                 </div>
             </div>
 
             <!-- Total Enseignants -->
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="p-5">
+            <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                <div class="p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
-                                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"/>
-                                </svg>
+                            <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
+                                <span class="material-icons text-white text-2xl">person</span>
                             </div>
                         </div>
                         <div class="ml-5 w-0 flex-1">
                             <dl>
                                 <dt class="text-sm font-medium text-gray-500 truncate">Enseignants</dt>
-                                <dd class="text-lg font-medium text-gray-900">{{ stats.total_teachers }}</dd>
+                                <dd class="text-2xl font-bold text-gray-900">{{ stats.total_teachers }}</dd>
+                                <dd class="text-xs text-blue-600 font-medium">{{ stats.total_parents }} parents</dd>
                             </dl>
                         </div>
+                    </div>
+                    <div class="mt-4">
+                        <a href="{% url 'accounts:teacher_list' %}" class="text-green-600 hover:text-green-700 text-sm font-medium flex items-center">
+                            Gérer le personnel
+                            <span class="material-icons ml-1 text-sm">arrow_forward</span>
+                        </a>
                     </div>
                 </div>
             </div>
 
             <!-- Total Classes -->
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="p-5">
+            <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                <div class="p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
-                                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"/>
-                                </svg>
+                            <div class="w-12 h-12 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg">
+                                <span class="material-icons text-white text-2xl">class</span>
                             </div>
                         </div>
                         <div class="ml-5 w-0 flex-1">
                             <dl>
                                 <dt class="text-sm font-medium text-gray-500 truncate">Classes</dt>
-                                <dd class="text-lg font-medium text-gray-900">{{ stats.total_classes }}</dd>
+                                <dd class="text-2xl font-bold text-gray-900">{{ stats.total_classes }}</dd>
+                                <dd class="text-xs text-gray-600 font-medium">{{ stats.total_subjects }} matières</dd>
                             </dl>
                         </div>
+                    </div>
+                    <div class="mt-4">
+                        <a href="/admin/academic/classroom/" class="text-yellow-600 hover:text-yellow-700 text-sm font-medium flex items-center">
+                            Voir les classes
+                            <span class="material-icons ml-1 text-sm">arrow_forward</span>
+                        </a>
                     </div>
                 </div>
             </div>
 
             <!-- Revenus du mois -->
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="p-5">
+            <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                <div class="p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
-                                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/>
-                                </svg>
+                            <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                                <span class="material-icons text-white text-2xl">payments</span>
                             </div>
                         </div>
                         <div class="ml-5 w-0 flex-1">
                             <dl>
                                 <dt class="text-sm font-medium text-gray-500 truncate">Revenus (mois)</dt>
-                                <dd class="text-lg font-medium text-gray-900">${{ stats.month_revenue|floatformat:0 }}</dd>
+                                <dd class="text-2xl font-bold text-gray-900">${{ stats.month_revenue|floatformat:0 }}</dd>
+                                <dd class="text-xs text-green-600 font-medium">Total: ${{ stats.total_revenue|floatformat:0 }}</dd>
                             </dl>
                         </div>
+                    </div>
+                    <div class="mt-4">
+                        <a href="{% url 'finance:payment_list' %}" class="text-purple-600 hover:text-purple-700 text-sm font-medium flex items-center">
+                            Rapport finance
+                            <span class="material-icons ml-1 text-sm">arrow_forward</span>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Deuxième ligne de statistiques -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Deuxième ligne de statistiques détaillées -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <!-- Présences du jour -->
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="px-4 py-5 sm:p-6">
-                    <dt class="text-sm font-medium text-gray-500 truncate">Présences aujourd'hui</dt>
-                    <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ stats.today_attendances }}</dd>
-                    <div class="mt-2 text-sm text-red-600">
-                        {{ stats.today_absences }} absence{{ stats.today_absences|pluralize }}
+            <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-100">
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <span class="material-icons text-green-600 mr-2">how_to_reg</span>
+                        <h3 class="text-sm font-medium text-gray-500">Présences aujourd'hui</h3>
+                    </div>
+                    <div class="text-3xl font-bold text-gray-900 mb-2">{{ stats.today_attendances }}</div>
+                    <div class="flex items-center text-sm">
+                        <span class="material-icons text-red-500 mr-1 text-sm">person_off</span>
+                        <span class="text-red-600">{{ stats.today_absences }} absence{{ stats.today_absences|pluralize }}</span>
                     </div>
                 </div>
             </div>
 
             <!-- Factures en attente -->
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="px-4 py-5 sm:p-6">
-                    <dt class="text-sm font-medium text-gray-500 truncate">Factures en attente</dt>
-                    <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ stats.pending_invoices }}</dd>
-                    <div class="mt-2 text-sm text-gray-600">
-                        sur {{ stats.total_invoices }} au total
+            <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-100">
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <span class="material-icons text-orange-600 mr-2">receipt_long</span>
+                        <h3 class="text-sm font-medium text-gray-500">Factures en attente</h3>
+                    </div>
+                    <div class="text-3xl font-bold text-gray-900 mb-2">{{ stats.pending_invoices }}</div>
+                    <div class="flex items-center text-sm">
+                        <span class="material-icons text-gray-500 mr-1 text-sm">receipt</span>
+                        <span class="text-gray-600">sur {{ stats.total_invoices }} au total</span>
                     </div>
                 </div>
             </div>
 
             <!-- Inscriptions actives -->
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="px-4 py-5 sm:p-6">
-                    <dt class="text-sm font-medium text-gray-500 truncate">Inscriptions actives</dt>
-                    <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ stats.active_enrollments }}</dd>
-                    <div class="mt-2 text-sm text-green-600">
-                        Moyenne: {{ academic_stats.avg_class_size|floatformat:1 }} élèves/classe
+            <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-100">
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <span class="material-icons text-blue-600 mr-2">how_to_reg</span>
+                        <h3 class="text-sm font-medium text-gray-500">Inscriptions actives</h3>
+                    </div>
+                    <div class="text-3xl font-bold text-gray-900 mb-2">{{ stats.active_enrollments }}</div>
+                    <div class="flex items-center text-sm">
+                        <span class="material-icons text-green-500 mr-1 text-sm">groups</span>
+                        <span class="text-green-600">Moyenne: {{ academic_stats.avg_class_size|floatformat:1 }} élèves/classe</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Utilisateurs actifs -->
+            <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-100">
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <span class="material-icons text-indigo-600 mr-2">people</span>
+                        <h3 class="text-sm font-medium text-gray-500">Utilisateurs actifs</h3>
+                    </div>
+                    <div class="text-3xl font-bold text-gray-900 mb-2">{{ stats.total_users }}</div>
+                    <div class="flex items-center text-sm">
+                        <span class="material-icons text-green-500 mr-1 text-sm">verified_user</span>
+                        <span class="text-green-600">Tous vérifiés</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Navigation rapide -->
-        <div class="bg-white shadow rounded-lg mb-8">
-            <div class="px-4 py-5 sm:p-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Actions rapides</h3>
+        <!-- Navigation rapide améliorée -->
+        <div class="bg-white shadow-lg rounded-xl mb-8 border border-gray-100">
+            <div class="px-6 py-5">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-6 flex items-center">
+                    <span class="material-icons text-blue-600 mr-2">flash_on</span>
+                    Actions rapides
+                </h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <a href="{% url 'accounts:register' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        <svg class="-ml-1 mr-2 h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"/>
-                        </svg>
-                        Nouvel utilisateur
+                    <a href="{% url 'accounts:register' %}" class="group inline-flex items-center px-6 py-3 border border-gray-200 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                        <span class="material-icons mr-3 text-blue-600 group-hover:text-blue-700">person_add</span>
+                        <div>
+                            <div class="font-medium">Nouvel utilisateur</div>
+                            <div class="text-xs text-gray-500">Élève, enseignant, parent</div>
+                        </div>
                     </a>
-                    <a href="{% url 'academic:classroom_create' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        <svg class="-ml-1 mr-2 h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3z"/>
-                        </svg>
-                        Nouvelle classe
+                    
+                    <a href="{% url 'academic:classroom_create' %}" class="group inline-flex items-center px-6 py-3 border border-gray-200 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200">
+                        <span class="material-icons mr-3 text-green-600 group-hover:text-green-700">add_business</span>
+                        <div>
+                            <div class="font-medium">Nouvelle classe</div>
+                            <div class="text-xs text-gray-500">Créer une nouvelle classe</div>
+                        </div>
                     </a>
-                    <a href="{% url 'finance:invoice_generate' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        <svg class="-ml-1 mr-2 h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
-                        </svg>
-                        Générer factures
+                    
+                    <a href="{% url 'finance:invoice_create' %}" class="group inline-flex items-center px-6 py-3 border border-gray-200 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-yellow-50 hover:border-yellow-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all duration-200">
+                        <span class="material-icons mr-3 text-yellow-600 group-hover:text-yellow-700">receipt_long</span>
+                        <div>
+                            <div class="font-medium">Nouvelle facture</div>
+                            <div class="text-xs text-gray-500">Créer une facture</div>
+                        </div>
                     </a>
-                    <a href="{% url 'finance:report_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        <svg class="-ml-1 mr-2 h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
-                            <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 2V6a1 1 0 10-2 0v1a1 1 0 102 0zm3 0V6a1 1 0 10-2 0v1a1 1 0 102 0z" clip-rule="evenodd"/>
-                        </svg>
-                        Rapport finance
+                    
+                    <a href="{% url 'communication:announcement_create' %}" class="group inline-flex items-center px-6 py-3 border border-gray-200 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-purple-50 hover:border-purple-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-200">
+                        <span class="material-icons mr-3 text-purple-600 group-hover:text-purple-700">campaign</span>
+                        <div>
+                            <div class="font-medium">Nouvelle annonce</div>
+                            <div class="text-xs text-gray-500">Informer la communauté</div>
+                        </div>
                     </a>
                 </div>
             </div>
         </div>
 
-        <!-- Activité récente -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Modules et gestion -->
+        <div class="bg-white shadow-lg rounded-xl mb-8 border border-gray-100">
+            <div class="px-6 py-5">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-6 flex items-center">
+                    <span class="material-icons text-indigo-600 mr-2">apps</span>
+                    Modules et gestion
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Module Académique -->
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
+                        <div class="flex items-center mb-3">
+                            <span class="material-icons text-blue-600 mr-2 text-2xl">school</span>
+                            <h4 class="font-medium text-gray-900">Module Académique</h4>
+                        </div>
+                        <div class="space-y-2">
+                            <a href="{% url 'academic:level_list' %}" class="block text-sm text-blue-600 hover:text-blue-700 flex items-center">
+                                <span class="material-icons mr-1 text-sm">grade</span>
+                                Niveaux scolaires
+                            </a>
+                            <a href="{% url 'academic:classroom_list' %}" class="block text-sm text-blue-600 hover:text-blue-700 flex items-center">
+                                <span class="material-icons mr-1 text-sm">meeting_room</span>
+                                Classes
+                            </a>
+                            <a href="{% url 'academic:subject_list' %}" class="block text-sm text-blue-600 hover:text-blue-700 flex items-center">
+                                <span class="material-icons mr-1 text-sm">menu_book</span>
+                                Matières
+                            </a>
+                            <a href="{% url 'academic:grade_list' %}" class="block text-sm text-blue-600 hover:text-blue-700 flex items-center">
+                                <span class="material-icons mr-1 text-sm">how_to_reg</span>
+                                Notes
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Module Finance -->
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
+                        <div class="flex items-center mb-3">
+                            <span class="material-icons text-green-600 mr-2 text-2xl">account_balance</span>
+                            <h4 class="font-medium text-gray-900">Module Finance</h4>
+                        </div>
+                        <div class="space-y-2">
+                            <a href="{% url 'finance:fee_structure_list' %}" class="block text-sm text-green-600 hover:text-green-700 flex items-center">
+                                <span class="material-icons mr-1 text-sm">price_check</span>
+                                Tarifs
+                            </a>
+                            <a href="{% url 'finance:invoice_list' %}" class="block text-sm text-green-600 hover:text-green-700 flex items-center">
+                                <span class="material-icons mr-1 text-sm">receipt</span>
+                                Factures
+                            </a>
+                            <a href="{% url 'finance:payment_list' %}" class="block text-sm text-green-600 hover:text-green-700 flex items-center">
+                                <span class="material-icons mr-1 text-sm">payment</span>
+                                Paiements
+                            </a>
+                            <a href="{% url 'finance:financial_reports' %}" class="block text-sm text-green-600 hover:text-green-700 flex items-center">
+                                <span class="material-icons mr-1 text-sm">analytics</span>
+                                Rapports
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Module Communication -->
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
+                        <div class="flex items-center mb-3">
+                            <span class="material-icons text-purple-600 mr-2 text-2xl">forum</span>
+                            <h4 class="font-medium text-gray-900">Communication</h4>
+                        </div>
+                        <div class="space-y-2">
+                            <a href="{% url 'communication:announcement_list' %}" class="block text-sm text-purple-600 hover:text-purple-700 flex items-center">
+                                <span class="material-icons mr-1 text-sm">campaign</span>
+                                Annonces
+                            </a>
+                            <a href="{% url 'communication:message_list' %}" class="block text-sm text-purple-600 hover:text-purple-700 flex items-center">
+                                <span class="material-icons mr-1 text-sm">mail</span>
+                                Messages
+                            </a>
+                            <a href="{% url 'communication:resource_list' %}" class="block text-sm text-purple-600 hover:text-purple-700 flex items-center">
+                                <span class="material-icons mr-1 text-sm">folder</span>
+                                Ressources
+                            </a>
+                            <a href="{% url 'communication:notification_list' %}" class="block text-sm text-purple-600 hover:text-purple-700 flex items-center">
+                                <span class="material-icons mr-1 text-sm">notifications</span>
+                                Notifications
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activité récente et tableaux détaillés -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <!-- Nouveaux élèves -->
-            <div class="bg-white shadow rounded-lg">
-                <div class="px-4 py-5 sm:p-6">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Nouveaux élèves (7 derniers jours)</h3>
+            <div class="bg-white shadow-lg rounded-xl border border-gray-100">
+                <div class="px-6 py-5">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4 flex items-center">
+                        <span class="material-icons text-blue-600 mr-2">person_add</span>
+                        Nouveaux élèves (7 derniers jours)
+                    </h3>
                     {% if recent_activity.new_students %}
-                        <div class="space-y-3">
+                        <div class="space-y-4">
                             {% for student in recent_activity.new_students %}
-                            <div class="flex items-center justify-between">
+                            <div class="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
                                 <div class="flex items-center">
-                                    <div class="flex-shrink-0 h-10 w-10">
+                                    <div class="flex-shrink-0 h-12 w-12">
                                         {% if student.user.avatar %}
-                                            <img class="h-10 w-10 rounded-full" src="{{ student.user.avatar.url }}" alt="">
+                                            <img class="h-12 w-12 rounded-full object-cover border-2 border-blue-100" src="{{ student.user.avatar.url }}" alt="">
                                         {% else %}
-                                            <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                                                <span class="text-sm font-medium text-gray-700">{{ student.user.first_name|first }}{{ student.user.last_name|first }}</span>
+                                            <div class="h-12 w-12 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center border-2 border-blue-100">
+                                                <span class="text-white font-semibold">{{ student.user.first_name|first }}{{ student.user.last_name|first }}</span>
                                             </div>
                                         {% endif %}
                                     </div>
                                     <div class="ml-4">
                                         <div class="text-sm font-medium text-gray-900">{{ student.user.get_full_name }}</div>
-                                        <div class="text-sm text-gray-500">{{ student.matricule }}</div>
+                                        <div class="text-sm text-gray-500 flex items-center">
+                                            <span class="material-icons mr-1 text-xs">badge</span>
+                                            {{ student.matricule }}
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="text-sm text-gray-500">
-                                    {{ student.user.date_joined|date:"d/m" }}
+                                <div class="text-right">
+                                    <div class="text-sm text-gray-500">{{ student.user.date_joined|date:"d/m" }}</div>
+                                    <div class="text-xs text-blue-600">Nouveau</div>
                                 </div>
                             </div>
                             {% endfor %}
                         </div>
+                        <div class="mt-4">
+                            <a href="{% url 'accounts:student_list' %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center">
+                                Voir tous les élèves
+                                <span class="material-icons ml-1 text-sm">arrow_forward</span>
+                            </a>
+                        </div>
                     {% else %}
-                        <p class="text-gray-500 text-sm">Aucun nouvel élève cette semaine.</p>
+                        <div class="text-center py-6">
+                            <span class="material-icons text-gray-400 text-4xl mb-2">person_outline</span>
+                            <p class="text-gray-500 text-sm">Aucun nouvel élève cette semaine.</p>
+                        </div>
                     {% endif %}
                 </div>
             </div>
 
             <!-- Paiements récents -->
-            <div class="bg-white shadow rounded-lg">
-                <div class="px-4 py-5 sm:p-6">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Paiements récents</h3>
+            <div class="bg-white shadow-lg rounded-xl border border-gray-100">
+                <div class="px-6 py-5">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4 flex items-center">
+                        <span class="material-icons text-green-600 mr-2">payment</span>
+                        Paiements récents
+                    </h3>
                     {% if recent_activity.recent_payments %}
-                        <div class="space-y-3">
+                        <div class="space-y-4">
                             {% for payment in recent_activity.recent_payments %}
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <div class="text-sm font-medium text-gray-900">${{ payment.amount }}</div>
-                                    <div class="text-sm text-gray-500">{{ payment.method }}</div>
+                            <div class="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="w-10 h-10 bg-gradient-to-r from-green-400 to-green-600 rounded-lg flex items-center justify-center">
+                                            <span class="material-icons text-white text-sm">attach_money</span>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">${{ payment.amount }}</div>
+                                        <div class="text-sm text-gray-500 flex items-center">
+                                            <span class="material-icons mr-1 text-xs">credit_card</span>
+                                            {{ payment.method }}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="text-sm text-gray-500">
-                                    {{ payment.date|date:"d/m" }}
+                                <div class="text-right">
+                                    <div class="text-sm text-gray-500">{{ payment.payment_date|date:"d/m" }}</div>
+                                    <div class="text-xs text-green-600">Complété</div>
                                 </div>
                             </div>
                             {% endfor %}
                         </div>
+                        <div class="mt-4">
+                            <a href="/admin/finance/payment/" class="text-green-600 hover:text-green-700 text-sm font-medium flex items-center">
+                                Voir tous les paiements
+                                <span class="material-icons ml-1 text-sm">arrow_forward</span>
+                            </a>
+                        </div>
                     {% else %}
-                        <p class="text-gray-500 text-sm">Aucun paiement récent.</p>
+                        <div class="text-center py-6">
+                            <span class="material-icons text-gray-400 text-4xl mb-2">payment</span>
+                            <p class="text-gray-500 text-sm">Aucun paiement récent.</p>
+                        </div>
                     {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Liens administration directs -->
+        <div class="bg-white shadow-lg rounded-xl border border-gray-100 mb-8">
+            <div class="px-6 py-5">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-6 flex items-center">
+                    <span class="material-icons text-red-600 mr-2">admin_panel_settings</span>
+                    Administration avancée
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <a href="/admin/" class="group flex items-center p-4 border border-gray-200 rounded-lg hover:bg-red-50 hover:border-red-300 transition-all duration-200">
+                        <span class="material-icons text-red-600 mr-3 group-hover:text-red-700">settings</span>
+                        <div>
+                            <div class="font-medium text-gray-900">Interface Admin</div>
+                            <div class="text-xs text-gray-500">Administration complète</div>
+                        </div>
+                    </a>
+                    
+                    <a href="/admin/auth/user/" class="group flex items-center p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-all duration-200">
+                        <span class="material-icons text-blue-600 mr-3 group-hover:text-blue-700">people</span>
+                        <div>
+                            <div class="font-medium text-gray-900">Gestion utilisateurs</div>
+                            <div class="text-xs text-gray-500">Comptes et permissions</div>
+                        </div>
+                    </a>
+                    
+                    <a href="/admin/auth/group/" class="group flex items-center p-4 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 transition-all duration-200">
+                        <span class="material-icons text-green-600 mr-3 group-hover:text-green-700">groups</span>
+                        <div>
+                            <div class="font-medium text-gray-900">Groupes</div>
+                            <div class="text-xs text-gray-500">Rôles et permissions</div>
+                        </div>
+                    </a>
                 </div>
             </div>
         </div>

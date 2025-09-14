@@ -30,15 +30,22 @@
         <div class="mb-8">
             <div class="bg-white rounded-lg shadow-sm p-6">
                 <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
-                    <a href="{% url 'accounts:parent_list' %}" class="hover:text-blue-600">👨‍👩‍👧‍👦 Parents</a>
+                    <a href="{% url 'accounts:parent_list' %}" class="hover:text-blue-600 flex items-center">
+                        <span class="material-icons text-sm mr-1">family_restroom</span>
+                        Parents
+                    </a>
                     <span>/</span>
                     <a href="{% url 'accounts:parent_detail' parent.id %}" class="hover:text-blue-600">{{ parent.user.full_name }}</a>
                     <span>/</span>
-                    <span class="text-gray-900">👶 Gérer Enfants</span>
+                    <span class="text-gray-900 flex items-center">
+                        <span class="material-icons text-sm mr-1">child_care</span>
+                        Gérer Enfants
+                    </span>
                 </nav>
                 
-                <h1 class="text-3xl font-bold text-gray-900 mb-2">
-                    👶 Gérer les Enfants de {{ parent.user.full_name }}
+                <h1 class="text-3xl font-bold text-gray-900 mb-2 flex items-center">
+                    <span class="material-icons mr-3">child_care</span>
+                    Gérer les Enfants de {{ parent.user.full_name }}
                 </h1>
                 <p class="text-gray-600">Assigner ou retirer des enfants à ce parent/tuteur</p>
             </div>
@@ -48,7 +55,10 @@
         <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
             <form method="GET" class="flex items-end space-x-4">
                 <div class="flex-1">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">🔍 Rechercher un élève</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                        <span class="material-icons text-sm mr-1">search</span>
+                        Rechercher un élève
+                    </label>
                     <input type="text" 
                            name="search" 
                            value="{{ search_query }}"
@@ -57,14 +67,16 @@
                 </div>
                 <div>
                     <button type="submit" 
-                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors duration-200">
-                        🔍 Chercher
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors duration-200 flex items-center">
+                        <span class="material-icons text-sm mr-1">search</span>
+                        Chercher
                     </button>
                 </div>
                 <div>
                     <a href="{% url 'accounts:parent_assign_children' parent.id %}" 
-                       class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md transition-colors duration-200">
-                        🔄 Réinitialiser
+                       class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md transition-colors duration-200 flex items-center">
+                        <span class="material-icons text-sm mr-1">refresh</span>
+                        Réinitialiser
                     </a>
                 </div>
             </form>
@@ -75,7 +87,7 @@
             <div class="bg-white rounded-lg shadow-lg">
                 <div class="current-children p-6 rounded-t-lg">
                     <h2 class="text-xl font-bold flex items-center">
-                        <span class="mr-2">👶</span>
+                        <span class="material-icons mr-2">child_care</span>
                         Enfants Actuels ({{ current_children.count }})
                     </h2>
                 </div>
@@ -102,15 +114,18 @@
                                                 <div class="font-medium text-gray-900">
                                                     {{ child.user.first_name }} {{ child.user.last_name }}
                                                 </div>
-                                                <div class="text-sm text-gray-500">
-                                                    📝 {{ child.matricule }}
+                                                <div class="text-sm text-gray-500 flex items-center">
+                                                    <span class="material-icons text-xs mr-1">badge</span>
+                                                    {{ child.matricule }}
                                                 </div>
-                                                <div class="text-sm text-gray-500">
-                                                    📧 {{ child.user.email }}
+                                                <div class="text-sm text-gray-500 flex items-center">
+                                                    <span class="material-icons text-xs mr-1">email</span>
+                                                    {{ child.user.email }}
                                                 </div>
                                                 {% if child.current_class %}
-                                                <div class="text-xs text-gray-400">
-                                                    🏫 {{ child.current_class.name }}
+                                                <div class="text-xs text-gray-400 flex items-center">
+                                                    <span class="material-icons text-xs mr-1">school</span>
+                                                    {{ child.current_class.name }}
                                                 </div>
                                                 {% endif %}
                                             </div>
@@ -118,8 +133,9 @@
                                         
                                         <div class="text-right">
                                             <a href="{% url 'accounts:student_detail' child.id %}" 
-                                               class="text-blue-600 hover:text-blue-800 text-sm">
-                                                👁️ Voir Profil
+                                               class="text-blue-600 hover:text-blue-800 text-sm flex items-center justify-end">
+                                                <span class="material-icons text-sm mr-1">visibility</span>
+                                                Voir Profil
                                             </a>
                                         </div>
                                     </div>
@@ -129,13 +145,16 @@
                             
                             <button type="button" 
                                     onclick="removeSelected()"
-                                    class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                                ❌ Retirer les Enfants Sélectionnés
+                                    class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center">
+                                <span class="material-icons mr-2">remove_circle</span>
+                                Retirer les Enfants Sélectionnés
                             </button>
                         </form>
                     {% else %}
                         <div class="text-center py-8">
-                            <div class="text-6xl mb-4">👶</div>
+                            <div class="text-gray-400 mb-4">
+                                <span class="material-icons" style="font-size: 4rem;">child_care</span>
+                            </div>
                             <p class="text-gray-500">Aucun enfant assigné à ce parent</p>
                         </div>
                     {% endif %}
@@ -146,7 +165,7 @@
             <div class="bg-white rounded-lg shadow-lg">
                 <div class="available-students p-6 rounded-t-lg">
                     <h2 class="text-xl font-bold flex items-center">
-                        <span class="mr-2">➕</span>
+                        <span class="material-icons mr-2">add_circle</span>
                         Élèves Disponibles ({{ available_students.count }})
                     </h2>
                 </div>
@@ -173,15 +192,18 @@
                                                 <div class="font-medium text-gray-900">
                                                     {{ student.user.first_name }} {{ student.user.last_name }}
                                                 </div>
-                                                <div class="text-sm text-gray-500">
-                                                    📝 {{ student.matricule }}
+                                                <div class="text-sm text-gray-500 flex items-center">
+                                                    <span class="material-icons text-xs mr-1">badge</span>
+                                                    {{ student.matricule }}
                                                 </div>
-                                                <div class="text-sm text-gray-500">
-                                                    📧 {{ student.user.email }}
+                                                <div class="text-sm text-gray-500 flex items-center">
+                                                    <span class="material-icons text-xs mr-1">email</span>
+                                                    {{ student.user.email }}
                                                 </div>
                                                 {% if student.current_class %}
-                                                <div class="text-xs text-gray-400">
-                                                    🏫 {{ student.current_class.name }}
+                                                <div class="text-xs text-gray-400 flex items-center">
+                                                    <span class="material-icons text-xs mr-1">school</span>
+                                                    {{ student.current_class.name }}
                                                 </div>
                                                 {% endif %}
                                             </div>
@@ -189,8 +211,9 @@
                                         
                                         <div class="text-right">
                                             <a href="{% url 'accounts:student_detail' student.id %}" 
-                                               class="text-blue-600 hover:text-blue-800 text-sm">
-                                                👁️ Voir Profil
+                                               class="text-blue-600 hover:text-blue-800 text-sm flex items-center justify-end">
+                                                <span class="material-icons text-sm mr-1">visibility</span>
+                                                Voir Profil
                                             </a>
                                         </div>
                                     </div>
@@ -200,13 +223,16 @@
                             
                             <button type="button" 
                                     onclick="addSelected()"
-                                    class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                                ➕ Ajouter les Élèves Sélectionnés
+                                    class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center">
+                                <span class="material-icons mr-2">add_circle</span>
+                                Ajouter les Élèves Sélectionnés
                             </button>
                         </form>
                     {% else %}
                         <div class="text-center py-8">
-                            <div class="text-6xl mb-4">✅</div>
+                            <div class="text-gray-400 mb-4">
+                                <span class="material-icons" style="font-size: 4rem;">check_circle</span>
+                            </div>
                             <p class="text-gray-500">
                                 {% if search_query %}
                                     Aucun élève trouvé pour "{{ search_query }}"
@@ -224,18 +250,21 @@
         <div class="mt-8 bg-white rounded-lg shadow-sm p-6">
             <div class="flex flex-col sm:flex-row gap-4">
                 <a href="{% url 'accounts:parent_detail' parent.id %}" 
-                   class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg text-center font-medium transition-colors duration-200">
-                    ← Retour aux Détails
+                   class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg text-center font-medium transition-colors duration-200 flex items-center justify-center">
+                    <span class="material-icons mr-2">arrow_back</span>
+                    Retour aux Détails
                 </a>
                 
                 <a href="{% url 'accounts:parent_list' %}" 
-                   class="flex-1 bg-blue-100 hover:bg-blue-200 text-blue-700 px-6 py-3 rounded-lg text-center font-medium transition-colors duration-200">
-                    👨‍👩‍👧‍👦 Liste des Parents
+                   class="flex-1 bg-blue-100 hover:bg-blue-200 text-blue-700 px-6 py-3 rounded-lg text-center font-medium transition-colors duration-200 flex items-center justify-center">
+                    <span class="material-icons mr-2">family_restroom</span>
+                    Liste des Parents
                 </a>
                 
                 <a href="{% url 'accounts:student_list' %}" 
-                   class="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 px-6 py-3 rounded-lg text-center font-medium transition-colors duration-200">
-                    👨‍🎓 Liste des Élèves
+                   class="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 px-6 py-3 rounded-lg text-center font-medium transition-colors duration-200 flex items-center justify-center">
+                    <span class="material-icons mr-2">school</span>
+                    Liste des Élèves
                 </a>
             </div>
         </div>
@@ -287,7 +316,7 @@ function addSelected() {
     const count = checkboxes.length;
     const message = `Êtes-vous sûr de vouloir ajouter ${count} élève${count > 1 ? 's' : ''} à {{ parent.user.full_name }} ?`;
     
-    showModal('➕ Ajouter des Enfants', message, function() {
+    showModal('Ajouter des Enfants', message, function() {
         document.getElementById('addForm').submit();
     });
 }
@@ -303,7 +332,7 @@ function removeSelected() {
     const count = checkboxes.length;
     const message = `Êtes-vous sûr de vouloir retirer ${count} enfant${count > 1 ? 's' : ''} de {{ parent.user.full_name }} ?`;
     
-    showModal('❌ Retirer des Enfants', message, function() {
+    showModal('Retirer des Enfants', message, function() {
         document.getElementById('removeForm').submit();
     });
 }

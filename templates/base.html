@@ -39,7 +39,12 @@
     <!-- Alpine.js pour l'interactivité -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    
     {% block extra_css %}{% endblock %}
+    {% block extra_head %}{% endblock %}
 </head>
 <body class="h-full">
     <div class="min-h-full">
@@ -51,52 +56,52 @@
                         <div class="flex-shrink-0">
                             <a href="{% url 'home' %}" class="text-white text-xl font-bold hover:text-gray-200 transition-colors duration-200 flex items-center">
                                 {% if user.role == 'STUDENT' %}
-                                    🎓 eSchool
+                                    <span class="material-icons mr-2">school</span> eSchool
                                 {% elif user.role == 'PARENT' %}
-                                    👨‍👩‍👧‍👦 eSchool
+                                    <span class="material-icons mr-2">family_restroom</span> eSchool
                                 {% elif user.role == 'TEACHER' %}
-                                    🏫 eSchool
+                                    <span class="material-icons mr-2">business</span> eSchool
                                 {% else %}
-                                    🔧 eSchool
+                                    <span class="material-icons mr-2">admin_panel_settings</span> eSchool
                                 {% endif %}
                             </a>
                         </div>
                         <div class="hidden md:block">
                             <div class="ml-10 flex items-baseline space-x-4">
                                 {% if user.is_authenticated %}
-                                    <a href="{% url 'accounts:dashboard' %}" class="text-gray-300 hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                                        {% if user.role == 'STUDENT' %}📊 Mon tableau de bord
-                                        {% elif user.role == 'PARENT' %}👶 Mes enfants
-                                        {% elif user.role == 'TEACHER' %}📚 Mes classes
-                                        {% else %}⚙️ Administration{% endif %}
+                                    <a href="{% url 'accounts:dashboard' %}" class="text-gray-300 hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                        {% if user.role == 'STUDENT' %}<span class="material-icons mr-1 text-sm">dashboard</span> Mon tableau de bord
+                                        {% elif user.role == 'PARENT' %}<span class="material-icons mr-1 text-sm">child_care</span> Mes enfants
+                                        {% elif user.role == 'TEACHER' %}<span class="material-icons mr-1 text-sm">menu_book</span> Mes classes
+                                        {% else %}<span class="material-icons mr-1 text-sm">settings</span> Administration{% endif %}
                                     </a>
                                     
                                     {% if user.role == 'STUDENT' %}
-                                        <a href="{% url 'accounts:student_grades_detail' %}" class="text-gray-300 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">📝 Mes notes</a>
-                                        <a href="{% url 'accounts:student_attendance_detail' %}" class="text-gray-300 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">📅 Mes présences</a>
-                                        <a href="{% url 'accounts:student_finance_detail' %}" class="text-gray-300 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">💰 Mes finances</a>
-                                        <a href="{% url 'accounts:student_academic_calendar' %}" class="text-gray-300 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">🗓️ Calendrier</a>
+                                        <a href="{% url 'accounts:student_grades_detail' %}" class="text-gray-300 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">grade</span> Mes notes</a>
+                                        <a href="{% url 'accounts:student_attendance_detail' %}" class="text-gray-300 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">event_available</span> Mes présences</a>
+                                        <a href="{% url 'accounts:student_finance_detail' %}" class="text-gray-300 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">account_balance_wallet</span> Mes finances</a>
+                                        <a href="{% url 'accounts:student_academic_calendar' %}" class="text-gray-300 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">calendar_month</span> Calendrier</a>
                                     {% elif user.role == 'PARENT' %}
-                                        <a href="{% url 'accounts:parent_children_overview' %}" class="text-gray-300 hover:bg-green-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">👥 Vue d'ensemble</a>
-                                        <a href="{% url 'accounts:parent_communication_center' %}" class="text-gray-300 hover:bg-green-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">💬 Communication</a>
-                                        <a href="{% url 'finance:invoice_list' %}" class="text-gray-300 hover:bg-green-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">💳 Paiements</a>
+                                        <a href="{% url 'accounts:parent_children_overview' %}" class="text-gray-300 hover:bg-green-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">groups</span> Vue d'ensemble</a>
+                                        <a href="{% url 'accounts:parent_communication_center' %}" class="text-gray-300 hover:bg-green-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">chat</span> Communication</a>
+                                        <a href="{% url 'finance:invoice_list' %}" class="text-gray-300 hover:bg-green-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">credit_card</span> Paiements</a>
                                     {% elif user.role == 'TEACHER' %}
-                                        <a href="{% url 'academic:attendance_list' %}" class="text-gray-300 hover:bg-purple-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">✅ Présences</a>
-                                        <a href="{% url 'academic:grade_list' %}" class="text-gray-300 hover:bg-purple-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">📊 Notes</a>
-                                        <a href="{% url 'academic:classroom_list' %}" class="text-gray-300 hover:bg-purple-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">🏛️ Classes</a>
+                                        <a href="{% url 'academic:attendance_list' %}" class="text-gray-300 hover:bg-purple-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">check_circle</span> Présences</a>
+                                        <a href="{% url 'academic:grade_list' %}" class="text-gray-300 hover:bg-purple-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">assessment</span> Notes</a>
+                                        <a href="{% url 'academic:classroom_list' %}" class="text-gray-300 hover:bg-purple-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">meeting_room</span> Classes</a>
                                     {% elif user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
-                                        <a href="{% url 'academic:classroom_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">🏛️ Classes</a>
-                                        <a href="{% url 'accounts:student_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">🎓 Élèves</a>
-                                        <a href="{% url 'accounts:teacher_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">👨‍🏫 Enseignants</a>
-                                        <a href="{% url 'accounts:parent_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">👨‍👩‍👧‍👦 Parents</a>
-                                        <a href="{% url 'finance:invoice_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">💰 Finances</a>
+                                        <a href="{% url 'academic:classroom_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">meeting_room</span> Classes</a>
+                                        <a href="{% url 'accounts:student_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">school</span> Élèves</a>
+                                        <a href="{% url 'accounts:teacher_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">person</span> Enseignants</a>
+                                        <a href="{% url 'accounts:parent_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">family_restroom</span> Parents</a>
+                                        <a href="{% url 'finance:invoice_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">account_balance</span> Finances</a>
                                     {% endif %}
                                     
                                     <!-- Liens communs -->
                                     {% if user.role != 'STUDENT' %}
-                                        <a href="{% url 'communication:announcement_list' %}" class="text-gray-300 hover:{% if user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} hover:text-white px-3 py-2 rounded-md text-sm font-medium">📢 Annonces</a>
+                                        <a href="{% url 'communication:announcement_list' %}" class="text-gray-300 hover:{% if user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">campaign</span> Annonces</a>
                                     {% endif %}
-                                    <a href="{% url 'communication:message_list' %}" class="text-gray-300 hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} hover:text-white px-3 py-2 rounded-md text-sm font-medium">✉️ Messages</a>
+                                    <a href="{% url 'communication:message_list' %}" class="text-gray-300 hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">mail</span> Messages</a>
                                 {% endif %}
                             </div>
                         </div>
@@ -108,10 +113,10 @@
                                 <!-- Badge de rôle -->
                                 <div class="mr-3">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if user.role == 'STUDENT' %}bg-blue-100 text-blue-800{% elif user.role == 'PARENT' %}bg-green-100 text-green-800{% elif user.role == 'TEACHER' %}bg-purple-100 text-purple-800{% else %}bg-indigo-100 text-indigo-800{% endif %}">
-                                        {% if user.role == 'STUDENT' %}🎓 Élève
-                                        {% elif user.role == 'PARENT' %}👨‍👩‍👧‍👦 Parent
-                                        {% elif user.role == 'TEACHER' %}👨‍🏫 Enseignant
-                                        {% else %}🔧 {{ user.get_role_display }}{% endif %}
+                                        {% if user.role == 'STUDENT' %}<span class="material-icons mr-1" style="font-size: 12px;">school</span> Élève
+                                        {% elif user.role == 'PARENT' %}<span class="material-icons mr-1" style="font-size: 12px;">family_restroom</span> Parent
+                                        {% elif user.role == 'TEACHER' %}<span class="material-icons mr-1" style="font-size: 12px;">person</span> Enseignant
+                                        {% else %}<span class="material-icons mr-1" style="font-size: 12px;">admin_panel_settings</span> {{ user.get_role_display }}{% endif %}
                                     </span>
                                 </div>
 
@@ -143,18 +148,18 @@
                                             <div class="font-medium">{{ user.first_name }} {{ user.last_name }}</div>
                                             <div class="text-xs text-gray-500">{{ user.email }}</div>
                                         </div>
-                                        <a href="{% url 'accounts:profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">👤 Mon profil</a>
+                                        <a href="{% url 'accounts:profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><span class="material-icons mr-2 text-sm">person</span> Mon profil</a>
                                         {% if user.role == 'STUDENT' %}
-                                            <a href="{% url 'accounts:student_grades_detail' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">📊 Mes notes</a>
-                                            <a href="{% url 'accounts:student_finance_detail' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">💰 Mes finances</a>
+                                            <a href="{% url 'accounts:student_grades_detail' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><span class="material-icons mr-2 text-sm">assessment</span> Mes notes</a>
+                                            <a href="{% url 'accounts:student_finance_detail' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><span class="material-icons mr-2 text-sm">account_balance_wallet</span> Mes finances</a>
                                         {% elif user.role == 'PARENT' %}
-                                            <a href="{% url 'accounts:parent_children_overview' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">👶 Mes enfants</a>
-                                            <a href="{% url 'accounts:parent_communication_center' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">💬 Communication</a>
+                                            <a href="{% url 'accounts:parent_children_overview' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><span class="material-icons mr-2 text-sm">child_care</span> Mes enfants</a>
+                                            <a href="{% url 'accounts:parent_communication_center' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><span class="material-icons mr-2 text-sm">chat</span> Communication</a>
                                         {% elif user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
-                                            <a href="/admin/" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">⚙️ Administration Django</a>
+                                            <a href="/admin/" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><span class="material-icons mr-2 text-sm">settings</span> Administration Django</a>
                                         {% endif %}
                                         <div class="border-t border-gray-200"></div>
-                                        <a href="{% url 'accounts:logout' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">🚪 Se déconnecter</a>
+                                        <a href="{% url 'accounts:logout' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><span class="material-icons mr-2 text-sm">logout</span> Se déconnecter</a>
                                     </div>
                                 </div>
                             {% else %}
@@ -181,39 +186,37 @@
             <!-- Menu mobile adaptatif -->
             <div x-show="mobileMenuOpen" x-transition class="md:hidden {% if user.role == 'STUDENT' %}bg-blue-600{% elif user.role == 'PARENT' %}bg-green-600{% elif user.role == 'TEACHER' %}bg-purple-600{% else %}bg-indigo-600{% endif %} px-2 pt-2 pb-3 space-y-1 sm:px-3">
                 {% if user.is_authenticated %}
-                    <a href="{% url 'accounts:dashboard' %}" class="text-white hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium">
-                        {% if user.role == 'STUDENT' %}📊 Mon tableau de bord
-                        {% elif user.role == 'PARENT' %}👶 Mes enfants
-                        {% elif user.role == 'TEACHER' %}📚 Mes classes
-                        {% else %}⚙️ Administration{% endif %}
-                    </a>
-                    
-                    {% if user.role == 'STUDENT' %}
-                        <a href="{% url 'accounts:student_grades_detail' %}" class="text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-base font-medium">📝 Mes notes</a>
-                        <a href="{% url 'accounts:student_attendance_detail' %}" class="text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-base font-medium">📅 Mes présences</a>
-                        <a href="{% url 'accounts:student_finance_detail' %}" class="text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-base font-medium">💰 Mes finances</a>
-                        <a href="{% url 'accounts:student_academic_calendar' %}" class="text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-base font-medium">🗓️ Calendrier</a>
+                <a href="{% url 'accounts:dashboard' %}" class="text-white hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium flex items-center">
+                    {% if user.role == 'STUDENT' %}<span class="material-icons mr-2">dashboard</span> Mon tableau de bord
+                    {% elif user.role == 'PARENT' %}<span class="material-icons mr-2">child_care</span> Mes enfants
+                    {% elif user.role == 'TEACHER' %}<span class="material-icons mr-2">menu_book</span> Mes classes
+                    {% else %}<span class="material-icons mr-2">settings</span> Administration{% endif %}
+                </a>                    {% if user.role == 'STUDENT' %}
+                        <a href="{% url 'accounts:student_grades_detail' %}" class="text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">grade</span> Mes notes</a>
+                        <a href="{% url 'accounts:student_attendance_detail' %}" class="text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">event_available</span> Mes présences</a>
+                        <a href="{% url 'accounts:student_finance_detail' %}" class="text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">account_balance_wallet</span> Mes finances</a>
+                        <a href="{% url 'accounts:student_academic_calendar' %}" class="text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">calendar_month</span> Calendrier</a>
                     {% elif user.role == 'PARENT' %}
-                        <a href="{% url 'accounts:parent_children_overview' %}" class="text-white hover:bg-green-700 block px-3 py-2 rounded-md text-base font-medium">👥 Vue d'ensemble</a>
-                        <a href="{% url 'accounts:parent_communication_center' %}" class="text-white hover:bg-green-700 block px-3 py-2 rounded-md text-base font-medium">💬 Communication</a>
-                        <a href="{% url 'finance:invoice_list' %}" class="text-white hover:bg-green-700 block px-3 py-2 rounded-md text-base font-medium">💳 Paiements</a>
+                        <a href="{% url 'accounts:parent_children_overview' %}" class="text-white hover:bg-green-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">groups</span> Vue d'ensemble</a>
+                        <a href="{% url 'accounts:parent_communication_center' %}" class="text-white hover:bg-green-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">chat</span> Communication</a>
+                        <a href="{% url 'finance:invoice_list' %}" class="text-white hover:bg-green-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">credit_card</span> Paiements</a>
                     {% elif user.role == 'TEACHER' %}
-                        <a href="{% url 'academic:attendance_list' %}" class="text-white hover:bg-purple-700 block px-3 py-2 rounded-md text-base font-medium">✅ Présences</a>
-                        <a href="{% url 'academic:grade_list' %}" class="text-white hover:bg-purple-700 block px-3 py-2 rounded-md text-base font-medium">📊 Notes</a>
-                        <a href="{% url 'academic:classroom_list' %}" class="text-white hover:bg-purple-700 block px-3 py-2 rounded-md text-base font-medium">🏛️ Classes</a>
+                        <a href="{% url 'academic:attendance_list' %}" class="text-white hover:bg-purple-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">check_circle</span> Présences</a>
+                        <a href="{% url 'academic:grade_list' %}" class="text-white hover:bg-purple-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">assessment</span> Notes</a>
+                        <a href="{% url 'academic:classroom_list' %}" class="text-white hover:bg-purple-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">meeting_room</span> Classes</a>
                     {% elif user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
-                        <a href="{% url 'academic:classroom_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium">🏛️ Classes</a>
-                        <a href="{% url 'accounts:student_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium">🎓 Élèves</a>
-                        <a href="{% url 'accounts:teacher_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium">👨‍🏫 Enseignants</a>
-                        <a href="{% url 'accounts:parent_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium">👨‍👩‍👧‍👦 Parents</a>
-                        <a href="{% url 'finance:invoice_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium">💰 Finances</a>
+                        <a href="{% url 'academic:classroom_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">meeting_room</span> Classes</a>
+                        <a href="{% url 'accounts:student_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">school</span> Élèves</a>
+                        <a href="{% url 'accounts:teacher_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">person</span> Enseignants</a>
+                        <a href="{% url 'accounts:parent_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">family_restroom</span> Parents</a>
+                        <a href="{% url 'finance:invoice_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">account_balance</span> Finances</a>
                     {% endif %}
                     
                     <!-- Liens communs -->
                     {% if user.role != 'STUDENT' %}
-                        <a href="{% url 'communication:announcement_list' %}" class="text-white hover:{% if user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium">📢 Annonces</a>
+                        <a href="{% url 'communication:announcement_list' %}" class="text-white hover:{% if user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">campaign</span> Annonces</a>
                     {% endif %}
-                    <a href="{% url 'communication:message_list' %}" class="text-white hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium">✉️ Messages</a>
+                    <a href="{% url 'communication:message_list' %}" class="text-white hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">mail</span> Messages</a>
                     
                     <!-- Séparateur -->
                     <div class="border-t {% if user.role == 'STUDENT' %}border-blue-500{% elif user.role == 'PARENT' %}border-green-500{% elif user.role == 'TEACHER' %}border-purple-500{% else %}border-indigo-500{% endif %} my-2"></div>
@@ -234,11 +237,11 @@
                             </div>
                         </div>
                         <div class="mt-3 space-y-1">
-                            <a href="{% url 'accounts:profile' %}" class="text-white hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium">👤 Mon profil</a>
+                            <a href="{% url 'accounts:profile' %}" class="text-white hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">person</span> Mon profil</a>
                             {% if user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
-                                <a href="/admin/" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium">⚙️ Administration Django</a>
+                                <a href="/admin/" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">settings</span> Administration Django</a>
                             {% endif %}
-                            <a href="{% url 'accounts:logout' %}" class="text-white hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium">🚪 Se déconnecter</a>
+                            <a href="{% url 'accounts:logout' %}" class="text-white hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">logout</span> Se déconnecter</a>
                         </div>
                     </div>
                 {% else %}
@@ -344,80 +347,86 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
                     <!-- Section Liens rapides adaptée au rôle -->
                     <div>
-                        <h3 class="text-lg font-semibold mb-4">
-                            {% if user.role == 'STUDENT' %}🎓 Espace Élève
-                            {% elif user.role == 'PARENT' %}👨‍👩‍👧‍👦 Espace Parent
-                            {% elif user.role == 'TEACHER' %}👨‍🏫 Espace Enseignant
-                            {% else %}⚙️ Administration{% endif %}
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            {% if user.role == 'STUDENT' %}<span class="material-icons mr-2">school</span> Espace Élève
+                            {% elif user.role == 'PARENT' %}<span class="material-icons mr-2">family_restroom</span> Espace Parent
+                            {% elif user.role == 'TEACHER' %}<span class="material-icons mr-2">person</span> Espace Enseignant
+                            {% else %}<span class="material-icons mr-2">admin_panel_settings</span> Administration{% endif %}
                         </h3>
                         <ul class="space-y-2">
                             {% if user.role == 'STUDENT' %}
-                                <li><a href="{% url 'accounts:student_grades_detail' %}" class="text-blue-200 hover:text-white transition-colors">📊 Mes notes</a></li>
-                                <li><a href="{% url 'accounts:student_attendance_detail' %}" class="text-blue-200 hover:text-white transition-colors">📅 Mes présences</a></li>
-                                <li><a href="{% url 'accounts:student_finance_detail' %}" class="text-blue-200 hover:text-white transition-colors">💰 Mes finances</a></li>
-                                <li><a href="{% url 'accounts:student_academic_calendar' %}" class="text-blue-200 hover:text-white transition-colors">🗓️ Calendrier académique</a></li>
+                                <li><a href="{% url 'accounts:student_grades_detail' %}" class="text-blue-200 hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">assessment</span> Mes notes</a></li>
+                                <li><a href="{% url 'accounts:student_attendance_detail' %}" class="text-blue-200 hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">event_available</span> Mes présences</a></li>
+                                <li><a href="{% url 'accounts:student_finance_detail' %}" class="text-blue-200 hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">account_balance_wallet</span> Mes finances</a></li>
+                                <li><a href="{% url 'accounts:student_academic_calendar' %}" class="text-blue-200 hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">calendar_month</span> Calendrier académique</a></li>
                             {% elif user.role == 'PARENT' %}
-                                <li><a href="{% url 'accounts:parent_children_overview' %}" class="text-green-200 hover:text-white transition-colors">👥 Vue d'ensemble</a></li>
-                                <li><a href="{% url 'accounts:parent_communication_center' %}" class="text-green-200 hover:text-white transition-colors">💬 Centre de communication</a></li>
-                                <li><a href="{% url 'finance:invoice_list' %}" class="text-green-200 hover:text-white transition-colors">💳 Gestion des paiements</a></li>
+                                <li><a href="{% url 'accounts:parent_children_overview' %}" class="text-green-200 hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">groups</span> Vue d'ensemble</a></li>
+                                <li><a href="{% url 'accounts:parent_communication_center' %}" class="text-green-200 hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">chat</span> Centre de communication</a></li>
+                                <li><a href="{% url 'finance:invoice_list' %}" class="text-green-200 hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">credit_card</span> Gestion des paiements</a></li>
                             {% elif user.role == 'TEACHER' %}
-                                <li><a href="{% url 'academic:attendance_list' %}" class="text-purple-200 hover:text-white transition-colors">✅ Gestion des présences</a></li>
-                                <li><a href="{% url 'academic:grade_list' %}" class="text-purple-200 hover:text-white transition-colors">📊 Saisie des notes</a></li>
-                                <li><a href="{% url 'academic:classroom_list' %}" class="text-purple-200 hover:text-white transition-colors">🏛️ Mes classes</a></li>
+                                <li><a href="{% url 'academic:attendance_list' %}" class="text-purple-200 hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">check_circle</span> Gestion des présences</a></li>
+                                <li><a href="{% url 'academic:grade_list' %}" class="text-purple-200 hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">assessment</span> Saisie des notes</a></li>
+                                <li><a href="{% url 'academic:classroom_list' %}" class="text-purple-200 hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">meeting_room</span> Mes classes</a></li>
                             {% else %}
-                                <li><a href="{% url 'academic:classroom_list' %}" class="text-indigo-200 hover:text-white transition-colors">🏛️ Gestion des classes</a></li>
-                                <li><a href="{% url 'accounts:student_list' %}" class="text-indigo-200 hover:text-white transition-colors">🎓 Gestion des élèves</a></li>
-                                <li><a href="{% url 'accounts:teacher_list' %}" class="text-indigo-200 hover:text-white transition-colors">👨‍🏫 Gestion des enseignants</a></li>
-                                <li><a href="{% url 'finance:invoice_list' %}" class="text-indigo-200 hover:text-white transition-colors">💰 Gestion financière</a></li>
+                                <li><a href="{% url 'academic:classroom_list' %}" class="text-indigo-200 hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">meeting_room</span> Gestion des classes</a></li>
+                                <li><a href="{% url 'accounts:student_list' %}" class="text-indigo-200 hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">school</span> Gestion des élèves</a></li>
+                                <li><a href="{% url 'accounts:teacher_list' %}" class="text-indigo-200 hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">person</span> Gestion des enseignants</a></li>
+                                <li><a href="{% url 'finance:invoice_list' %}" class="text-indigo-200 hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">account_balance</span> Gestion financière</a></li>
                             {% endif %}
                         </ul>
                     </div>
 
                     <!-- Section Communication -->
                     <div>
-                        <h3 class="text-lg font-semibold mb-4">💬 Communication</h3>
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <span class="material-icons mr-2">forum</span> Communication
+                        </h3>
                         <ul class="space-y-2">
                             {% if user.role != 'STUDENT' %}
-                                <li><a href="{% url 'communication:announcement_list' %}" class="{% if user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %} hover:text-white transition-colors">📢 Annonces</a></li>
+                                <li><a href="{% url 'communication:announcement_list' %}" class="{% if user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %} hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">campaign</span> Annonces</a></li>
                             {% endif %}
-                            <li><a href="{% url 'communication:message_list' %}" class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %} hover:text-white transition-colors">✉️ Messagerie</a></li>
+                            <li><a href="{% url 'communication:message_list' %}" class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %} hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">mail</span> Messagerie</a></li>
                             {% if user.role == 'PARENT' %}
-                                <li><span class="{% if user.role == 'PARENT' %}text-green-200{% endif %}">📞 Support parent</span></li>
-                                <li><span class="{% if user.role == 'PARENT' %}text-green-200{% endif %}">📋 Rendez-vous</span></li>
+                                <li><span class="{% if user.role == 'PARENT' %}text-green-200{% endif %} flex items-center"><span class="material-icons mr-2 text-sm">support_agent</span> Support parent</span></li>
+                                <li><span class="{% if user.role == 'PARENT' %}text-green-200{% endif %} flex items-center"><span class="material-icons mr-2 text-sm">event</span> Rendez-vous</span></li>
                             {% elif user.role == 'TEACHER' %}
-                                <li><span class="text-purple-200">📚 Ressources pédagogiques</span></li>
-                                <li><span class="text-purple-200">👥 Conseil de classe</span></li>
+                                <li><span class="text-purple-200 flex items-center"><span class="material-icons mr-2 text-sm">menu_book</span> Ressources pédagogiques</span></li>
+                                <li><span class="text-purple-200 flex items-center"><span class="material-icons mr-2 text-sm">groups</span> Conseil de classe</span></li>
                             {% elif user.role == 'STUDENT' %}
-                                <li><span class="text-blue-200">🤝 Aide aux devoirs</span></li>
-                                <li><span class="text-blue-200">🏆 Activités extrascolaires</span></li>
+                                <li><span class="text-blue-200 flex items-center"><span class="material-icons mr-2 text-sm">help</span> Aide aux devoirs</span></li>
+                                <li><span class="text-blue-200 flex items-center"><span class="material-icons mr-2 text-sm">emoji_events</span> Activités extrascolaires</span></li>
                             {% else %}
-                                <li><span class="text-indigo-200">📊 Rapports statistiques</span></li>
-                                <li><span class="text-indigo-200">⚙️ Configuration système</span></li>
+                                <li><span class="text-indigo-200 flex items-center"><span class="material-icons mr-2 text-sm">analytics</span> Rapports statistiques</span></li>
+                                <li><span class="text-indigo-200 flex items-center"><span class="material-icons mr-2 text-sm">settings</span> Configuration système</span></li>
                             {% endif %}
                         </ul>
                     </div>
 
                     <!-- Section Support -->
                     <div>
-                        <h3 class="text-lg font-semibold mb-4">🆘 Support</h3>
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <span class="material-icons mr-2">support_agent</span> Support
+                        </h3>
                         <ul class="space-y-2">
-                            <li><a href="#" class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %} hover:text-white transition-colors">❓ FAQ</a></li>
-                            <li><a href="#" class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %} hover:text-white transition-colors">📖 Guide d'utilisation</a></li>
-                            <li><a href="#" class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %} hover:text-white transition-colors">📞 Nous contacter</a></li>
+                            <li><a href="#" class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %} hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">help</span> FAQ</a></li>
+                            <li><a href="#" class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %} hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">menu_book</span> Guide d'utilisation</a></li>
+                            <li><a href="#" class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %} hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">phone</span> Nous contacter</a></li>
                             {% if user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
-                                <li><a href="/admin/" class="text-indigo-200 hover:text-white transition-colors">🔧 Admin Django</a></li>
+                                <li><a href="/admin/" class="text-indigo-200 hover:text-white transition-colors flex items-center"><span class="material-icons mr-2 text-sm">build</span> Admin Django</a></li>
                             {% endif %}
                         </ul>
                     </div>
 
                     <!-- Section École -->
                     <div>
-                        <h3 class="text-lg font-semibold mb-4">🏫 École</h3>
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <span class="material-icons mr-2">school</span> École
+                        </h3>
                         <ul class="space-y-2">
-                            <li><span class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %}">📍 123 Rue de l'Éducation</span></li>
-                            <li><span class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %}">📞 +33 1 23 45 67 89</span></li>
-                            <li><span class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %}">✉️ contact@eschool.fr</span></li>
-                            <li><span class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %}">⏰ Lun-Ven: 8h-18h</span></li>
+                            <li><span class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %} flex items-center"><span class="material-icons mr-2 text-sm">location_on</span> 123 Rue de l'Éducation</span></li>
+                            <li><span class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %} flex items-center"><span class="material-icons mr-2 text-sm">phone</span> +33 1 23 45 67 89</span></li>
+                            <li><span class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %} flex items-center"><span class="material-icons mr-2 text-sm">mail</span> contact@eschool.fr</span></li>
+                            <li><span class="{% if user.role == 'STUDENT' %}text-blue-200{% elif user.role == 'PARENT' %}text-green-200{% elif user.role == 'TEACHER' %}text-purple-200{% else %}text-indigo-200{% endif %} flex items-center"><span class="material-icons mr-2 text-sm">schedule</span> Lun-Ven: 8h-18h</span></li>
                         </ul>
                     </div>
                 </div>
