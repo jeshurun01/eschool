@@ -326,6 +326,59 @@
                     </div>
                 </div>
 
+                <!-- Annonces récentes -->
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4 flex items-center">
+                            <span class="material-icons text-purple-600 mr-2">campaign</span>
+                            Annonces récentes
+                        </h3>
+                        
+                        {% if recent_announcements %}
+                            <div class="space-y-4">
+                                {% for announcement in recent_announcements %}
+                                <div class="border border-gray-200 rounded-lg p-4 hover:bg-purple-50 transition-colors duration-200">
+                                    <div class="flex items-start">
+                                        <div class="flex-shrink-0">
+                                            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                                <span class="material-icons text-purple-600 text-sm">
+                                                    {% if announcement.type == 'URGENT' %}warning
+                                                    {% elif announcement.type == 'INFO' %}info
+                                                    {% elif announcement.type == 'EVENT' %}event
+                                                    {% else %}campaign{% endif %}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="ml-3 flex-1">
+                                            <div class="flex items-center mb-1">
+                                                <h4 class="font-medium text-gray-900 text-sm mr-2">{{ announcement.title }}</h4>
+                                                {% if announcement.priority == 'HIGH' %}
+                                                    <span class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">Urgent</span>
+                                                {% endif %}
+                                            </div>
+                                            <p class="text-gray-600 text-sm mb-2">{{ announcement.content|truncatewords:15 }}</p>
+                                            <div class="text-xs text-gray-500">
+                                                {{ announcement.publish_date|date:"d/m/Y" }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-4">
+                                <a href="{% url 'communication:announcement_list' %}" class="text-purple-600 hover:text-purple-700 text-sm font-medium">
+                                    Voir toutes les annonces →
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <span class="material-icons text-gray-400 text-3xl mb-2">campaign</span>
+                                <p class="text-gray-500 text-sm">Aucune annonce récente.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <!-- Présences aujourd'hui -->
                 <div class="bg-white shadow rounded-lg">
                     <div class="px-4 py-5 sm:p-6">

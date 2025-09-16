@@ -125,14 +125,76 @@ def admin_dashboard(request):
     now = timezone.now()
     week_ago = today - timedelta(days=7)
     month_ago = today - timedelta(days=30)
+    year_ago = today - timedelta(days=365)
     
-    # Statistiques principales
+    # Statistiques principales avec comparaisons
+    total_students = Student.objects.count()
+    total_students_last_month = Student.objects.filter(
+        user__date_joined__lt=month_ago
+    ).count()
+    
+    total_teachers = Teacher.objects.count()
+    total_parents = Parent.objects.count()
+    
+    # Calcul du pourcentage d'évolution des étudiants
+    student_growth_percentage = 0
+    if total_students_last_month > 0:
+        student_growth = total_students - total_students_last_month
+        student_growth_percentage = round((student_growth / total_students_last_month) * 100, 1)
+    
+    # Nouvelles inscriptions ce mois
+    new_students_this_month = Student.objects.filter(
+        user__date_joined__gte=month_ago
+    ).count()
+    
+    # Annonces récentes
+    recent_announcements = Announcement.objects.filter(
+        publish_date__gte=week_ago
+    ).order_by('-publish_date')[:5]
+    
+    # Notes récentes
+    recent_grades = Grade.objects.select_related(
+        'student__user', 'subject', 'teacher__user'
+    ).order_by('-created_at')[:10]
+    
+    # Présences du jour
+    today_attendances = Attendance.objects.filter(date=today).count()
+    today_absences = Attendance.objects.filter(
+        date=today, 
+        status='ABSENT'
+    ).count()
+    
+    # Calcul du taux de présence
+    attendance_rate = 0
+    if today_attendances > 0:
+        present_count = today_attendances - today_absences
+        attendance_rate = round((present_count / today_attendances) * 100, 1)
+    
+    # Annonces récentes (7 derniers jours)
+    recent_announcements_count = Announcement.objects.filter(
+        publish_date__gte=week_ago
+    ).count()
+    
+    # Notes de cette semaine
+    recent_grades_count = Grade.objects.filter(
+        created_at__gte=week_ago
+    ).count()
+    
+    # Moyenne générale des notes récentes
+    recent_grades_avg = Grade.objects.filter(
+        created_at__gte=week_ago
+    ).aggregate(
+        avg_score=Avg('score')
+    )['avg_score'] or 0
+    
     stats = {
         # Utilisateurs
-        'total_students': Student.objects.count(),
-        'total_teachers': Teacher.objects.count(),
-        'total_parents': Parent.objects.count(),
+        'total_students': total_students,
+        'total_teachers': total_teachers,
+        'total_parents': total_parents,
         'total_users': User.objects.filter(is_active=True).count(),
+        'new_students_this_month': new_students_this_month,
+        'student_growth_percentage': student_growth_percentage,
         
         # Académique
         'total_classes': ClassRoom.objects.count(),
@@ -142,11 +204,14 @@ def admin_dashboard(request):
         ).count(),
         
         # Présences du jour
-        'today_attendances': Attendance.objects.filter(date=today).count(),
-        'today_absences': Attendance.objects.filter(
-            date=today, 
-            status='ABSENT'
-        ).count(),
+        'today_attendances': today_attendances,
+        'today_absences': today_absences,
+        'attendance_rate': attendance_rate,
+        
+        # Annonces et notes récentes
+        'recent_announcements_count': recent_announcements_count,
+        'recent_grades_count': recent_grades_count,
+        'recent_grades_avg': round(recent_grades_avg, 1) if recent_grades_avg else 0,
         
         # Financier
         'total_invoices': Invoice.objects.count(),
@@ -198,6 +263,7 @@ def admin_dashboard(request):
         'recent_activity': recent_activity,
         'academic_stats': academic_stats,
         'chart_data': chart_data,
+        'recent_announcements': recent_announcements,
         'today': today,
         'now': now,
     }
@@ -265,31 +331,57 @@ def student_dashboard(request):
             }
         })
         
-        # Prochains cours (emploi du temps)
-        from academic.models import Timetable
-        next_classes_query = Timetable.objects.filter(
-            classroom=student.current_class
-        ).select_related('subject', 'teacher').order_by('weekday', 'start_time')[:5]
-        
-        # Transformer les données pour le template
-        next_classes = []
-        for timetable in next_classes_query:
-            class_data = {
-                'subject': timetable.subject.name,
-                'teacher': timetable.teacher.user.get_full_name(),
-                'room': timetable.classroom.room_number if hasattr(timetable.classroom, 'room_number') else '--',
-                'time': timezone.now().replace(hour=timetable.start_time.hour, minute=timetable.start_time.minute),
-                'duration': 60,  # Durée par défaut
-            }
-            next_classes.append(class_data)
-        
+    # Prochains cours (emploi du temps)
+    from academic.models import Timetable
+    next_classes_query = Timetable.objects.filter(
+        classroom=student.current_class
+    ).select_related('subject', 'teacher').order_by('weekday', 'start_time')[:5]
+    
+    # Transformer les données pour le template
+    next_classes = []
+    for timetable in next_classes_query:
+        class_data = {
+            'subject': timetable.subject.name,
+            'teacher': timetable.teacher.user.get_full_name(),
+            'room': timetable.classroom.room_number if hasattr(timetable.classroom, 'room_number') else '--',
+            'time': timezone.now().replace(hour=timetable.start_time.hour, minute=timetable.start_time.minute),
+            'duration': 60,  # Durée par défaut
+        }
+        next_classes.append(class_data)
+    
         context['next_classes'] = next_classes
     
-    # Devoirs et assignements à venir (simulation)
-    context['pending_assignments'] = 3  # Valeur simulée
+        # Statistiques étudiant détaillées
+        student_stats = {
+            'present_days': present_count,
+            'total_days': total_days,
+            'attendance_rate': attendance_rate,
+            'total_subjects': student.current_class.subjects.count() if student.current_class else 0,
+            'active_subjects': student.current_class.subjects.count() if student.current_class else 0,
+        }
+    else:
+        # Valeurs par défaut si pas de classe assignée
+        student_stats = {
+            'present_days': 0,
+            'total_days': 0,
+            'attendance_rate': 0,
+            'total_subjects': 0,
+            'active_subjects': 0,
+        }
     
-    # Messages non lus (simulation)
-    context['unread_messages'] = 2  # Valeur simulée
+    context['student_stats'] = student_stats
+    
+    # Devoirs et assignements - vraies données
+    pending_assignments = 0  # TODO: Implémenter le modèle Assignment
+    overdue_assignments = 0  # TODO: Implémenter le modèle Assignment  
+    total_assignments = 0   # TODO: Implémenter le modèle Assignment
+    
+    # Messages non lus - vraies données depuis la communication
+    from communication.models import Message
+    unread_messages = Message.objects.filter(
+        recipient=request.user,
+        is_read=False
+    ).count()
     
     # Informations financières
     pending_invoices = Invoice.objects.filter(
@@ -310,14 +402,12 @@ def student_dashboard(request):
         )['total'] or 0
     })
     
-    # Annonces récentes (simulation)
+    # Annonces récentes pour les étudiants
     from communication.models import Announcement
-    try:
-        recent_announcements = Announcement.objects.filter(
-            target_classes=student.current_class
-        ).order_by('-created_at')[:3]
-    except:
-        recent_announcements = []
+    recent_announcements = Announcement.objects.filter(
+        audience__in=['ALL', 'STUDENTS'],
+        publish_date__lte=today
+    ).order_by('-publish_date')[:5]
     
     context['recent_announcements'] = recent_announcements
     
@@ -516,6 +606,12 @@ def teacher_dashboard(request):
     
     classes_with_absences.sort(key=lambda x: x['absences'], reverse=True)
     
+    # Annonces récentes pour les enseignants
+    recent_announcements = Announcement.objects.filter(
+        audience__in=['ALL', 'TEACHERS'],
+        publish_date__lte=today
+    ).order_by('-publish_date')[:5]
+    
     context = {
         'teacher': teacher,
         'assigned_classes': assigned_classes,
@@ -527,6 +623,7 @@ def teacher_dashboard(request):
         'weekly_schedule': weekly_schedule,
         'recent_activities': recent_activities[:10],
         'classes_with_absences': classes_with_absences[:5],
+        'recent_announcements': recent_announcements,
         'stats': {
             'total_classes': assigned_classes.count(),
             'total_subjects': subjects.count(),
@@ -738,6 +835,12 @@ def parent_dashboard(request):
         }
     ]
     
+    # Annonces récentes pour les parents
+    recent_announcements = Announcement.objects.filter(
+        audience__in=['ALL', 'PARENTS'],
+        publish_date__lte=today
+    ).order_by('-publish_date')[:5]
+    
     context = {
         'parent': parent,
         'children': children,
@@ -746,6 +849,7 @@ def parent_dashboard(request):
         'overall_stats': overall_stats,
         'recent_activities': recent_activities[:15],
         'upcoming_events': upcoming_events,
+        'recent_announcements': recent_announcements,
         'stats': {
             'total_children': total_children,
             'average_grade': overall_stats['average_grade'],

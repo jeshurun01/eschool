@@ -46,7 +46,15 @@
                             <dl>
                                 <dt class="text-sm font-medium text-gray-500 truncate">Total Élèves</dt>
                                 <dd class="text-2xl font-bold text-gray-900">{{ stats.total_students }}</dd>
-                                <dd class="text-xs text-green-600 font-medium">+12% ce mois</dd>
+                                <dd class="text-xs font-medium">
+                                    {% if stats.student_growth_percentage > 0 %}
+                                        <span class="text-green-600">+{{ stats.student_growth_percentage }}% ce mois</span>
+                                    {% elif stats.student_growth_percentage < 0 %}
+                                        <span class="text-red-600">{{ stats.student_growth_percentage }}% ce mois</span>
+                                    {% else %}
+                                        <span class="text-gray-600">Aucune variation</span>
+                                    {% endif %}
+                                </dd>
                             </dl>
                         </div>
                     </div>
@@ -151,6 +159,9 @@
                     <div class="flex items-center text-sm">
                         <span class="material-icons text-red-500 mr-1 text-sm">person_off</span>
                         <span class="text-red-600">{{ stats.today_absences }} absence{{ stats.today_absences|pluralize }}</span>
+                        {% if stats.attendance_rate > 0 %}
+                            <span class="ml-2 text-green-600">({{ stats.attendance_rate }}% présent{{ stats.attendance_rate|floatformat:0|pluralize }})</span>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -431,6 +442,63 @@
                         </div>
                     {% endif %}
                 </div>
+            </div>
+        </div>
+
+        <!-- Annonces récentes -->
+        <div class="bg-white shadow-lg rounded-xl border border-gray-100 mb-8">
+            <div class="px-6 py-5">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4 flex items-center">
+                    <span class="material-icons text-purple-600 mr-2">campaign</span>
+                    Annonces récentes
+                </h3>
+                {% if recent_announcements %}
+                    <div class="space-y-4">
+                        {% for announcement in recent_announcements %}
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors duration-200">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center mb-2">
+                                        <h4 class="font-medium text-gray-900 mr-3">{{ announcement.title }}</h4>
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                            {% if announcement.priority == 'HIGH' %}bg-red-100 text-red-800
+                                            {% elif announcement.priority == 'MEDIUM' %}bg-yellow-100 text-yellow-800
+                                            {% else %}bg-blue-100 text-blue-800{% endif %}">
+                                            {{ announcement.get_priority_display }}
+                                        </span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mb-3">{{ announcement.content|truncatewords:20 }}</p>
+                                    <div class="flex items-center text-xs text-gray-500">
+                                        <span class="material-icons mr-1" style="font-size: 14px;">schedule</span>
+                                        {{ announcement.publish_date|date:"d/m/Y à H:i" }}
+                                        <span class="mx-2">•</span>
+                                        <span class="material-icons mr-1" style="font-size: 14px;">group</span>
+                                        {{ announcement.get_audience_display }}
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <span class="material-icons text-gray-400">{{ announcement.type_icon }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-4">
+                        <a href="{% url 'communication:announcement_list' %}" class="text-purple-600 hover:text-purple-700 text-sm font-medium flex items-center">
+                            Voir toutes les annonces
+                            <span class="material-icons ml-1 text-sm">arrow_forward</span>
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-6">
+                        <span class="material-icons text-gray-400 text-4xl mb-2">campaign</span>
+                        <p class="text-gray-500 text-sm">Aucune annonce récente.</p>
+                        <a href="{% url 'communication:announcement_create' %}" class="inline-flex items-center mt-3 text-purple-600 hover:text-purple-700 text-sm font-medium">
+                            <span class="material-icons mr-1 text-sm">add</span>
+                            Créer une annonce
+                        </a>
+                    </div>
+                {% endif %}
             </div>
         </div>
 

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}📢 Annonces{% endblock %}
+{% block title %}<span class="material-icons">campaign</span> Annonces{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gray-50 py-8">
@@ -11,7 +11,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900 flex items-center">
-                        📢 Annonces
+                        <span class="material-icons mr-2 text-blue-600">campaign</span> Annonces
                         {% if unread_count > 0 %}
                             <span class="ml-3 bg-red-500 text-white text-sm px-2 py-1 rounded-full">{{ unread_count }} nouvelle{{ unread_count|pluralize }}</span>
                         {% endif %}
@@ -21,7 +21,7 @@
                 {% if user.role == 'TEACHER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
                 <a href="{% url 'communication:announcement_create' %}" 
                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
-                    ➕ Nouvelle annonce
+                    <span class="material-icons mr-2" style="font-size: 16px;">add</span> Nouvelle annonce
                 </a>
                 {% endif %}
             </div>
@@ -52,26 +52,43 @@
                                     
                                     <!-- Badges simplifiés -->
                                     {% if announcement.priority == 3 %}
-                                        <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-medium">🚨 Urgent</span>
+                                        <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-medium flex items-center">
+                                            <span class="material-icons mr-1" style="font-size: 12px;">priority_high</span> Urgent
+                                        </span>
                                     {% elif announcement.priority == 2 %}
-                                        <span class="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs font-medium">⚠️ Important</span>
+                                        <span class="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs font-medium flex items-center">
+                                            <span class="material-icons mr-1" style="font-size: 12px;">warning</span> Important
+                                        </span>
                                     {% endif %}
                                     
                                     {% if announcement.is_pinned %}
-                                        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-medium">📌 Épinglé</span>
+                                        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-medium flex items-center">
+                                            <span class="material-icons mr-1" style="font-size: 12px;">push_pin</span> Épinglé
+                                        </span>
                                     {% endif %}
                                 </div>
                                 
                                 <!-- Métadonnées simplifiées -->
                                 <div class="flex items-center text-sm text-gray-500 space-x-4 mb-3">
-                                    <span>👤 {{ announcement.author.first_name }} {{ announcement.author.last_name }}</span>
-                                    <span>📅 {{ announcement.publish_date|date:"d/m/Y" }}</span>
-                                    <span>
-                                        {% if announcement.audience == 'ALL' %}🌐 Tous
-                                        {% elif announcement.audience == 'STUDENTS' %}🎓 Étudiants
-                                        {% elif announcement.audience == 'TEACHERS' %}👨‍🏫 Enseignants
-                                        {% elif announcement.audience == 'PARENTS' %}👨‍👩‍👧‍👦 Parents
-                                        {% elif announcement.audience == 'STAFF' %}💼 Personnel
+                                    <span class="flex items-center">
+                                        <span class="material-icons mr-1" style="font-size: 16px;">person</span> 
+                                        {{ announcement.author.first_name }} {{ announcement.author.last_name }}
+                                    </span>
+                                    <span class="flex items-center">
+                                        <span class="material-icons mr-1" style="font-size: 16px;">calendar_today</span> 
+                                        {{ announcement.publish_date|date:"d/m/Y" }}
+                                    </span>
+                                    <span class="flex items-center">
+                                        {% if announcement.audience == 'ALL' %}
+                                            <span class="material-icons mr-1" style="font-size: 16px;">public</span> Tous
+                                        {% elif announcement.audience == 'STUDENTS' %}
+                                            <span class="material-icons mr-1" style="font-size: 16px;">school</span> Étudiants
+                                        {% elif announcement.audience == 'TEACHERS' %}
+                                            <span class="material-icons mr-1" style="font-size: 16px;">person</span> Enseignants
+                                        {% elif announcement.audience == 'PARENTS' %}
+                                            <span class="material-icons mr-1" style="font-size: 16px;">family_restroom</span> Parents
+                                        {% elif announcement.audience == 'STAFF' %}
+                                            <span class="material-icons mr-1" style="font-size: 16px;">work</span> Personnel
                                         {% endif %}
                                     </span>
                                 </div>
@@ -84,13 +101,13 @@
                                             onclick="markAsRead(this.dataset.announcementId)"
                                             class="text-green-600 hover:text-green-800 transition-colors p-2 rounded-lg hover:bg-green-50"
                                             title="Marquer comme lu">
-                                        ✅
+                                        <span class="material-icons" style="font-size: 16px;">check_circle</span>
                                     </button>
                                 {% endif %}
                                 <a href="{% url 'communication:announcement_detail' announcement.id %}" 
                                    class="text-blue-600 hover:text-blue-800 transition-colors p-2 rounded-lg hover:bg-blue-50"
                                    title="Lire l'annonce">
-                                    👁️
+                                    <span class="material-icons" style="font-size: 16px;">visibility</span>
                                 </a>
                             </div>
                         </div>
@@ -138,13 +155,15 @@
         {% else %}
             <!-- État vide simplifié -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                <div class="text-6xl mb-4">📢</div>
+                <div class="text-gray-400 mb-4">
+                    <span class="material-icons" style="font-size: 64px;">campaign</span>
+                </div>
                 <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune annonce disponible</h3>
                 <p class="text-gray-600">Il n'y a aucune annonce à afficher pour le moment.</p>
                 {% if user.role == 'TEACHER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
                     <a href="{% url 'communication:announcement_create' %}" 
                        class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
-                        ➕ Créer la première annonce
+                        <span class="material-icons mr-2" style="font-size: 16px;">add</span> Créer la première annonce
                     </a>
                 {% endif %}
             </div>

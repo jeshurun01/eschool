@@ -4,231 +4,180 @@
 {% block title %}Vue d'ensemble des enfants{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6">
-    <!-- Header -->
-    <div class="mb-8">
-        <div class="bg-white rounded-lg shadow-sm p-6">
-            <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
-                <a href="{% url 'accounts:dashboard' %}" class="hover:text-blue-600">🏠 Tableau de bord</a>
-                <span>/</span>
-                <span class="text-gray-900">Vue d'ensemble des enfants</span>
-            </nav>
+<div class="container mx-auto px-4 py-8">
+    <!-- Simple, clean header -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
+        <nav class="text-sm text-gray-600 mb-4">
+            <a href="{% url 'accounts:dashboard' %}" class="hover:text-blue-600">
+                <span class="material-icons text-sm">home</span> Tableau de bord
+            </a>
+            <span class="mx-2">/</span>
+            <span class="text-gray-900">Vue d'ensemble des enfants</span>
+        </nav>
+        
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+                    <span class="material-icons text-blue-600 mr-3">family_restroom</span>
+                    Vue d'ensemble de vos enfants
+                </h1>
+                <p class="text-gray-600 mt-2">
+                    Suivez la progression de vos {{ total_children }} enfant{{ total_children|pluralize }}
+                </p>
+            </div>
             
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h1 class="text-3xl font-bold text-gray-900">Vue d'ensemble de vos enfants</h1>
-                    <p class="text-gray-600 mt-2">Suivez la progression académique et financière de vos {{ total_children }} enfant{{ total_children|pluralize }}</p>
-                </div>
-                
-                <!-- Filtres de période -->
-                <div class="mt-4 md:mt-0">
-                    <div class="flex space-x-2">
-                        <a href="?period=week" class="px-3 py-2 text-sm rounded-lg {% if period == 'week' %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
-                            7 jours
-                        </a>
-                        <a href="?period=month" class="px-3 py-2 text-sm rounded-lg {% if period == 'month' %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
-                            30 jours
-                        </a>
-                        <a href="?period=semester" class="px-3 py-2 text-sm rounded-lg {% if period == 'semester' %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
-                            Semestre
-                        </a>
-                    </div>
-                </div>
+            <!-- Period filters -->
+            <div class="flex space-x-2">
+                <a href="?period=week" class="px-3 py-2 text-sm rounded {% if period == 'week' %}bg-blue-600 text-white{% else %}bg-gray-100{% endif %}">7 jours</a>
+                <a href="?period=month" class="px-3 py-2 text-sm rounded {% if period == 'month' %}bg-blue-600 text-white{% else %}bg-gray-100{% endif %}">30 jours</a>
+                <a href="?period=semester" class="px-3 py-2 text-sm rounded {% if period == 'semester' %}bg-blue-600 text-white{% else %}bg-gray-100{% endif %}">Semestre</a>
             </div>
         </div>
     </div>
 
     {% if children_detailed %}
-        <!-- Statistiques globales -->
+        <!-- Global stats -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="bg-white rounded-lg shadow-sm p-6">
                 <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-blue-100 text-blue-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                        </svg>
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <span class="material-icons text-blue-600">groups</span>
                     </div>
                     <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Total enfants</p>
-                        <p class="text-2xl font-semibold text-gray-900">{{ total_children }}</p>
+                        <p class="text-sm text-gray-600">Enfants inscrits</p>
+                        <p class="text-2xl font-bold">{{ total_children }}</p>
+                        <p class="text-sm text-blue-600">Moyenne: {{ average_grade|floatformat:1 }}/20</p>
                     </div>
                 </div>
             </div>
-
+            
             <div class="bg-white rounded-lg shadow-sm p-6">
                 <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-green-100 text-green-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
+                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                        <span class="material-icons text-green-600">how_to_reg</span>
                     </div>
                     <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Période</p>
-                        <p class="text-2xl font-semibold text-gray-900">
-                            {% if period == 'week' %}7 jours
-                            {% elif period == 'month' %}30 jours
-                            {% elif period == 'semester' %}Semestre
-                            {% else %}30 jours{% endif %}
-                        </p>
+                        <p class="text-sm text-gray-600">Taux de présence</p>
+                        <p class="text-2xl font-bold">{{ average_attendance|floatformat:1 }}%</p>
+                        <p class="text-sm text-green-600">{{ total_present_days }} jours</p>
                     </div>
                 </div>
             </div>
-
+            
             <div class="bg-white rounded-lg shadow-sm p-6">
                 <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-red-100 text-red-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                        </svg>
+                    <div class="w-12 h-12 {% if total_pending_amount > 0 %}bg-red-100{% else %}bg-green-100{% endif %} rounded-lg flex items-center justify-center">
+                        <span class="material-icons {% if total_pending_amount > 0 %}text-red-600{% else %}text-green-600{% endif %}">account_balance_wallet</span>
                     </div>
                     <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Factures en attente</p>
-                        <p class="text-2xl font-semibold text-gray-900">
+                        <p class="text-sm text-gray-600">Factures</p>
+                        <p class="text-2xl font-bold {% if total_pending_amount > 0 %}text-red-600{% else %}text-green-600{% endif %}">
                             ${{ total_pending_amount|floatformat:0 }}
-                            {% if total_overdue_amount > 0 %}
-                                <span class="text-sm text-red-600">(+${{ total_overdue_amount|floatformat:0 }} en retard)</span>
-                            {% endif %}
                         </p>
+                        {% if total_overdue_amount > 0 %}
+                            <p class="text-sm text-red-600">+${{ total_overdue_amount|floatformat:0 }} en retard</p>
+                        {% else %}
+                            <p class="text-sm text-green-600">À jour</p>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Liste détaillée des enfants -->
+        <!-- Children list -->
         <div class="space-y-6">
             {% for child_data in children_detailed %}
             <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div class="p-6">
-                    <!-- En-tête enfant -->
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                <!-- Child header -->
+                <div class="px-6 py-4 bg-blue-50 border-b">
+                    <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-4">
-                            <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
-                                {{ child_data.student.user.first_name|first }}{{ child_data.student.user.last_name|first }}
+                            <div>
+                                {% if child_data.student.user.avatar %}
+                                    <img class="w-12 h-12 rounded-full object-cover" src="{{ child_data.student.user.avatar.url }}" alt="">
+                                {% else %}
+                                    <div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center">
+                                        <span class="text-white font-bold">{{ child_data.student.user.first_name|first }}{{ child_data.student.user.last_name|first }}</span>
+                                    </div>
+                                {% endif %}
                             </div>
                             <div>
                                 <h3 class="text-xl font-bold text-gray-900">
                                     {{ child_data.student.user.first_name }} {{ child_data.student.user.last_name }}
                                 </h3>
                                 <p class="text-gray-600">{{ child_data.student.matricule }}</p>
-                                <div class="flex items-center space-x-4 mt-1">
-                                    <span class="text-sm text-gray-500">📚 {{ child_data.period_grades }} note{{ child_data.period_grades|pluralize }} cette période</span>
-                                    <span class="text-sm px-2 py-1 rounded-full {% if child_data.financial_status == 'success' %}bg-green-100 text-green-800{% elif child_data.financial_status == 'warning' %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
-                                        {% if child_data.financial_status == 'success' %}✅ À jour
-                                        {% elif child_data.financial_status == 'warning' %}⚠️ Factures en attente
-                                        {% else %}🚨 Factures en retard{% endif %}
-                                    </span>
-                                </div>
                             </div>
                         </div>
+                        
+                        <!-- Financial status -->
+                        <div>
+                            <span class="px-3 py-1 rounded-full text-sm {% if child_data.financial_status == 'success' %}bg-green-100 text-green-800{% elif child_data.financial_status == 'warning' %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                {% if child_data.financial_status == 'success' %}
+                                    <span class="material-icons text-sm mr-1">check_circle</span>À jour
+                                {% elif child_data.financial_status == 'warning' %}
+                                    <span class="material-icons text-sm mr-1">warning</span>En attente
+                                {% else %}
+                                    <span class="material-icons text-sm mr-1">error</span>En retard
+                                {% endif %}
+                            </span>
+                        </div>
                     </div>
+                </div>
 
-                    <!-- Statistiques rapides -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <!-- Child stats -->
+                <div class="p-6">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="text-center p-4 bg-gray-50 rounded-lg">
-                            <p class="text-2xl font-bold text-green-600">{{ child_data.average_grade|floatformat:1 }}</p>
-                            <p class="text-sm text-gray-600">Moyenne générale</p>
+                            <div class="flex items-center justify-center mb-2">
+                                <span class="material-icons text-green-600 mr-2">grade</span>
+                                <span class="text-2xl font-bold text-green-600">{{ child_data.average_grade|floatformat:1 }}</span>
+                            </div>
+                            <p class="text-sm text-gray-600">Moyenne</p>
                         </div>
+                        
                         <div class="text-center p-4 bg-gray-50 rounded-lg">
-                            <p class="text-2xl font-bold text-blue-600">{{ child_data.attendance_rate|floatformat:1 }}%</p>
-                            <p class="text-sm text-gray-600">Taux de présence</p>
+                            <div class="flex items-center justify-center mb-2">
+                                <span class="material-icons text-blue-600 mr-2">how_to_reg</span>
+                                <span class="text-2xl font-bold text-blue-600">{{ child_data.attendance_rate|floatformat:1 }}%</span>
+                            </div>
+                            <p class="text-sm text-gray-600">Présence</p>
                         </div>
+                        
                         <div class="text-center p-4 bg-gray-50 rounded-lg">
-                            <p class="text-2xl font-bold text-purple-600">{{ child_data.best_grade|floatformat:0 }}</p>
+                            <div class="flex items-center justify-center mb-2">
+                                <span class="material-icons text-purple-600 mr-2">military_tech</span>
+                                <span class="text-2xl font-bold text-purple-600">{{ child_data.best_grade|floatformat:0 }}</span>
+                            </div>
                             <p class="text-sm text-gray-600">Meilleure note</p>
                         </div>
+                        
                         <div class="text-center p-4 bg-gray-50 rounded-lg">
-                            <p class="text-2xl font-bold {% if child_data.total_pending > 0 %}text-red-600{% else %}text-green-600{% endif %}">
-                                ${{ child_data.total_pending|floatformat:0 }}
-                            </p>
-                            <p class="text-sm text-gray-600">Factures en attente</p>
+                            <div class="flex items-center justify-center mb-2">
+                                <span class="material-icons {% if child_data.total_pending > 0 %}text-red-600{% else %}text-green-600{% endif %} mr-2">account_balance_wallet</span>
+                                <span class="text-2xl font-bold {% if child_data.total_pending > 0 %}text-red-600{% else %}text-green-600{% endif %}">
+                                    ${{ child_data.total_pending|floatformat:0 }}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600">Factures</p>
                         </div>
                     </div>
-
-                    <!-- Performance par matière -->
-                    {% if child_data.subjects_performance %}
-                    <div class="mb-6">
-                        <h4 class="font-semibold text-gray-900 mb-3">📊 Performance par matière</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {% for subject_perf in child_data.subjects_performance %}
-                            <div class="p-4 border border-gray-200 rounded-lg">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h5 class="font-medium text-gray-900">{{ subject_perf.subject.name }}</h5>
-                                    <span class="text-sm px-2 py-1 rounded-full {% if subject_perf.trend == 'up' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
-                                        {% if subject_perf.trend == 'up' %}📈{% else %}📉{% endif %}
-                                    </span>
-                                </div>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-lg font-bold {% if subject_perf.average >= 12 %}text-green-600{% elif subject_perf.average >= 10 %}text-yellow-600{% else %}text-red-600{% endif %}">
-                                        {{ subject_perf.average|floatformat:1 }}/20
-                                    </span>
-                                    <span class="text-sm text-gray-500">{{ subject_perf.grades_count }} note{{ subject_perf.grades_count|pluralize }}</span>
-                                </div>
-                                        <div class="w-full bg-gray-200 rounded-full h-2">
-                                            <div class="h-2 rounded-full {% if subject_perf.average >= 12 %}bg-green-500{% elif subject_perf.average >= 10 %}bg-yellow-500{% else %}bg-red-500{% endif %}" 
-                                                 style="width: {% widthratio subject_perf.average 20 100 %}%"></div>
-                                        </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Situation financière détaillée -->
-                    {% if child_data.total_pending > 0 or child_data.total_overdue > 0 %}
-                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                        <h4 class="font-semibold text-yellow-800 mb-2">💰 Situation financière</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            {% if child_data.total_pending > 0 %}
-                            <div>
-                                <span class="text-yellow-700">Factures en attente:</span>
-                                <span class="font-semibold">${{ child_data.total_pending|floatformat:2 }}</span>
-                            </div>
-                            {% endif %}
-                            {% if child_data.total_overdue > 0 %}
-                            <div>
-                                <span class="text-red-700">Factures en retard:</span>
-                                <span class="font-semibold text-red-600">${{ child_data.total_overdue|floatformat:2 }}</span>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
             {% endfor %}
         </div>
-
     {% else %}
-        <!-- Message si aucun enfant -->
-        <div class="text-center py-12">
-            <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                </svg>
+        <!-- No children -->
+        <div class="text-center py-16">
+            <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                <span class="material-icons text-gray-400 text-4xl">family_restroom</span>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">Aucun enfant trouvé</h3>
-            <p class="text-gray-600 mb-4">Aucun enfant n'est associé à votre compte parent.</p>
-            <a href="{% url 'accounts:dashboard' %}" 
-               class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200">
-                Retour au tableau de bord
+            <h3 class="text-xl font-medium text-gray-900 mb-2">Aucun enfant assigné</h3>
+            <p class="text-gray-600 mb-6">Contactez l'administration pour ajouter vos enfants.</p>
+            <a href="#" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <span class="material-icons mr-2">contact_support</span>
+                Contacter l'administration
             </a>
         </div>
     {% endif %}
 </div>
-
-<style>
-.child-card {
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-}
-
-.child-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-}
-
-.finance-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
-</style>
 {% endblock %}

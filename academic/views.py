@@ -476,16 +476,10 @@ def level_create(request):
     }
     return render(request, 'academic/level_create.html', context)
 
+@login_required
 def subject_list(request):
-    """Liste des matières avec filtres"""
+    """Liste des matières avec filtres - Accessible à tous les utilisateurs connectés"""
     subjects = Subject.objects.prefetch_related('teachers').all()
-    
-    # Filtrage par statut
-    status = request.GET.get('status')
-    if status == 'active':
-        subjects = subjects.filter(is_active=True)
-    elif status == 'inactive':
-        subjects = subjects.filter(is_active=False)
     
     # Recherche
     search = request.GET.get('search')
@@ -500,7 +494,7 @@ def subject_list(request):
     subjects = subjects.order_by('name')
     
     # Statistiques
-    active_subjects_count = Subject.objects.filter(is_active=True).count()
+    total_subjects = Subject.objects.count()
     subjects_with_teachers = Subject.objects.filter(teachers__isnull=False).distinct().count()
     
     # Coefficient moyen
@@ -511,24 +505,23 @@ def subject_list(request):
     context = {
         'subjects': subjects,
         'search': search,
-        'current_status': status,
-        'active_subjects_count': active_subjects_count,
+        'current_status': request.GET.get('status'),  # Pour maintenir la valeur dans le form
+        'total_subjects': total_subjects,
         'subjects_with_teachers': subjects_with_teachers,
         'average_coefficient': average_coefficient,
     }
     
     return render(request, 'academic/subject_list.html', context)
 
+@admin_required
 def subject_create(request):
-    """Créer une nouvelle matière"""
+    """Créer une nouvelle matière - Réservé aux administrateurs"""
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         code = request.POST.get('code', '').strip()
         description = request.POST.get('description', '').strip()
         coefficient = request.POST.get('coefficient', '1')
         color = request.POST.get('color', '#3B82F6')
-        is_active = request.POST.get('is_active') == 'on'
-        has_practical_work = request.POST.get('has_practical_work') == 'on'
         
         if not name:
             messages.error(request, 'Le nom de la matière est obligatoire.')
@@ -548,8 +541,7 @@ def subject_create(request):
                         code=code if code else None,
                         description=description if description else None,
                         coefficient=coefficient,
-                        color=color,
-                        is_active=is_active
+                        color=color
                     )
                     
                     messages.success(request, f'Matière "{name}" créée avec succès.')
@@ -557,8 +549,7 @@ def subject_create(request):
                     # Check if this is a popup (for integration with teacher creation)
                     if request.GET.get('popup'):
                         return render(request, 'academic/popup_close.html', {
-                            'message': f'Matière "{name}" créée avec succès.',
-                            'refresh_parent': True
+                            'message': 'refresh_subjects'
                         })
                     
                     return redirect('academic:subject_list')
@@ -574,7 +565,10 @@ def subject_create(request):
     
     return render(request, 'academic/subject_create.html', context)
 
+@teacher_or_student_required
 def classroom_students(request, classroom_id):
+    """Élèves d'une classe - Accessible aux enseignants de la classe et aux élèves inscrits"""
+    # TODO: Ajouter vérification RBAC pour s'assurer que l'utilisateur a accès à cette classe
     return HttpResponse(f"Élèves de la classe {classroom_id} - En cours de développement")
 
 @login_required
@@ -638,10 +632,14 @@ def classroom_timetable(request, classroom_id):
     
     return render(request, 'academic/classroom_timetable.html', context)
 
+@admin_required
 def timetable_list(request):
+    """Liste des emplois du temps - Réservé aux administrateurs"""
     return HttpResponse("Liste des emplois du temps - En cours de développement")
 
+@admin_required
 def timetable_create(request):
+    """Créer un emploi du temps - Réservé aux administrateurs"""
     return HttpResponse("Créer un emploi du temps - En cours de développement")
 
 @teacher_or_student_required
@@ -1379,10 +1377,16 @@ def class_grades(request, classroom_id):
     
     return render(request, 'academic/class_grades.html', context)
 
+@teacher_or_student_required
 def student_bulletin(request, student_id):
+    """Bulletin d'un élève - Accessible à l'élève, ses parents, ses enseignants et admins"""
+    # TODO: Ajouter vérification RBAC pour s'assurer que l'utilisateur a accès à cet élève
     return HttpResponse(f"Bulletin de l'élève {student_id} - En cours de développement")
 
+@teacher_required  
 def class_report(request, classroom_id):
+    """Rapport de classe - Réservé aux enseignants et admins"""
+    # TODO: Ajouter vérification RBAC pour s'assurer que l'enseignant enseigne dans cette classe
     return HttpResponse(f"Rapport de la classe {classroom_id} - En cours de développement")
 
 
@@ -1911,137 +1915,3 @@ def document_detail(request, document_id):
     }
     
     return render(request, 'academic/document_detail.html', context)
-
-
-# Vues pour la gestion des enseignants
-
-@admin_required
-def teacher_list(request):
-    """Liste des enseignants avec filtres"""
-    teachers = Teacher.objects.select_related('user').prefetch_related('subjects')
-    
-    # Filtrage par matière
-    subject = request.GET.get('subject')
-    if subject and subject != 'None' and subject.strip():
-        try:
-            teachers = teachers.filter(subjects__id=int(subject))
-        except (ValueError, TypeError):
-            pass
-    
-    # Recherche
-    search = request.GET.get('search')
-    if search and search != 'None' and search.strip():
-        teachers = teachers.filter(
-            Q(user__first_name__icontains=search) |
-            Q(user__last_name__icontains=search) |
-            Q(user__email__icontains=search) |
-            Q(employee_id__icontains=search) |
-            Q(subjects__name__icontains=search)
-        ).distinct()
-    
-    # Ordre
-    teachers = teachers.order_by('user__last_name', 'user__first_name')
-    
-    # Pagination
-    paginator = Paginator(teachers, 12)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    # Statistiques
-    teachers_with_assignments = Teacher.objects.filter(
-        teacherassignment__isnull=False
-    ).distinct().count()
-    
-    available_teachers = Teacher.objects.exclude(
-        teacherassignment__isnull=False
-    ).count()
-    
-    # Données pour les filtres
-    subjects = Subject.objects.all()
-    
-    context = {
-        'teachers': page_obj,
-        'subjects': subjects,
-        'current_subject': subject,
-        'search': search,
-        'teachers_with_assignments': teachers_with_assignments,
-        'available_teachers': available_teachers,
-    }
-    
-    return render(request, 'academic/teacher_list.html', context)
-
-@admin_required
-def teacher_create(request):
-    """Créer un nouvel enseignant"""
-    if request.method == 'POST':
-        # Récupération des données
-        first_name = request.POST.get('first_name', '').strip()
-        last_name = request.POST.get('last_name', '').strip()
-        email = request.POST.get('email', '').strip()
-        phone = request.POST.get('phone', '').strip()
-        employee_id = request.POST.get('employee_id', '').strip()
-        hire_date = request.POST.get('hire_date')
-        password = request.POST.get('password')
-        password_confirm = request.POST.get('password_confirm')
-        subject_ids = request.POST.getlist('subjects')
-        
-        # Validation
-        if not all([first_name, last_name, email, password, password_confirm]):
-            messages.error(request, 'Tous les champs obligatoires doivent être remplis.')
-        elif password != password_confirm:
-            messages.error(request, 'Les mots de passe ne correspondent pas.')
-        elif len(password) < 8:
-            messages.error(request, 'Le mot de passe doit contenir au moins 8 caractères.')
-        elif User.objects.filter(email=email).exists():
-            messages.error(request, 'Un utilisateur avec cette adresse email existe déjà.')
-        elif employee_id and Teacher.objects.filter(employee_id=employee_id).exists():
-            messages.error(request, 'Un enseignant avec cet identifiant employé existe déjà.')
-        else:
-            try:
-                # Créer l'utilisateur
-                user = User.objects.create_user(
-                    username=email,
-                    email=email,
-                    first_name=first_name,
-                    last_name=last_name,
-                    password=password,
-                    role='TEACHER'
-                )
-                
-                # Créer le profil enseignant
-                teacher = Teacher.objects.create(
-                    user=user,
-                    employee_id=employee_id if employee_id else None,
-                    phone=phone if phone else None,
-                    hire_date=hire_date if hire_date else None
-                )
-                
-                # Assigner les matières
-                if subject_ids:
-                    subjects = Subject.objects.filter(id__in=subject_ids)
-                    teacher.subjects.set(subjects)
-                
-                messages.success(request, f'Enseignant "{user.get_full_name()}" créé avec succès.')
-                
-                # Check if this is a popup (for integration with classroom creation)
-                if request.GET.get('popup'):
-                    return render(request, 'academic/popup_close.html', {
-                        'message': f'Enseignant "{user.get_full_name()}" créé avec succès.',
-                        'refresh_parent': True
-                    })
-                
-                return redirect('academic:teacher_list')
-                
-            except Exception as e:
-                messages.error(request, f'Erreur lors de la création: {str(e)}')
-    
-    # Données pour le formulaire
-    subjects = Subject.objects.all().order_by('name')
-    
-    context = {
-        'subjects': subjects,
-        'today': date.today(),
-        'is_popup': request.GET.get('popup', False)
-    }
-    
-    return render(request, 'academic/teacher_create.html', context)

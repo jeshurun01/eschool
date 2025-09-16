@@ -314,13 +314,13 @@ Cette documentation liste toutes les URLs disponibles dans l'application eSchool
 | Module | Nombre d'URLs | Description |
 |--------|---------------|-------------|
 | **Accounts** | 27 | Gestion des utilisateurs, authentification, dashboards |
-| **Academic** | 25 | Gestion académique (classes, notes, présences, documents) |
+| **Academic** | 23 | Gestion académique (classes, notes, présences, documents) |
 | **Finance** | 20 | Gestion financière (factures, paiements, bourses, rapports) |
 | **Communication** | 17 | Communication (annonces, messages, forum, ressources) |
 | **API** | 2 | API REST (en développement) |
 | **Core** | 6 | URLs principales et configuration |
 
-**Total : 97 URLs** définies dans l'application eSchool.
+**Total : 95 URLs** définies dans l'application eSchool.
 
 ---
 
@@ -341,4 +341,4 @@ Cette documentation liste toutes les URLs disponibles dans l'application eSchool
 
 ---
 
-*Dernière mise à jour : 12 septembre 2025*
+*Dernière mise à jour : 15 septembre 2025*
