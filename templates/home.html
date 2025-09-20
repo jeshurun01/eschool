@@ -51,46 +51,127 @@
       </p>
       
       <!-- Statistiques rapides -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12 max-w-2xl mx-auto">
-        <div class="text-center">
-          <div class="text-3xl font-bold text-blue-600">31</div>
-          <div class="text-sm text-gray-500">Sujets Forum</div>
+      {% if user.is_authenticated %}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12 max-w-3xl mx-auto">
+          <div class="text-center bg-white/50 backdrop-blur-sm p-4 rounded-xl">
+            <div class="text-3xl font-bold text-blue-600">{{ total_students|default:0 }}</div>
+            <div class="text-sm text-gray-600">
+              <span class="material-icons text-sm mr-1">school</span>Élèves
+            </div>
+          </div>
+          <div class="text-center bg-white/50 backdrop-blur-sm p-4 rounded-xl">
+            <div class="text-3xl font-bold text-purple-600">{{ total_teachers|default:0 }}</div>
+            <div class="text-sm text-gray-600">
+              <span class="material-icons text-sm mr-1">person</span>Enseignants
+            </div>
+          </div>
+          <div class="text-center bg-white/50 backdrop-blur-sm p-4 rounded-xl">
+            <div class="text-3xl font-bold text-green-600">{{ total_classes|default:0 }}</div>
+            <div class="text-sm text-gray-600">
+              <span class="material-icons text-sm mr-1">meeting_room</span>Classes
+            </div>
+          </div>
+          <div class="text-center bg-white/50 backdrop-blur-sm p-4 rounded-xl">
+            <div class="text-3xl font-bold text-indigo-600">{{ total_subjects|default:0 }}</div>
+            <div class="text-sm text-gray-600">
+              <span class="material-icons text-sm mr-1">menu_book</span>Matières
+            </div>
+          </div>
         </div>
-        <div class="text-center">
-          <div class="text-3xl font-bold text-green-600">144</div>
-          <div class="text-sm text-gray-500">Messages</div>
+      {% else %}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12 max-w-2xl mx-auto">
+          <div class="text-center">
+            <div class="text-3xl font-bold text-blue-600">
+              <span class="material-icons text-3xl">school</span>
+            </div>
+            <div class="text-sm text-gray-500">Gestion Élèves</div>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-bold text-green-600">
+              <span class="material-icons text-3xl">grade</span>
+            </div>
+            <div class="text-sm text-gray-500">Notes & Évaluations</div>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-bold text-purple-600">
+              <span class="material-icons text-3xl">event_available</span>
+            </div>
+            <div class="text-sm text-gray-500">Présences</div>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-bold text-indigo-600">
+              <span class="material-icons text-3xl">account_balance</span>
+            </div>
+            <div class="text-sm text-gray-500">Finances</div>
+          </div>
         </div>
-        <div class="text-center">
-          <div class="text-3xl font-bold text-purple-600">35</div>
-          <div class="text-sm text-gray-500">Utilisateurs</div>
-        </div>
-        <div class="text-center">
-          <div class="text-3xl font-bold text-indigo-600">90%</div>
-          <div class="text-sm text-gray-500">Complété</div>
-        </div>
-      </div>
+      {% endif %}
       
       <!-- Boutons d'action -->
       <div class="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-        <a href="{% url 'accounts:login' %}" 
-           class="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
-          <span class="flex items-center justify-center">
-            <svg class="w-5 h-5 mr-2 group-hover:animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
-            </svg>
-            Se connecter
-          </span>
-        </a>
-        
-        <a href="{% url 'accounts:register' %}" 
-           class="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold text-lg hover:border-blue-500 hover:text-blue-600 transition-all duration-300 transform hover:scale-105">
-          <span class="flex items-center justify-center">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
-            </svg>
-            Créer un compte
-          </span>
-        </a>
+        {% if user.is_authenticated %}
+          <!-- Utilisateur connecté -->
+          {% if can_manage_users %}
+            <a href="{% url 'accounts:student_create' %}" 
+               class="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
+              <span class="flex items-center justify-center">
+                <span class="material-icons mr-2 group-hover:animate-pulse">person_add</span>
+                Créer un compte élève
+              </span>
+            </a>
+          {% endif %}
+          
+          {% if user.is_student %}
+            <a href="{% url 'academic:classroom_list' %}" 
+               class="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
+              <span class="flex items-center justify-center">
+                <span class="material-icons mr-2">school</span>
+                Mes Classes
+              </span>
+            </a>
+          {% elif user.is_teacher %}
+            <a href="{% url 'academic:classroom_list' %}" 
+               class="px-8 py-4 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:from-purple-700 hover:to-violet-700 transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
+              <span class="flex items-center justify-center">
+                <span class="material-icons mr-2">school</span>
+                Gestion Classes
+              </span>
+            </a>
+          {% else %}
+            <a href="{% url 'academic:classroom_list' %}" 
+               class="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
+              <span class="flex items-center justify-center">
+                <span class="material-icons mr-2">admin_panel_settings</span>
+                Gestion Académique
+              </span>
+            </a>
+          {% endif %}
+          
+          <a href="{% url 'academic:classroom_list' %}" 
+             class="px-8 py-4 border-2 border-orange-500 text-orange-600 rounded-xl font-semibold text-lg hover:bg-orange-500 hover:text-white transition-all duration-300 transform hover:scale-105">
+            <span class="flex items-center justify-center">
+              <span class="material-icons mr-2">meeting_room</span>
+              Voir les Classes
+            </span>
+          </a>
+        {% else %}
+          <!-- Utilisateur non connecté -->
+          <a href="{% url 'accounts:login' %}" 
+             class="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
+            <span class="flex items-center justify-center">
+              <span class="material-icons mr-2 group-hover:animate-pulse">login</span>
+              Se connecter
+            </span>
+          </a>
+          
+          <a href="{% url 'accounts:register' %}" 
+             class="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold text-lg hover:border-blue-500 hover:text-blue-600 transition-all duration-300 transform hover:scale-105">
+            <span class="flex items-center justify-center">
+              <span class="material-icons mr-2">person_add</span>
+              Créer un compte
+            </span>
+          </a>
+        {% endif %}
       </div>
     </div>
 

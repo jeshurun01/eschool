@@ -249,3 +249,46 @@ class Teacher(models.Model):
             self.employee_id = f"TEA{current_year}{new_number:04d}"
         
         super().save(*args, **kwargs)
+
+    def sync_teacher_assignments(self, old_subject_ids=None):
+        """
+        Synchronise les attributions TeacherAssignment avec les matières assignées
+        Supprime les attributions pour les matières qui ne sont plus assignées
+        """
+        if old_subject_ids is None:
+            return
+            
+        current_subject_ids = set(self.subjects.values_list('id', flat=True))
+        removed_subject_ids = set(old_subject_ids) - current_subject_ids
+        
+        if removed_subject_ids:
+            # Importer ici pour éviter les imports circulaires
+            from academic.models import TeacherAssignment
+            
+            # Supprimer les attributions pour les matières qui ne sont plus assignées
+            TeacherAssignment.objects.filter(
+                teacher=self,
+                subject_id__in=removed_subject_ids
+            ).delete()
+            
+            return list(removed_subject_ids)
+        
+        return []
+
+    @property
+    def current_class_assignments(self):
+        """Retourne les attributions de classes actuelles de l'enseignant"""
+        from academic.models import TeacherAssignment, AcademicYear
+        current_year = AcademicYear.objects.filter(is_current=True).first()
+        if current_year:
+            return TeacherAssignment.objects.filter(
+                teacher=self,
+                academic_year=current_year
+            ).select_related('classroom', 'subject')
+        return TeacherAssignment.objects.none()
+
+    @property
+    def principal_classes(self):
+        """Retourne les classes dont cet enseignant est professeur principal"""
+        from academic.models import ClassRoom
+        return ClassRoom.objects.filter(head_teacher=self)

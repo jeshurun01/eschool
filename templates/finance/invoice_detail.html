@@ -57,6 +57,14 @@
                     </a>
                     {% endif %}
                     
+                    {% if invoice.status in 'SENT,OVERDUE' and remaining_amount > 0 %}
+                    <a href="{% url 'finance:invoice_pay' invoice.id %}" 
+                       class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md">
+                        <span class="material-icons text-sm mr-2">payment</span>
+                        Payer ({{ remaining_amount }}€)
+                    </a>
+                    {% endif %}
+                    
                     <a href="{% url 'finance:invoice_pdf' invoice.id %}" 
                        class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md">
                         <svg class="-ml-1 mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
@@ -260,7 +268,7 @@
                         
                         {% if remaining_amount > 0 %}
                         <div class="pt-4">
-                            <a href="#" class="w-full inline-flex justify-center items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md">
+                            <a href="{% url 'finance:invoice_pay' invoice.id %}" class="w-full inline-flex justify-center items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md">
                                 <svg class="-ml-1 mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"/>
                                 </svg>
@@ -281,17 +289,37 @@
                             {% for payment in payments %}
                             <div class="px-6 py-4">
                                 <div class="flex justify-between items-start">
-                                    <div>
+                                    <div class="flex-1">
                                         <p class="text-sm font-medium text-gray-900">{{ payment.amount|floatformat:2 }} €</p>
                                         <p class="text-sm text-gray-600">{{ payment.payment_method.name }}</p>
                                         <p class="text-xs text-gray-500">{{ payment.payment_date|date:"d/m/Y H:i" }}</p>
+                                        {% if payment.transaction_id %}
+                                        <p class="text-xs text-gray-500">Réf: {{ payment.transaction_id }}</p>
+                                        {% endif %}
                                     </div>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        Validé
-                                    </span>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                            {% if payment.status == 'COMPLETED' %}bg-green-100 text-green-800
+                                            {% elif payment.status == 'PENDING' %}bg-yellow-100 text-yellow-800
+                                            {% elif payment.status == 'FAILED' %}bg-red-100 text-red-800
+                                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                            {% if payment.status == 'COMPLETED' %}Confirmé
+                                            {% elif payment.status == 'PENDING' %}En attente
+                                            {% elif payment.status == 'FAILED' %}Rejeté
+                                            {% else %}{{ payment.status }}{% endif %}
+                                        </span>
+                                        
+                                        {% if payment.status == 'PENDING' and can_edit %}
+                                        <a href="{% url 'finance:payment_confirm' payment.id %}" 
+                                           class="inline-flex items-center px-2 py-1 border border-blue-300 rounded text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">
+                                            <span class="material-icons text-xs mr-1">check_circle</span>
+                                            Confirmer
+                                        </a>
+                                        {% endif %}
+                                    </div>
                                 </div>
-                                {% if payment.reference %}
-                                <p class="mt-1 text-xs text-gray-500">Réf: {{ payment.reference }}</p>
+                                {% if payment.notes %}
+                                <p class="mt-1 text-xs text-gray-500">{{ payment.notes|truncatewords:10 }}</p>
                                 {% endif %}
                             </div>
                             {% endfor %}

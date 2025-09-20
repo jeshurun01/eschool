@@ -318,14 +318,24 @@ def enrollment_manage(request, classroom_id):
                         inactive_enrollment.withdrawal_date = None
                         inactive_enrollment.enrollment_date = timezone.now().date()
                         inactive_enrollment.save()
+                        
+                        # Mettre à jour la classe actuelle de l'élève
+                        student.current_class = classroom
+                        student.save()
+                        
                         messages.success(request, f'✅ {student.user.get_full_name()} a été réinscrit dans la classe {classroom.name}.')
                     else:
                         # Créer une nouvelle inscription
-                        Enrollment.objects.create(
+                        enrollment = Enrollment.objects.create(
                             student=student,
                             classroom=classroom,
                             academic_year=classroom.academic_year
                         )
+                        
+                        # Mettre à jour la classe actuelle de l'élève
+                        student.current_class = classroom
+                        student.save()
+                        
                         messages.success(request, f'✅ {student.user.get_full_name()} a été inscrit dans la classe {classroom.name}.')
                     
             except Exception as e:
@@ -342,6 +352,11 @@ def enrollment_manage(request, classroom_id):
                 enrollment.is_active = False
                 enrollment.withdrawal_date = timezone.now().date()
                 enrollment.save()
+                
+                # Mettre à jour la classe actuelle de l'élève (retirer)
+                student = enrollment.student
+                student.current_class = None
+                student.save()
                 
                 student_name = enrollment.student.user.get_full_name()
                 messages.success(request, f'✅ {student_name} a été retiré de la classe {classroom.name}.')
@@ -475,6 +490,68 @@ def level_create(request):
         'is_popup': request.GET.get('popup', False)
     }
     return render(request, 'academic/level_create.html', context)
+
+
+@admin_required
+def level_detail(request, level_id):
+    """Détails d'un niveau"""
+    level = get_object_or_404(Level, id=level_id)
+    
+    # Statistiques du niveau
+    classrooms = ClassRoom.objects.filter(level=level)
+    subjects = level.subjects.all()
+    students_count = Enrollment.objects.filter(
+        classroom__level=level, 
+        is_active=True
+    ).count()
+    
+    # Statistiques par année académique
+    current_year = AcademicYear.objects.filter(is_current=True).first()
+    classrooms_current_year = classrooms.filter(academic_year=current_year) if current_year else ClassRoom.objects.none()
+    
+    context = {
+        'level': level,
+        'classrooms': classrooms.select_related('academic_year', 'head_teacher__user').annotate(
+            student_count=Count('enrollments', filter=Q(enrollments__is_active=True))
+        ),
+        'subjects': subjects,
+        'total_classrooms': classrooms.count(),
+        'current_year_classrooms': classrooms_current_year.count(),
+        'total_subjects': subjects.count(),
+        'total_students': students_count,
+        'current_year': current_year,
+    }
+    return render(request, 'academic/level_detail.html', context)
+
+
+@admin_required
+def level_edit(request, level_id):
+    """Modifier un niveau"""
+    level = get_object_or_404(Level, id=level_id)
+    
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description', '')
+        order = request.POST.get('order', 1)
+        
+        if name:
+            try:
+                level.name = name
+                level.description = description
+                level.order = int(order) if order else 1
+                level.save()
+                
+                messages.success(request, f'Niveau "{level.name}" modifié avec succès.')
+                return redirect('academic:level_detail', level_id=level.id)
+            except Exception as e:
+                messages.error(request, f'Erreur lors de la modification : {str(e)}')
+        else:
+            messages.error(request, 'Le nom du niveau est obligatoire.')
+    
+    context = {
+        'level': level,
+    }
+    return render(request, 'academic/level_edit.html', context)
 
 @login_required
 def subject_list(request):

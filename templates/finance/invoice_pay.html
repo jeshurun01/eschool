@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payer la facture {{ invoice.invoice_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.payment-form {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.amount-display {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #1f2937;
+}
+.payment-method-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.payment-method-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+.payment-method-card.selected {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- En-tête -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <a href="{% url 'finance:invoice_detail' invoice.id %}" 
+                       class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        <span class="material-icons text-sm mr-2">arrow_back</span>
+                        Retour à la facture
+                    </a>
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900">Payer la facture</h1>
+                        <p class="mt-1 text-gray-600">Facture {{ invoice.invoice_number }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations de la facture -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Détails de la facture</h2>
+            </div>
+            <div class="px-6 py-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500">Montant total</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ invoice.total_amount }}€</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500">Déjà payé</p>
+                        <p class="text-2xl font-bold text-green-600">{{ total_paid }}€</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500">Montant restant</p>
+                        <p class="amount-display text-red-600">{{ remaining_amount }}€</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulaire de paiement -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <span class="material-icons mr-2">payment</span>
+                    Effectuer un paiement
+                </h2>
+            </div>
+            
+            <form method="post" class="p-6">
+                {% csrf_token %}
+                
+                <!-- Méthodes de paiement -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-3">
+                        Méthode de paiement
+                    </label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {% for method in payment_methods %}
+                        <div class="payment-method-card border border-gray-300 rounded-lg p-4 relative">
+                            <input type="radio" name="payment_method" value="{{ method.id }}" 
+                                   id="method_{{ method.id }}" required
+                                   class="absolute top-3 right-3">
+                            <label for="method_{{ method.id }}" class="cursor-pointer block">
+                                <div class="flex items-center mb-2">
+                                    {% if method.code == 'CASH' %}
+                                        <span class="material-icons text-green-600 mr-2">money</span>
+                                    {% elif method.code == 'BANK_TRANSFER' %}
+                                        <span class="material-icons text-blue-600 mr-2">account_balance</span>
+                                    {% elif method.code == 'CARD' %}
+                                        <span class="material-icons text-purple-600 mr-2">credit_card</span>
+                                    {% elif method.code == 'MOBILE_MONEY' %}
+                                        <span class="material-icons text-orange-600 mr-2">phone_android</span>
+                                    {% else %}
+                                        <span class="material-icons text-gray-600 mr-2">payment</span>
+                                    {% endif %}
+                                    <h3 class="font-medium text-gray-900">{{ method.name }}</h3>
+                                </div>
+                                {% if method.description %}
+                                <p class="text-sm text-gray-500">{{ method.description }}</p>
+                                {% endif %}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Montant -->
+                <div class="mb-6">
+                    <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">
+                        Montant du paiement (€)
+                    </label>
+                    <div class="relative">
+                        <input type="number" step="0.01" min="0.01" max="{{ remaining_amount }}" 
+                               name="amount" id="amount" required
+                               value="{{ remaining_amount }}"
+                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500 text-sm">€</span>
+                        </div>
+                    </div>
+                    <p class="mt-1 text-sm text-gray-500">
+                        Montant maximum: {{ remaining_amount }}€
+                    </p>
+                </div>
+
+                <!-- Référence de transaction (optionnel) -->
+                <div class="mb-6">
+                    <label for="transaction_id" class="block text-sm font-medium text-gray-700 mb-2">
+                        Référence de transaction (optionnel)
+                    </label>
+                    <input type="text" name="transaction_id" id="transaction_id"
+                           placeholder="Numéro de transaction, chèque, etc."
+                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <p class="mt-1 text-sm text-gray-500">
+                        Pour le suivi du paiement (numéro de chèque, référence bancaire, etc.)
+                    </p>
+                </div>
+
+                <!-- Notes -->
+                <div class="mb-6">
+                    <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">
+                        Notes (optionnel)
+                    </label>
+                    <textarea name="notes" id="notes" rows="3"
+                              placeholder="Informations complémentaires sur le paiement..."
+                              class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                    <a href="{% url 'finance:invoice_detail' invoice.id %}" 
+                       class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <span class="material-icons text-sm mr-2">cancel</span>
+                        Annuler
+                    </a>
+                    
+                    <button type="submit" 
+                            class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <span class="material-icons mr-2">payment</span>
+                        Enregistrer le paiement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Script pour la sélection des méthodes de paiement
+document.addEventListener('DOMContentLoaded', function() {
+    const paymentCards = document.querySelectorAll('.payment-method-card');
+    const radioButtons = document.querySelectorAll('input[name="payment_method"]');
+    
+    // Gérer la sélection visuelle
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', function() {
+            paymentCards.forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            if (this.checked) {
+                this.closest('.payment-method-card').classList.add('selected');
+            }
+        });
+    });
+    
+    // Permettre de cliquer sur toute la carte
+    paymentCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const radio = this.querySelector('input[type="radio"]');
+            radio.checked = true;
+            radio.dispatchEvent(new Event('change'));
+        });
+    });
+});
+</script>
+{% endblock %}

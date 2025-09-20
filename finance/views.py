@@ -235,17 +235,20 @@ def invoice_list(request):
     if student_filter and (hasattr(request.user, 'teacher_profile') or request.user.is_staff):
         invoices = invoices.filter(student_id=student_filter)
     
-    # Statistiques pour le dashboard
-    total_invoices = invoices.count()
-    paid_invoices = invoices.filter(status='PAID').count()
-    pending_invoices = invoices.filter(status='SENT').count()
-    overdue_invoices = invoices.filter(status='OVERDUE').count()
+    # Statistiques pour le dashboard (exclure les brouillons)
+    # Filtrer les factures non-brouillon pour les statistiques
+    non_draft_invoices = invoices.exclude(status='DRAFT')
     
-    # Montants
+    total_invoices = non_draft_invoices.count()
+    paid_invoices = non_draft_invoices.filter(status='PAID').count()
+    pending_invoices = non_draft_invoices.filter(status='SENT').count()
+    overdue_invoices = non_draft_invoices.filter(status='OVERDUE').count()
+    
+    # Montants (exclure les brouillons du calcul)
     from django.db.models import Sum
-    total_amount = invoices.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-    paid_amount = invoices.filter(status='PAID').aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-    pending_amount = invoices.filter(status__in=['SENT', 'OVERDUE']).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    total_amount = non_draft_invoices.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    paid_amount = non_draft_invoices.filter(status='PAID').aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    pending_amount = non_draft_invoices.filter(status__in=['SENT', 'OVERDUE']).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
     
     # Pagination
     paginator = Paginator(invoices.order_by('-issue_date'), 15)
@@ -391,6 +394,151 @@ def invoice_detail(request, invoice_id):
     }
     
     return render(request, 'finance/invoice_detail.html', context)
+
+
+@parent_or_student_required
+@login_required
+def invoice_pay(request, invoice_id):
+    """Traiter le paiement d'une facture"""
+    # Récupérer la facture avec filtrage RBAC
+    invoice = get_object_or_404(
+        Invoice.objects.for_role(request.user).select_related(
+            'student__user', 'parent__user'
+        ),
+        id=invoice_id
+    )
+    
+    # Vérifier que la facture peut être payée
+    if invoice.status not in ['SENT', 'OVERDUE']:
+        messages.error(request, 'Cette facture ne peut pas être payée.')
+        return redirect('finance:invoice_detail', invoice_id=invoice.id)
+    
+    # Calculer le montant restant
+    total_paid = sum(payment.amount for payment in invoice.payments.filter(status='COMPLETED'))
+    remaining_amount = invoice.total_amount - total_paid
+    
+    if remaining_amount <= 0:
+        messages.info(request, 'Cette facture est déjà entièrement payée.')
+        return redirect('finance:invoice_detail', invoice_id=invoice.id)
+    
+    # Récupérer les méthodes de paiement actives
+    payment_methods = PaymentMethod.objects.filter(is_active=True)
+    
+    if request.method == 'POST':
+        payment_method_id = request.POST.get('payment_method')
+        amount_str = request.POST.get('amount')
+        transaction_id = request.POST.get('transaction_id', '')
+        notes = request.POST.get('notes', '')
+        
+        try:
+            # Validation du montant
+            amount = Decimal(amount_str)
+            if amount <= 0:
+                messages.error(request, 'Le montant doit être positif.')
+                raise ValueError('Montant invalide')
+            
+            if amount > remaining_amount:
+                messages.error(request, f'Le montant ne peut pas dépasser le montant restant ({remaining_amount}€).')
+                raise ValueError('Montant trop élevé')
+            
+            # Validation de la méthode de paiement
+            payment_method = get_object_or_404(PaymentMethod, id=payment_method_id, is_active=True)
+            
+            # Créer le paiement (en attente de confirmation admin)
+            payment = Payment.objects.create(
+                invoice=invoice,
+                payment_method=payment_method,
+                amount=amount,
+                transaction_id=transaction_id,
+                notes=notes,
+                status='PENDING'  # En attente de confirmation par un admin
+            )
+            
+            # Ne pas mettre à jour automatiquement le statut de la facture
+            # Les admins devront confirmer le paiement d'abord
+            messages.success(request, f'Demande de paiement de {amount}€ soumise avec succès. En attente de confirmation par l\'administration.')
+            
+            return redirect('finance:invoice_detail', invoice_id=invoice.id)
+            
+        except (ValueError, InvalidOperation):
+            messages.error(request, 'Montant invalide.')
+        except Exception as e:
+            messages.error(request, f'Erreur lors du traitement du paiement: {str(e)}')
+    
+    context = {
+        'invoice': invoice,
+        'remaining_amount': remaining_amount,
+        'total_paid': total_paid,
+        'payment_methods': payment_methods,
+    }
+    
+    return render(request, 'finance/invoice_pay.html', context)
+
+
+@admin_required
+@login_required
+def payment_confirm(request, payment_id):
+    """Confirmer ou rejeter un paiement (admin seulement)"""
+    payment = get_object_or_404(Payment, id=payment_id)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        admin_notes = request.POST.get('admin_notes', '')
+        
+        if action == 'confirm':
+            # Confirmer le paiement
+            payment.status = 'COMPLETED'
+            payment.processed_date = timezone.now()
+            if admin_notes:
+                payment.notes = f"{payment.notes}\n[Admin] {admin_notes}" if payment.notes else f"[Admin] {admin_notes}"
+            payment.save()
+            
+            # Vérifier si la facture est maintenant entièrement payée
+            invoice = payment.invoice
+            total_paid = sum(p.amount for p in invoice.payments.filter(status='COMPLETED'))
+            
+            if total_paid >= invoice.total_amount:
+                invoice.status = 'PAID'
+                invoice.save()
+                messages.success(request, f'Paiement confirmé et facture marquée comme payée.')
+            else:
+                remaining = invoice.total_amount - total_paid
+                messages.success(request, f'Paiement de {payment.amount}€ confirmé. Montant restant: {remaining}€')
+                
+        elif action == 'reject':
+            # Rejeter le paiement
+            payment.status = 'FAILED'
+            payment.processed_date = timezone.now()
+            if admin_notes:
+                payment.notes = f"{payment.notes}\n[Admin - Rejet] {admin_notes}" if payment.notes else f"[Admin - Rejet] {admin_notes}"
+            payment.save()
+            messages.warning(request, f'Paiement de {payment.amount}€ rejeté.')
+        
+        return redirect('finance:payment_detail', payment_id=payment.id)
+    
+    context = {
+        'payment': payment,
+        'invoice': payment.invoice,
+    }
+    
+    return render(request, 'finance/payment_confirm.html', context)
+
+
+@admin_required
+@login_required  
+def pending_payments(request):
+    """Liste des paiements en attente de confirmation (admin seulement)"""
+    pending_payments = Payment.objects.filter(status='PENDING').select_related(
+        'invoice', 'invoice__student__user', 'payment_method'
+    ).order_by('-payment_date')
+    
+    context = {
+        'pending_payments': pending_payments,
+        'pending_count': pending_payments.count(),
+    }
+    
+    return render(request, 'finance/pending_payments.html', context)
+
 
 @admin_required
 def invoice_edit(request, invoice_id):

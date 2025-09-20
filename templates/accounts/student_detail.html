@@ -15,21 +15,39 @@
           Détails de l'élève - Matricule: {{ student.matricule }}
         </p>
       </div>
-      <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none space-x-3">
-        <a href="{% url 'accounts:student_edit' student.id %}" 
-           class="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
-          <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-          </svg>
-          Modifier
-        </a>
-        <a href="{% url 'accounts:student_list' %}" 
-           class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
-          <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-          </svg>
-          Retour à la liste
-        </a>
+      <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+        <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+          <a href="{% url 'accounts:student_edit' student.id %}" 
+             class="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
+            <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+            Modifier
+          </a>
+          
+          {% if user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
+          <!-- Bouton de réinitialisation de mot de passe (Admin uniquement) -->
+          <form method="post" action="{% url 'accounts:reset_password' student.user.id %}" class="inline-block" 
+                onsubmit="return confirm('Êtes-vous sûr de vouloir réinitialiser le mot de passe de {{ student.user.full_name }} ? Un nouveau mot de passe temporaire sera généré.');">
+            {% csrf_token %}
+            <button type="submit" 
+                    class="inline-flex items-center justify-center rounded-md border border-transparent bg-orange-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2">
+              <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v-2l-2.257-2.257A6 6 0 0111 4a2 2 0 012 2zm-5 8.5V14a.5.5 0 01.5-.5h1a.5.5 0 01.5.5v1.5a.5.5 0 01-.5.5h-1a.5.5 0 01-.5-.5z"></path>
+              </svg>
+              Réinitialiser MDP
+            </button>
+          </form>
+          {% endif %}
+          
+          <a href="{% url 'accounts:student_list' %}" 
+             class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+            <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Retour à la liste
+          </a>
+        </div>
       </div>
     </div>
   </div>
@@ -125,9 +143,11 @@
               <dd class="text-sm text-gray-900">
                 {% if student.current_class %}
                   <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {{ student.current_class.name }} ({{ student.current_class.level.name }})
+                    {{ student.current_class.name }}{% if student.current_class.level %} ({{ student.current_class.level.name }}){% endif %}
                   </span>
-                {% else %}-{% endif %}
+                {% else %}
+                  <span class="text-gray-500 italic">Aucune classe assignée</span>
+                {% endif %}
               </dd>
             </div>
             <div>

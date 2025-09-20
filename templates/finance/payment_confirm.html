@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Confirmer le paiement{% endblock %}
+
+{% block extra_css %}
+<style>
+.payment-status-pending {
+    background-color: #fbbf24;
+    color: #92400e;
+}
+.action-confirm {
+    background-color: #10b981;
+    border-color: #10b981;
+    color: white;
+}
+.action-reject {
+    background-color: #ef4444;
+    border-color: #ef4444;
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- En-tête -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <a href="{% url 'finance:payment_detail' payment.id %}" 
+                       class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        <span class="material-icons text-sm mr-2">arrow_back</span>
+                        Retour au paiement
+                    </a>
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900">Confirmer le paiement</h1>
+                        <p class="mt-1 text-gray-600">Référence: {{ payment.payment_reference }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Détails du paiement -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                        <span class="material-icons mr-2">payment</span>
+                        Détails du paiement
+                    </h2>
+                </div>
+                <div class="px-6 py-4 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Montant</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ payment.amount }}€</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Statut</p>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium payment-status-pending">
+                                En attente
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Méthode de paiement</p>
+                        <p class="text-lg text-gray-900">{{ payment.payment_method.name }}</p>
+                    </div>
+                    
+                    {% if payment.transaction_id %}
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Référence de transaction</p>
+                        <p class="text-lg text-gray-900">{{ payment.transaction_id }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Date de demande</p>
+                        <p class="text-lg text-gray-900">{{ payment.payment_date|date:"d F Y à H:i" }}</p>
+                    </div>
+                    
+                    {% if payment.notes %}
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Notes</p>
+                        <p class="text-gray-900 whitespace-pre-line">{{ payment.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Détails de la facture -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                        <span class="material-icons mr-2">receipt</span>
+                        Facture associée
+                    </h2>
+                </div>
+                <div class="px-6 py-4 space-y-4">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Numéro de facture</p>
+                        <p class="text-lg font-semibold text-gray-900">{{ invoice.invoice_number }}</p>
+                    </div>
+                    
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Élève</p>
+                        <p class="text-lg text-gray-900">{{ invoice.student.user.first_name }} {{ invoice.student.user.last_name }}</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Montant total</p>
+                            <p class="text-lg font-bold text-gray-900">{{ invoice.total_amount }}€</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Statut facture</p>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if invoice.status == 'PAID' %}bg-green-100 text-green-800
+                                {% elif invoice.status == 'SENT' %}bg-blue-100 text-blue-800
+                                {% elif invoice.status == 'OVERDUE' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {% if invoice.status == 'PAID' %}Payée
+                                {% elif invoice.status == 'SENT' %}Envoyée
+                                {% elif invoice.status == 'OVERDUE' %}En retard
+                                {% else %}{{ invoice.status }}{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4">
+                        <a href="{% url 'finance:invoice_detail' invoice.id %}" 
+                           class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                            Voir la facture complète →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions administrateur -->
+        <div class="mt-8 bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <span class="material-icons mr-2">admin_panel_settings</span>
+                    Actions administrateur
+                </h2>
+            </div>
+            
+            <form method="post" class="p-6">
+                {% csrf_token %}
+                
+                <!-- Notes administrateur -->
+                <div class="mb-6">
+                    <label for="admin_notes" class="block text-sm font-medium text-gray-700 mb-2">
+                        Notes administrateur (optionnel)
+                    </label>
+                    <textarea name="admin_notes" id="admin_notes" rows="3"
+                              placeholder="Commentaires sur la validation/rejet du paiement..."
+                              class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                    <a href="{% url 'finance:payment_detail' payment.id %}" 
+                       class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <span class="material-icons text-sm mr-2">cancel</span>
+                        Annuler
+                    </a>
+                    
+                    <div class="flex space-x-4">
+                        <button type="submit" name="action" value="reject"
+                                class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white action-reject hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            <span class="material-icons mr-2">cancel</span>
+                            Rejeter le paiement
+                        </button>
+                        
+                        <button type="submit" name="action" value="confirm"
+                                class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white action-confirm hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            <span class="material-icons mr-2">check_circle</span>
+                            Confirmer le paiement
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Confirmation avant action
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmBtn = document.querySelector('button[value="confirm"]');
+    const rejectBtn = document.querySelector('button[value="reject"]');
+    
+    confirmBtn.addEventListener('click', function(e) {
+        if (!confirm('Êtes-vous sûr de vouloir confirmer ce paiement ? Cette action ne peut pas être annulée.')) {
+            e.preventDefault();
+        }
+    });
+    
+    rejectBtn.addEventListener('click', function(e) {
+        if (!confirm('Êtes-vous sûr de vouloir rejeter ce paiement ?')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

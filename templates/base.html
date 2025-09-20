@@ -131,11 +131,11 @@
                                 </button>
 
                                 <!-- Profile dropdown -->
-                                <div class="relative ml-3" x-data="{ open: false }">
+                                <div class="relative ml-3" x-data="{ open: false }" @click.outside="open = false">
                                     <button @click="open = !open" type="button" class="relative flex max-w-xs items-center rounded-full {% if user.role == 'STUDENT' %}bg-blue-600{% elif user.role == 'PARENT' %}bg-green-600{% elif user.role == 'TEACHER' %}bg-purple-600{% else %}bg-indigo-600{% endif %} text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-{% if user.role == 'STUDENT' %}blue{% elif user.role == 'PARENT' %}green{% elif user.role == 'TEACHER' %}purple{% else %}indigo{% endif %}-600">
                                         <span class="sr-only">Ouvrir le menu utilisateur</span>
                                         {% if user.avatar %}
-                                            <img class="h-8 w-8 rounded-full" src="{{ user.avatar.url }}" alt="">
+                                            <img class="h-8 w-8 rounded-full object-cover" src="{{ user.avatar.url }}" alt="">
                                         {% else %}
                                             <div class="h-8 w-8 rounded-full {% if user.role == 'STUDENT' %}bg-blue-500{% elif user.role == 'PARENT' %}bg-green-500{% elif user.role == 'TEACHER' %}bg-purple-500{% else %}bg-indigo-500{% endif %} flex items-center justify-center">
                                                 <span class="text-sm font-medium text-white">{{ user.first_name.0 }}{{ user.last_name.0 }}</span>
@@ -143,23 +143,56 @@
                                         {% endif %}
                                     </button>
                                     
-                                    <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                                        <div class="px-4 py-2 text-sm text-gray-700 border-b border-gray-200">
+                                    <div x-show="open" 
+                                         x-transition:enter="transition ease-out duration-200" 
+                                         x-transition:enter-start="opacity-0 scale-95" 
+                                         x-transition:enter-end="opacity-100 scale-100" 
+                                         x-transition:leave="transition ease-in duration-75" 
+                                         x-transition:leave-start="opacity-100 scale-100" 
+                                         x-transition:leave-end="opacity-0 scale-95"
+                                         class="absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none" style="display: none;">
+                                        <div class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">
                                             <div class="font-medium">{{ user.first_name }} {{ user.last_name }}</div>
                                             <div class="text-xs text-gray-500">{{ user.email }}</div>
+                                            <div class="text-xs text-gray-400 mt-1">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {% if user.role == 'STUDENT' %}bg-blue-100 text-blue-800{% elif user.role == 'PARENT' %}bg-green-100 text-green-800{% elif user.role == 'TEACHER' %}bg-purple-100 text-purple-800{% else %}bg-indigo-100 text-indigo-800{% endif %}">
+                                                    {% if user.role == 'STUDENT' %}Élève
+                                                    {% elif user.role == 'PARENT' %}Parent
+                                                    {% elif user.role == 'TEACHER' %}Enseignant
+                                                    {% else %}{{ user.get_role_display }}{% endif %}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <a href="{% url 'accounts:profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><span class="material-icons mr-2 text-sm">person</span> Mon profil</a>
+                                        
+                                        <a href="{% url 'accounts:profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                            <span class="material-icons mr-2 text-sm">person</span> Mon profil
+                                        </a>
+                                        
                                         {% if user.role == 'STUDENT' %}
-                                            <a href="{% url 'accounts:student_grades_detail' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><span class="material-icons mr-2 text-sm">assessment</span> Mes notes</a>
-                                            <a href="{% url 'accounts:student_finance_detail' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><span class="material-icons mr-2 text-sm">account_balance_wallet</span> Mes finances</a>
+                                            <a href="{% url 'accounts:student_grades_detail' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                                <span class="material-icons mr-2 text-sm">assessment</span> Mes notes
+                                            </a>
+                                            <a href="{% url 'accounts:student_finance_detail' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                                <span class="material-icons mr-2 text-sm">account_balance_wallet</span> Mes finances
+                                            </a>
                                         {% elif user.role == 'PARENT' %}
-                                            <a href="{% url 'accounts:parent_children_overview' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><span class="material-icons mr-2 text-sm">child_care</span> Mes enfants</a>
-                                            <a href="{% url 'accounts:parent_communication_center' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><span class="material-icons mr-2 text-sm">chat</span> Communication</a>
+                                            <a href="{% url 'accounts:parent_children_overview' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                                <span class="material-icons mr-2 text-sm">child_care</span> Mes enfants
+                                            </a>
+                                            <a href="{% url 'accounts:parent_communication_center' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                                <span class="material-icons mr-2 text-sm">chat</span> Communication
+                                            </a>
                                         {% elif user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
-                                            <a href="/admin/" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><span class="material-icons mr-2 text-sm">settings</span> Administration Django</a>
+                                            <a href="/admin/" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                                <span class="material-icons mr-2 text-sm">settings</span> Administration Django
+                                            </a>
                                         {% endif %}
-                                        <div class="border-t border-gray-200"></div>
-                                        <a href="{% url 'accounts:logout' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><span class="material-icons mr-2 text-sm">logout</span> Se déconnecter</a>
+                                        
+                                        <div class="border-t border-gray-200 my-1"></div>
+                                        
+                                        <a href="{% url 'accounts:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center font-medium">
+                                            <span class="material-icons mr-2 text-sm">logout</span> Se déconnecter
+                                        </a>
                                     </div>
                                 </div>
                             {% else %}

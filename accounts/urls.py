@@ -15,6 +15,7 @@ urlpatterns = [
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('teacher-dashboard/', views.teacher_dashboard, name='teacher_dashboard'),
     path('parent-dashboard/', views.parent_dashboard, name='parent_dashboard'),
+    path('student-dashboard/', views.student_dashboard, name='student_dashboard'),
     
     # Profil utilisateur
     path('profile/', views.profile_view, name='profile'),
@@ -25,6 +26,7 @@ urlpatterns = [
     path('users/create/', views.user_create, name='user_create'),
     path('users/<int:user_id>/', views.user_detail, name='user_detail'),
     path('users/<int:user_id>/edit/', views.user_edit, name='user_edit'),
+    path('users/<int:user_id>/reset-password/', views.reset_password, name='reset_password'),
     path('users/<int:user_id>/toggle-active/', views.user_toggle_active, name='user_toggle_active'),
     
     # Gestion des élèves
@@ -49,6 +51,7 @@ urlpatterns = [
     path('teachers/create/', views.teacher_create, name='teacher_create'),
     path('teachers/<int:teacher_id>/', views.teacher_detail, name='teacher_detail'),
     path('teachers/<int:teacher_id>/edit/', views.teacher_edit, name='teacher_edit'),
+    path('teachers/assignments/', views.teacher_assignments_management, name='teacher_assignments_management'),
     
     # === VUE D'ENSEMBLE POUR ADMIN ===
     path('children-overview/', views.admin_children_overview, name='admin_children_overview'),

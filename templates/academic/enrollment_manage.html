@@ -30,15 +30,19 @@
         <div class="mb-8">
             <div class="bg-white rounded-lg shadow-sm p-6">
                 <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
-                    <a href="{% url 'academic:classroom_list' %}" class="hover:text-blue-600">📚 Classes</a>
+                    <a href="{% url 'academic:classroom_list' %}" class="hover:text-blue-600">
+                        <span class="material-icons text-sm mr-1">class</span>Classes
+                    </a>
                     <span>/</span>
                     <a href="{% url 'academic:classroom_detail' classroom.id %}" class="hover:text-blue-600">{{ classroom.name }}</a>
                     <span>/</span>
-                    <span class="text-gray-900">👥 Gestion des Inscriptions</span>
+                    <span class="text-gray-900">
+                        <span class="material-icons text-sm mr-1">group</span>Gestion des Inscriptions
+                    </span>
                 </nav>
                 
                 <h1 class="text-3xl font-bold text-gray-900 mb-2">
-                    👥 Gestion des Inscriptions
+                    <span class="material-icons text-3xl mr-2 align-middle">group</span>Gestion des Inscriptions
                 </h1>
                 <p class="text-gray-600">{{ classroom.name }} - {{ classroom.grade.name }}</p>
             </div>
@@ -47,19 +51,25 @@
         <!-- Statistics Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="stats-card rounded-lg shadow-lg p-6 text-center">
-                <div class="text-4xl mb-2">👨‍🎓</div>
+                <div class="text-4xl mb-2">
+                    <span class="material-icons text-4xl">school</span>
+                </div>
                 <div class="text-3xl font-bold">{{ enrollments.count }}</div>
                 <div class="text-sm opacity-90">Étudiants inscrits</div>
             </div>
             
             <div class="bg-white rounded-lg shadow-lg p-6 text-center border-l-4 border-green-500">
-                <div class="text-4xl mb-2 text-green-600">✅</div>
+                <div class="text-4xl mb-2 text-green-600">
+                    <span class="material-icons text-4xl">groups</span>
+                </div>
                 <div class="text-3xl font-bold text-gray-900">{{ classroom.capacity|default:"∞" }}</div>
                 <div class="text-sm text-gray-600">Capacité maximale</div>
             </div>
             
             <div class="action-card rounded-lg shadow-lg p-6 text-center">
-                <div class="text-4xl mb-2">📊</div>
+                <div class="text-4xl mb-2">
+                    <span class="material-icons text-4xl">analytics</span>
+                </div>
                 <div class="text-3xl font-bold">
                     {% if classroom.capacity %}
                         {{ enrollments.count }}/{{ classroom.capacity }}
@@ -76,7 +86,7 @@
             <div class="bg-white rounded-lg shadow-lg">
                 <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-lg">
                     <h2 class="text-xl font-bold flex items-center">
-                        <span class="mr-2">👨‍🎓</span>
+                        <span class="material-icons mr-2">school</span>
                         Étudiants Inscrits ({{ enrollments.count }})
                     </h2>
                 </div>
@@ -102,24 +112,26 @@
                                             {{ enrollment.student.user.first_name }} {{ enrollment.student.user.last_name }}
                                         </div>
                                         <div class="text-sm text-gray-500">
-                                            📧 {{ enrollment.student.user.email }}
+                                            <span class="material-icons text-xs mr-1">email</span>{{ enrollment.student.user.email }}
                                         </div>
                                         <div class="text-xs text-gray-400">
-                                            📅 Inscrit le {{ enrollment.enrollment_date|date:"d/m/Y" }}
+                                            <span class="material-icons text-xs mr-1">calendar_today</span>Inscrit le {{ enrollment.enrollment_date|date:"d/m/Y" }}
                                         </div>
                                     </div>
                                 </div>
                                 
                                 <button onclick="removeStudent({{ enrollment.student.id }}, '{{ enrollment.student.user.first_name }} {{ enrollment.student.user.last_name }}')"
                                         class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-lg text-sm font-medium transition-colors duration-200">
-                                    ❌ Retirer
+                                    <span class="material-icons text-sm mr-1">remove</span>Retirer
                                 </button>
                             </div>
                             {% endfor %}
                         </div>
                     {% else %}
                         <div class="text-center py-8">
-                            <div class="text-6xl mb-4">📭</div>
+                            <div class="text-6xl mb-4">
+                                <span class="material-icons text-6xl text-gray-400">inbox</span>
+                            </div>
                             <p class="text-gray-500">Aucun étudiant inscrit dans cette classe</p>
                         </div>
                     {% endif %}
@@ -130,7 +142,7 @@
             <div class="bg-white rounded-lg shadow-lg">
                 <div class="bg-gradient-to-r from-green-600 to-teal-600 text-white p-6 rounded-t-lg">
                     <h2 class="text-xl font-bold flex items-center">
-                        <span class="mr-2">➕</span>
+                        <span class="material-icons mr-2">person_add</span>
                         Étudiants Disponibles ({{ available_students.count }})
                     </h2>
                 </div>
@@ -156,11 +168,11 @@
                                             {{ student.user.first_name }} {{ student.user.last_name }}
                                         </div>
                                         <div class="text-sm text-gray-500">
-                                            📧 {{ student.user.email }}
+                                            <span class="material-icons text-xs mr-1">email</span>{{ student.user.email }}
                                         </div>
                                         {% if student.grade %}
                                         <div class="text-xs text-gray-400">
-                                            🎓 Niveau: {{ student.grade.name }}
+                                            <span class="material-icons text-xs mr-1">school</span>Niveau: {{ student.grade.name }}
                                         </div>
                                         {% endif %}
                                     </div>
@@ -168,14 +180,16 @@
                                 
                                 <button onclick="addStudent({{ student.id }}, '{{ student.user.first_name }} {{ student.user.last_name }}')"
                                         class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded-lg text-sm font-medium transition-colors duration-200">
-                                    ➕ Ajouter
+                                    <span class="material-icons text-sm mr-1">add</span>Ajouter
                                 </button>
                             </div>
                             {% endfor %}
                         </div>
                     {% else %}
                         <div class="text-center py-8">
-                            <div class="text-6xl mb-4">✅</div>
+                            <div class="text-6xl mb-4">
+                                <span class="material-icons text-6xl text-green-500">check_circle</span>
+                            </div>
                             <p class="text-gray-500">Aucun étudiant disponible pour inscription</p>
                         </div>
                     {% endif %}
@@ -193,12 +207,12 @@
                 
                 <button onclick="window.print()" 
                         class="flex-1 bg-blue-100 hover:bg-blue-200 text-blue-700 px-6 py-3 rounded-lg font-medium transition-colors duration-200">
-                    🖨️ Imprimer la liste
+                    <span class="material-icons text-sm mr-1">print</span>Imprimer la liste
                 </button>
                 
                 <a href="{% url 'academic:classroom_list' %}" 
                    class="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 px-6 py-3 rounded-lg text-center font-medium transition-colors duration-200">
-                    📚 Toutes les classes
+                    <span class="material-icons text-sm mr-1">class</span>Toutes les classes
                 </a>
             </div>
         </div>
@@ -276,7 +290,7 @@ function closeModal() {
 // Add student function
 function addStudent(studentId, studentName) {
     showModal(
-        '➕ Ajouter un étudiant',
+        'Ajouter un étudiant',
         `Êtes-vous sûr de vouloir ajouter ${studentName} à cette classe ?`,
         function() {
             // Create form and submit
@@ -314,7 +328,7 @@ function addStudent(studentId, studentName) {
 // Remove student function
 function removeStudent(studentId, studentName) {
     showModal(
-        '❌ Retirer un étudiant',
+        'Retirer un étudiant',
         `Êtes-vous sûr de vouloir retirer ${studentName} de cette classe ?`,
         function() {
             // Create form and submit

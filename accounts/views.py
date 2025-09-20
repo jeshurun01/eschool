@@ -16,7 +16,7 @@ from communication.models import Announcement, Message
 from .forms import (
     UserRegistrationForm, CustomLoginForm, ProfileEditForm,
     StudentProfileForm, TeacherProfileForm, ParentProfileForm,
-    AdminUserCreateForm, PasswordChangeForm
+    AdminUserCreateForm, PasswordChangeForm, StudentCreationForm
 )
 
 
@@ -992,6 +992,60 @@ def user_edit(request, user_id):
 
 @user_passes_test(is_admin)
 @require_http_methods(["POST"])
+def reset_password(request, user_id):
+    """Réinitialiser le mot de passe d'un utilisateur (admin seulement)"""
+    user_obj = get_object_or_404(User, id=user_id)
+    
+    # Générer un nouveau mot de passe temporaire plus convivial
+    import random
+    
+    # Listes de mots simples pour créer un mot de passe mémorable
+    adjectives = ['Bleu', 'Rouge', 'Vert', 'Jaune', 'Noir', 'Blanc', 'Rose', 'Violet']
+    nouns = ['Chat', 'Chien', 'Lion', 'Ours', 'Loup', 'Aigle', 'Tigre', 'Renard']
+    numbers = random.randint(10, 99)
+    
+    # Format: AdjectifNom + 2 chiffres (ex: BleuChat47)
+    new_password = f"{random.choice(adjectives)}{random.choice(nouns)}{numbers}"
+    
+    user_obj.set_password(new_password)
+    user_obj.save()
+    
+    # Message avec le nouveau mot de passe
+    from django.utils.safestring import mark_safe
+    messages.success(
+        request, 
+        mark_safe(
+            f'Mot de passe de {user_obj.full_name} réinitialisé. '
+            f'Nouveau mot de passe temporaire: <strong>{new_password}</strong><br>'
+            f'L\'utilisateur doit le changer lors de sa prochaine connexion.'
+        )
+    )
+    
+    # Redirection intelligente selon le referer
+    referer = request.META.get('HTTP_REFERER', '')
+    
+    # Si on vient d'une page de détail enseignant, rediriger vers cette page
+    if 'teachers' in referer and '/teachers/' in referer:
+        try:
+            teacher = user_obj.teacher_profile
+            return redirect('accounts:teacher_detail', teacher_id=teacher.pk)
+        except:
+            pass
+    
+    # Si on vient d'une page de détail étudiant, rediriger vers cette page
+    if 'students' in referer and '/students/' in referer:
+        try:
+            student = user_obj.student_profile
+            return redirect('accounts:student_detail', student_id=student.pk)
+        except:
+            pass
+    
+    # Sinon redirection par défaut vers l'édition utilisateur
+    return redirect('accounts:user_edit', user_id=user_obj.pk)
+
+
+@user_passes_test(is_admin)
+@require_http_methods(["POST"])
 def user_toggle_active(request, user_id):
     """Activer/désactiver un utilisateur"""
     user_obj = get_object_or_404(User, id=user_id)
@@ -1054,9 +1108,23 @@ def student_list(request):
     return render(request, 'accounts/student_list.html', context)
 
 
-# Vues placeholder pour le développement futur
+# Vues pour la gestion des élèves
+@login_required
+@user_passes_test(is_admin_or_staff)
 def student_create(request):
-    return HttpResponse("Créer un élève - En cours de développement")
+    """Créer un nouvel élève"""
+    if request.method == 'POST':
+        form = StudentCreationForm(request.POST)
+        if form.is_valid():
+            student = form.save()
+            messages.success(request, f'Élève {student.user.full_name} créé avec succès.')
+            return redirect('accounts:student_list')
+        else:
+            messages.error(request, 'Erreur lors de la création de l\'élève. Vérifiez les informations.')
+    else:
+        form = StudentCreationForm()
+    
+    return render(request, 'accounts/student_create.html', {'form': form})
 
 @user_passes_test(is_admin_or_staff)
 def student_detail(request, student_id):
@@ -1087,16 +1155,6 @@ def student_edit(request, student_id):
         # Données spécifiques à l'élève
         student.matricule = request.POST.get('matricule', student.matricule)
         
-        # Assignation de classe si fournie
-        class_id = request.POST.get('current_class')
-        if class_id:
-            from academic.models import ClassRoom
-            try:
-                classroom = ClassRoom.objects.get(id=class_id)
-                student.current_class = classroom
-            except ClassRoom.DoesNotExist:
-                pass
-        
         try:
             user.save()
             student.save()
@@ -1105,14 +1163,9 @@ def student_edit(request, student_id):
         except Exception as e:
             messages.error(request, f'Erreur lors de la modification: {str(e)}')
     
-    # Import ici pour éviter les imports circulaires
-    from academic.models import ClassRoom
-    classes = ClassRoom.objects.all()
-    
     context = {
         'student': student,
         'user': user,
-        'classes': classes,
     }
     return render(request, 'accounts/student_edit.html', context)
 
@@ -1797,10 +1850,29 @@ def teacher_edit(request, teacher_id):
         teacher.is_head_teacher = request.POST.get('is_head_teacher') == 'on'
         teacher.save()
         
-        # Mise à jour des matières
+        # Mise à jour des matières avec synchronisation des attributions
         subject_ids = request.POST.getlist('subjects')
+        old_subject_ids = list(teacher.subjects.values_list('id', flat=True))
+        
+        # Mettre à jour les matières de l'enseignant
         if subject_ids:
             teacher.subjects.set(subject_ids)
+        else:
+            teacher.subjects.clear()
+        
+        # Synchroniser les attributions TeacherAssignment
+        removed_subject_ids = teacher.sync_teacher_assignments(old_subject_ids)
+        
+        # Informer l'utilisateur des changements
+        if removed_subject_ids:
+            from academic.models import Subject
+            removed_subject_names = list(
+                Subject.objects.filter(id__in=removed_subject_ids).values_list('name', flat=True)
+            )
+            messages.info(
+                request, 
+                f'Attributions supprimées pour les matières : {", ".join(removed_subject_names)}'
+            )
         
         messages.success(request, f'Les informations de {user.full_name} ont été mises à jour.')
         return redirect('accounts:teacher_detail', teacher_id=teacher.id)
@@ -1972,10 +2044,10 @@ def student_finance_detail(request):
         messages.error(request, 'Profil étudiant non trouvé.')
         return redirect('accounts:dashboard')
     
-    # Factures par statut
+    # Factures par statut (exclure les brouillons pour les étudiants)
     pending_invoices = Invoice.objects.filter(
         student=student,
-        status__in=['DRAFT', 'SENT']
+        status='SENT'  # Seulement les factures envoyées, pas les brouillons
     ).order_by('-due_date')
     
     paid_invoices = Invoice.objects.filter(
@@ -2388,3 +2460,84 @@ def parent_communication_center(request):
     }
     
     return render(request, 'accounts/parent_communication_center.html', context)
+
+
+@user_passes_test(is_admin_or_staff)
+def teacher_assignments_management(request):
+    """Vue pour gérer les assignations des enseignants"""
+    from academic.models import TeacherAssignment, AcademicYear, ClassRoom, Subject
+    
+    # Récupérer les données nécessaires
+    teachers = Teacher.objects.select_related('user').all()
+    classrooms = ClassRoom.objects.select_related('level', 'head_teacher').all()
+    subjects = Subject.objects.all()
+    current_year = AcademicYear.objects.filter(is_current=True).first()
+    
+    # Récupérer les assignations existantes pour l'année courante
+    assignments = TeacherAssignment.objects.filter(
+        academic_year=current_year
+    ).select_related('teacher__user', 'classroom', 'subject')
+    
+    # Organiser les assignations par enseignant
+    assignments_by_teacher = {}
+    for assignment in assignments:
+        teacher_id = assignment.teacher.id
+        if teacher_id not in assignments_by_teacher:
+            assignments_by_teacher[teacher_id] = []
+        assignments_by_teacher[teacher_id].append(assignment)
+    
+    # Traitement des formulaires
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'create_assignment':
+            teacher_id = request.POST.get('teacher_id')
+            classroom_id = request.POST.get('classroom_id')
+            subject_id = request.POST.get('subject_id')
+            hours_per_week = request.POST.get('hours_per_week', 1)
+            
+            try:
+                teacher = Teacher.objects.get(id=teacher_id)
+                classroom = ClassRoom.objects.get(id=classroom_id)
+                subject = Subject.objects.get(id=subject_id)
+                
+                assignment, created = TeacherAssignment.objects.get_or_create(
+                    teacher=teacher,
+                    classroom=classroom,
+                    subject=subject,
+                    academic_year=current_year,
+                    defaults={'hours_per_week': hours_per_week}
+                )
+                
+                if created:
+                    messages.success(request, f'Assignation créée: {teacher.user.full_name} - {subject.name} - {classroom.name}')
+                else:
+                    messages.warning(request, 'Cette assignation existe déjà.')
+                    
+            except Exception as e:
+                messages.error(request, f'Erreur lors de la création de l\'assignation: {str(e)}')
+        
+        elif action == 'delete_assignment':
+            assignment_id = request.POST.get('assignment_id')
+            try:
+                assignment = TeacherAssignment.objects.get(id=assignment_id)
+                teacher_name = assignment.teacher.user.full_name
+                subject_name = assignment.subject.name
+                classroom_name = assignment.classroom.name
+                assignment.delete()
+                messages.success(request, f'Assignation supprimée: {teacher_name} - {subject_name} - {classroom_name}')
+            except TeacherAssignment.DoesNotExist:
+                messages.error(request, 'Assignation introuvable.')
+        
+        return redirect('accounts:teacher_assignments_management')
+    
+    context = {
+        'teachers': teachers,
+        'classrooms': classrooms,
+        'subjects': subjects,
+        'current_year': current_year,
+        'assignments': assignments,
+        'assignments_by_teacher': assignments_by_teacher,
+    }
+    
+    return render(request, 'accounts/teacher_assignments_management.html', context)

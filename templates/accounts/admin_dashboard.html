@@ -84,10 +84,14 @@
                             </dl>
                         </div>
                     </div>
-                    <div class="mt-4">
+                    <div class="mt-4 flex flex-col space-y-2">
                         <a href="{% url 'accounts:teacher_list' %}" class="text-green-600 hover:text-green-700 text-sm font-medium flex items-center">
                             Gérer le personnel
                             <span class="material-icons ml-1 text-sm">arrow_forward</span>
+                        </a>
+                        <a href="{% url 'accounts:teacher_assignments_management' %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center">
+                            Assignations des cours
+                            <span class="material-icons ml-1 text-sm">assignment</span>
                         </a>
                     </div>
                 </div>
@@ -111,7 +115,7 @@
                         </div>
                     </div>
                     <div class="mt-4">
-                        <a href="/admin/academic/classroom/" class="text-yellow-600 hover:text-yellow-700 text-sm font-medium flex items-center">
+                        <a href="{% url 'academic:classroom_list' %}" class="text-yellow-600 hover:text-yellow-700 text-sm font-medium flex items-center">
                             Voir les classes
                             <span class="material-icons ml-1 text-sm">arrow_forward</span>
                         </a>
@@ -430,7 +434,7 @@
                             {% endfor %}
                         </div>
                         <div class="mt-4">
-                            <a href="/admin/finance/payment/" class="text-green-600 hover:text-green-700 text-sm font-medium flex items-center">
+                            <a href="{% url 'finance:payment_list' %}" class="text-green-600 hover:text-green-700 text-sm font-medium flex items-center">
                                 Voir tous les paiements
                                 <span class="material-icons ml-1 text-sm">arrow_forward</span>
                             </a>
@@ -510,15 +514,15 @@
                     Administration avancée
                 </h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <a href="/admin/" class="group flex items-center p-4 border border-gray-200 rounded-lg hover:bg-red-50 hover:border-red-300 transition-all duration-200">
+                    <a href="{% url 'accounts:dashboard' %}" class="group flex items-center p-4 border border-gray-200 rounded-lg hover:bg-red-50 hover:border-red-300 transition-all duration-200">
                         <span class="material-icons text-red-600 mr-3 group-hover:text-red-700">settings</span>
                         <div>
-                            <div class="font-medium text-gray-900">Interface Admin</div>
-                            <div class="text-xs text-gray-500">Administration complète</div>
+                            <div class="font-medium text-gray-900">Tableau de bord</div>
+                            <div class="text-xs text-gray-500">Administration principale</div>
                         </div>
                     </a>
                     
-                    <a href="/admin/auth/user/" class="group flex items-center p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-all duration-200">
+                    <a href="{% url 'accounts:user_list' %}" class="group flex items-center p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-all duration-200">
                         <span class="material-icons text-blue-600 mr-3 group-hover:text-blue-700">people</span>
                         <div>
                             <div class="font-medium text-gray-900">Gestion utilisateurs</div>
@@ -526,11 +530,11 @@
                         </div>
                     </a>
                     
-                    <a href="/admin/auth/group/" class="group flex items-center p-4 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 transition-all duration-200">
-                        <span class="material-icons text-green-600 mr-3 group-hover:text-green-700">groups</span>
+                    <a href="{% url 'academic:classroom_list' %}" class="group flex items-center p-4 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 transition-all duration-200">
+                        <span class="material-icons text-green-600 mr-3 group-hover:text-green-700">school</span>
                         <div>
-                            <div class="font-medium text-gray-900">Groupes</div>
-                            <div class="text-xs text-gray-500">Rôles et permissions</div>
+                            <div class="font-medium text-gray-900">Gestion classes</div>
+                            <div class="text-xs text-gray-500">Classes et enseignements</div>
                         </div>
                     </a>
                 </div>

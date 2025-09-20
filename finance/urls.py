@@ -16,12 +16,15 @@ urlpatterns = [
     path('invoices/create/', views.invoice_create, name='invoice_create'),
     path('invoices/<int:invoice_id>/', views.invoice_detail, name='invoice_detail'),
     path('invoices/<int:invoice_id>/edit/', views.invoice_edit, name='invoice_edit'),
+    path('invoices/<int:invoice_id>/pay/', views.invoice_pay, name='invoice_pay'),
     path('invoices/<int:invoice_id>/pdf/', views.invoice_pdf, name='invoice_pdf'),
     
     # Gestion des paiements
     path('payments/', views.payment_list, name='payment_list'),
+    path('payments/pending/', views.pending_payments, name='pending_payments'),
     path('payments/create/', views.payment_create, name='payment_create'),
     path('payments/<int:payment_id>/', views.payment_detail, name='payment_detail'),
+    path('payments/<int:payment_id>/confirm/', views.payment_confirm, name='payment_confirm'),
     
     # Gestion des bourses
     path('scholarships/', views.scholarship_list, name='scholarship_list'),

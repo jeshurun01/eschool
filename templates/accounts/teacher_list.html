@@ -28,6 +28,11 @@
             <div class="text-sm text-indigo-100">Enseignant{{ teachers.paginator.count|pluralize }}</div>
           </div>
           {% if user.is_admin %}
+          <a href="{% url 'accounts:teacher_assignments_management' %}" 
+             class="inline-flex items-center justify-center px-6 py-3 border-2 border-white bg-white/10 backdrop-blur-sm text-white rounded-lg hover:bg-white/20 transition-all duration-200">
+            <span class="material-icons mr-2" style="font-size: 20px;">assignment</span>
+            Gérer les assignations
+          </a>
           <a href="{% url 'accounts:teacher_create' %}" 
              class="inline-flex items-center justify-center px-6 py-3 border-2 border-white bg-white/10 backdrop-blur-sm text-white rounded-lg hover:bg-white/20 transition-all duration-200">
             <span class="material-icons mr-2" style="font-size: 20px;">add</span>

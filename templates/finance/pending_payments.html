@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Paiements en attente{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Paiements en attente</h1>
+                    <p class="mt-2 text-gray-600">{{ pending_count }} paiement{{ pending_count|pluralize }} en attente de confirmation</p>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'finance:payment_list' %}" 
+                       class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        <span class="material-icons text-sm mr-2">list</span>
+                        Tous les paiements
+                    </a>
+                    <a href="{% url 'finance:invoice_list' %}" 
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md">
+                        <span class="material-icons text-sm mr-2">receipt</span>
+                        Voir les factures
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {% if pending_count > 0 %}
+        <!-- Alerte -->
+        <div class="mb-6 bg-yellow-50 border border-yellow-200 rounded-md p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <span class="material-icons text-yellow-600">warning</span>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">
+                        Action requise
+                    </h3>
+                    <div class="mt-1 text-sm text-yellow-700">
+                        <p>{{ pending_count }} paiement{{ pending_count|pluralize }} nécessite{{ pending_count|pluralize:"nt," }} votre confirmation avant d'être validé{{ pending_count|pluralize }}.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Liste des paiements -->
+        <div class="bg-white shadow-sm rounded-lg overflow-hidden">
+            {% if pending_payments %}
+                <div class="divide-y divide-gray-200">
+                    {% for payment in pending_payments %}
+                    <div class="p-6 hover:bg-gray-50 transition-colors">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h3 class="text-lg font-medium text-gray-900">
+                                            {{ payment.amount }}€
+                                        </h3>
+                                        <p class="text-sm text-gray-600">
+                                            Facture {{ payment.invoice.invoice_number }} - 
+                                            {{ payment.invoice.student.user.first_name }} {{ payment.invoice.student.user.last_name }}
+                                        </p>
+                                        <div class="mt-2 flex items-center space-x-4 text-sm text-gray-500">
+                                            <span class="flex items-center">
+                                                <span class="material-icons text-xs mr-1">payment</span>
+                                                {{ payment.payment_method.name }}
+                                            </span>
+                                            <span class="flex items-center">
+                                                <span class="material-icons text-xs mr-1">schedule</span>
+                                                {{ payment.payment_date|date:"d/m/Y H:i" }}
+                                            </span>
+                                            {% if payment.transaction_id %}
+                                            <span class="flex items-center">
+                                                <span class="material-icons text-xs mr-1">confirmation_number</span>
+                                                {{ payment.transaction_id }}
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                        {% if payment.notes %}
+                                        <p class="mt-2 text-sm text-gray-600">
+                                            <span class="font-medium">Note:</span> {{ payment.notes|truncatewords:15 }}
+                                        </p>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="flex items-center space-x-3">
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                                            <span class="material-icons text-sm mr-1">schedule</span>
+                                            En attente
+                                        </span>
+                                        
+                                        <div class="flex space-x-2">
+                                            <a href="{% url 'finance:invoice_detail' payment.invoice.id %}" 
+                                               class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50">
+                                                <span class="material-icons text-xs mr-1">receipt</span>
+                                                Voir facture
+                                            </a>
+                                            
+                                            <a href="{% url 'finance:payment_confirm' payment.id %}" 
+                                               class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700">
+                                                <span class="material-icons text-xs mr-1">check_circle</span>
+                                                Confirmer
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <!-- État vide -->
+                <div class="text-center py-12">
+                    <div class="mx-auto h-12 w-12 text-gray-400">
+                        <span class="material-icons text-5xl">check_circle</span>
+                    </div>
+                    <h3 class="mt-4 text-lg font-medium text-gray-900">Aucun paiement en attente</h3>
+                    <p class="mt-2 text-gray-500">Tous les paiements ont été traités.</p>
+                    <div class="mt-6">
+                        <a href="{% url 'finance:payment_list' %}" 
+                           class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                            <span class="material-icons text-sm mr-2">list</span>
+                            Voir tous les paiements
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

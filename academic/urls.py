@@ -11,6 +11,8 @@ urlpatterns = [
     # Gestion des niveaux
     path('levels/', views.level_list, name='level_list'),
     path('levels/create/', views.level_create, name='level_create'),
+    path('levels/<int:level_id>/', views.level_detail, name='level_detail'),
+    path('levels/<int:level_id>/edit/', views.level_edit, name='level_edit'),
     
     # Gestion des matières
     path('subjects/', views.subject_list, name='subject_list'),
