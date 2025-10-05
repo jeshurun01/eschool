@@ -1,0 +1,44 @@
+<!-- Navigation Admin -->
+<a href="{% url 'accounts:dashboard' %}" 
+   class="sidebar-link flex items-center px-4 py-3 rounded-lg">
+    <span class="material-icons mr-3">dashboard</span>
+    <span class="font-medium">Tableau de bord</span>
+</a>
+
+<a href="/admin/" 
+   class="sidebar-link flex items-center px-4 py-3 rounded-lg">
+    <span class="material-icons mr-3">settings</span>
+    <span class="font-medium">Admin Django</span>
+</a>
+
+<a href="{% url 'academic:classroom_list' %}" 
+   class="sidebar-link flex items-center px-4 py-3 rounded-lg">
+    <span class="material-icons mr-3">class</span>
+    <span class="font-medium">Classes</span>
+</a>
+
+<a href="{% url 'academic:subject_list' %}" 
+   class="sidebar-link flex items-center px-4 py-3 rounded-lg">
+    <span class="material-icons mr-3">book</span>
+    <span class="font-medium">Matières</span>
+</a>
+
+<a href="{% url 'accounts:user_list' %}" 
+   class="sidebar-link flex items-center px-4 py-3 rounded-lg">
+    <span class="material-icons mr-3">people</span>
+    <span class="font-medium">Utilisateurs</span>
+</a>
+
+<a href="{% url 'finance:payment_list' %}" 
+   class="sidebar-link flex items-center px-4 py-3 rounded-lg">
+    <span class="material-icons mr-3">attach_money</span>
+    <span class="font-medium">Finances</span>
+</a>
+
+<div class="border-t border-white/20 my-4"></div>
+
+<a href="{% url 'communication:announcement_list' %}" 
+   class="sidebar-link flex items-center px-4 py-3 rounded-lg">
+    <span class="material-icons mr-3">campaign</span>
+    <span class="font-medium">Annonces</span>
+</a>

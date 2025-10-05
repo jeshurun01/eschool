@@ -1,0 +1,452 @@
+{% extends 'academic/teacher/base_teacher.html' %}
+{% load academic_extras %}
+
+{% block title %}
+    Gestion Sessions - Interface Enseignant
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Style amélioré pour les options des select */
+    select option {
+        padding: 12px 16px !important;
+        line-height: 1.5;
+    }
+    
+    /* Animation pour les select au focus */
+    select:focus {
+        transform: translateY(-1px);
+    }
+    
+    /* Style pour les options sélectionnées */
+    select option:checked {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block teacher_content %}
+<div class="px-4 py-6 sm:px-0">
+    <!-- En-tête avec actions principales -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-2xl font-bold text-gray-900">Gestion de mes Sessions</h2>
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'academic:session_create' %}" 
+                   class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium inline-flex items-center">
+                    <span class="material-icons text-sm mr-2">add</span>
+                    Nouvelle Session
+                </a>
+                <button onclick="toggleBulkActions()" 
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium">
+                    <span class="material-icons text-sm mr-2">checklist</span>
+                    Actions groupées
+                </button>
+            </div>
+        </div>
+        
+        <!-- Statistiques rapides -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            <div class="teacher-card bg-white rounded-lg p-4 shadow">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-green-500 text-2xl">event</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-500">Sessions aujourd'hui</p>
+                        <p class="text-lg font-semibold text-gray-900">{{ stats.today_sessions|default:0 }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="teacher-card bg-white rounded-lg p-4 shadow">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-blue-500 text-2xl">schedule</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-500">À venir</p>
+                        <p class="text-lg font-semibold text-gray-900">{{ stats.upcoming_sessions|default:0 }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="teacher-card bg-white rounded-lg p-4 shadow">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-gray-500 text-2xl">check_circle</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-500">Terminées</p>
+                        <p class="text-lg font-semibold text-gray-900">{{ stats.completed_sessions|default:0 }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="teacher-card bg-white rounded-lg p-4 shadow">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-yellow-500 text-2xl">group</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-500">Taux présence moyen</p>
+                        <p class="text-lg font-semibold text-gray-900">{{ stats.avg_attendance|default:0 }}%</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="teacher-card bg-white rounded-lg p-4 shadow">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-red-500 text-2xl">assignment_late</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-500">Présences non prises</p>
+                        <p class="text-lg font-semibold text-gray-900">{{ stats.pending_attendance|default:0 }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                    <span class="material-icons text-green-600">filter_list</span>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Filtres de recherche</h3>
+                    <p class="text-sm text-gray-500">Affinez votre sélection de sessions</p>
+                </div>
+            </div>
+            <a href="{% url 'academic:teacher_sessions' %}" 
+               class="text-sm text-green-600 hover:text-green-700 font-medium flex items-center gap-2">
+                <span class="material-icons text-sm">refresh</span>
+                Réinitialiser
+            </a>
+        </div>
+        
+        <form method="get" class="space-y-4">
+            <!-- Ligne 1: Recherche -->
+            <div>
+                <label for="search" class="block text-sm font-semibold text-gray-700 mb-2.5">
+                    <span class="material-icons text-sm text-green-500 mr-2 align-middle">search</span>
+                    Recherche globale
+                </label>
+                <input type="text" name="search" id="search" value="{{ request.GET.search }}" 
+                       placeholder="Rechercher par titre, description, classe ou matière..." 
+                       class="block w-full px-4 py-3 border-2 border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all hover:border-gray-300 text-gray-700 font-medium">
+            </div>
+            
+            <!-- Ligne 2: Filtres avancés -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label for="classroom" class="block text-sm font-semibold text-gray-700 mb-2.5">
+                        <span class="material-icons text-sm text-green-500 mr-2 align-middle">class</span>
+                        Classe
+                    </label>
+                    <select name="classroom" id="classroom" class="block w-full px-4 py-3 border-2 border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all hover:border-gray-300 text-gray-700 font-medium">
+                        <option value="">Toutes les classes</option>
+                        {% for classroom in classrooms %}
+                            <option value="{{ classroom.id }}" {% if request.GET.classroom == classroom.id|stringformat:"s" %}selected{% endif %}>
+                                {{ classroom.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="subject" class="block text-sm font-semibold text-gray-700 mb-2.5">
+                        <span class="material-icons text-sm text-green-500 mr-2 align-middle">book</span>
+                        Matière
+                    </label>
+                    <select name="subject" id="subject" class="block w-full px-4 py-3 border-2 border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all hover:border-gray-300 text-gray-700 font-medium">
+                        <option value="">Toutes les matières</option>
+                        {% for subject in subjects %}
+                            <option value="{{ subject.id }}" {% if request.GET.subject == subject.id|stringformat:"s" %}selected{% endif %}>
+                                {{ subject.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="status" class="block text-sm font-semibold text-gray-700 mb-2.5">
+                        <span class="material-icons text-sm text-green-500 mr-2 align-middle">info</span>
+                        Statut
+                    </label>
+                    <select name="status" id="status" class="block w-full px-4 py-3 border-2 border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all hover:border-gray-300 text-gray-700 font-medium">
+                        <option value="">Tous les statuts</option>
+                        <option value="upcoming" {% if request.GET.status == 'upcoming' %}selected{% endif %}>📅 À venir</option>
+                        <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>🟢 En cours</option>
+                        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>✅ Terminées</option>
+                        <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>❌ Annulées</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Bouton d'action -->
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <a href="{% url 'academic:teacher_sessions' %}" 
+                   class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-all inline-flex items-center">
+                    <span class="material-icons text-sm mr-2">clear</span>
+                    Effacer
+                </a>
+                <button type="submit" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold shadow-sm hover:shadow-md transition-all inline-flex items-center">
+                    <span class="material-icons text-sm mr-2">search</span>
+                    Appliquer les filtres
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Actions groupées (masqué par défaut) -->
+    <div id="bulkActions" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <input type="checkbox" id="selectAll" class="mr-3 rounded border-gray-300 focus:ring-green-500">
+                <span class="text-sm font-medium text-gray-700">Sélectionner tout</span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="markCompleted()" class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-2 rounded-md text-sm font-medium">
+                    <span class="material-icons text-sm mr-1">check_circle</span>
+                    Marquer terminé
+                </button>
+                <button onclick="cancelSessions()" class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-md text-sm font-medium">
+                    <span class="material-icons text-sm mr-1">cancel</span>
+                    Annuler
+                </button>
+                <button onclick="exportSessions()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-2 rounded-md text-sm font-medium">
+                    <span class="material-icons text-sm mr-1">get_app</span>
+                    Exporter
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des sessions -->
+    <div class="space-y-4">
+        {% for session in sessions %}
+            <div class="teacher-card bg-white rounded-lg shadow hover:shadow-md transition-shadow">
+                <div class="p-6">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start">
+                            <input type="checkbox" class="session-checkbox mt-1 mr-4 rounded border-gray-300 focus:ring-green-500" 
+                                   value="{{ session.id }}">
+                            <div class="flex-1">
+                                <div class="flex items-center mb-2">
+                                    <h3 class="text-lg font-semibold text-gray-900 mr-3">
+                                        {{ session.timetable.subject.name }}
+                                    </h3>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                               {% if session.status == 'completed' %}bg-gray-100 text-gray-800
+                                               {% elif session.status == 'in_progress' %}bg-green-100 text-green-800
+                                               {% elif session.status == 'cancelled' %}bg-red-100 text-red-800
+                                               {% else %}bg-blue-100 text-blue-800{% endif %}">
+                                        {% if session.status == 'completed' %}Terminée
+                                        {% elif session.status == 'in_progress' %}En cours
+                                        {% elif session.status == 'cancelled' %}Annulée
+                                        {% else %}Programmée{% endif %}
+                                    </span>
+                                    
+                                    <!-- Indicateur de présences non prises -->
+                                    {% if session.status == 'completed' and not session.attendance_taken %}
+                                        <span class="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                            <span class="material-icons text-xs mr-1">warning</span>
+                                            Présences non prises
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600 mb-4">
+                                    <div class="flex items-center">
+                                        <span class="material-icons text-sm mr-2">class</span>
+                                        {{ session.timetable.classroom.name }}
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="material-icons text-sm mr-2">schedule</span>
+                                        {{ session.date|date:"d/m/Y" }} - {{ session.timetable.start_time }} à {{ session.timetable.end_time }}
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="material-icons text-sm mr-2">group</span>
+                                        {{ session.student_count|default:0 }} étudiants
+                                    </div>
+                                    <div class="flex items-center">
+                                        {% if session.status == 'completed' and session.attendance_stats %}
+                                            <span class="material-icons text-sm mr-2">analytics</span>
+                                            {{ session.attendance_stats.presence_rate }}% présence
+                                        {% else %}
+                                            <span class="material-icons text-sm mr-2">location_on</span>
+                                            Salle {{ session.timetable.room|default:"Non assignée" }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                {% if session.description %}
+                                    <p class="text-gray-700 mb-4">{{ session.description|truncatewords:25 }}</p>
+                                {% endif %}
+                                
+                                <!-- Alertes et notifications -->
+                                {% if session.status == 'completed' and not session.attendance_taken %}
+                                    <div class="bg-red-50 border border-red-200 rounded-md p-3 mb-3">
+                                        <div class="flex items-center">
+                                            <span class="material-icons text-red-500 text-sm mr-2">warning</span>
+                                            <p class="text-red-700 text-sm">
+                                                Les présences n'ont pas encore été prises pour cette session.
+                                                <a href="{% url 'academic:teacher_attendance' session.id %}" class="font-medium underline">
+                                                    Prendre les présences maintenant
+                                                </a>
+                                            </p>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="flex-shrink-0 ml-4">
+                            <div class="flex items-center space-x-2">
+                                {% if session.status == 'scheduled' or session.status == 'in_progress' %}
+                                    <a href="{% url 'academic:teacher_session_edit' session.id %}" 
+                                       class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                                        <span class="material-icons text-sm mr-1">edit</span>
+                                        Modifier
+                                    </a>
+                                {% endif %}
+                                
+                                {% if session.status == 'completed' or session.status == 'in_progress' %}
+                                    <a href="{% url 'academic:teacher_attendance' session.id %}" 
+                                       class="bg-green-50 hover:bg-green-100 text-green-600 px-3 py-2 rounded-md text-sm font-medium">
+                                        <span class="material-icons text-sm mr-1">check_circle</span>
+                                        Présences
+                                    </a>
+                                {% endif %}
+                                
+                                <a href="{% url 'academic:teacher_session_detail' session.id %}" 
+                                   class="bg-gray-50 hover:bg-gray-100 text-gray-600 px-3 py-2 rounded-md text-sm font-medium">
+                                    <span class="material-icons text-sm mr-1">visibility</span>
+                                    Détails
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="text-center py-12">
+                <span class="material-icons text-gray-300 text-6xl mb-4">event_busy</span>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune session trouvée</h3>
+                <p class="text-gray-500 mb-4">
+                    {% if request.GET.search or request.GET.classroom or request.GET.subject or request.GET.status %}
+                        Essayez de modifier vos critères de recherche.
+                    {% else %}
+                        Commencez par créer votre première session.
+                    {% endif %}
+                </p>
+                <a href="{% url 'academic:session_create' %}" 
+                   class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium inline-flex items-center">
+                    <span class="material-icons text-sm mr-2">add</span>
+                    Créer une session
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+        <div class="mt-8 flex justify-center">
+            <nav class="flex space-x-2">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.classroom %}&classroom={{ request.GET.classroom }}{% endif %}{% if request.GET.subject %}&subject={{ request.GET.subject }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+                       class="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        <span class="material-icons text-sm">first_page</span>
+                    </a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.classroom %}&classroom={{ request.GET.classroom }}{% endif %}{% if request.GET.subject %}&subject={{ request.GET.subject }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+                       class="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        <span class="material-icons text-sm">chevron_left</span>
+                    </a>
+                {% endif %}
+                
+                <span class="px-3 py-2 text-sm font-medium text-gray-700">
+                    Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+                </span>
+                
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.classroom %}&classroom={{ request.GET.classroom }}{% endif %}{% if request.GET.subject %}&subject={{ request.GET.subject }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+                       class="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        <span class="material-icons text-sm">chevron_right</span>
+                    </a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.classroom %}&classroom={{ request.GET.classroom }}{% endif %}{% if request.GET.subject %}&subject={{ request.GET.subject }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+                       class="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        <span class="material-icons text-sm">last_page</span>
+                    </a>
+                {% endif %}
+            </nav>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function toggleBulkActions() {
+    const bulkActions = document.getElementById('bulkActions');
+    bulkActions.classList.toggle('hidden');
+    
+    // Si on affiche les actions, cocher/décocher toutes les cases
+    const checkboxes = document.querySelectorAll('.session-checkbox');
+    const selectAll = document.getElementById('selectAll');
+    
+    selectAll.addEventListener('change', function() {
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+    });
+}
+
+function markCompleted() {
+    const selected = getSelectedSessions();
+    if (selected.length === 0) {
+        alert('Veuillez sélectionner au moins une session.');
+        return;
+    }
+    
+    if (confirm(`Marquer ${selected.length} session(s) comme terminée(s) ?`)) {
+        // Implement bulk update logic
+        console.log('Marking as completed:', selected);
+    }
+}
+
+function cancelSessions() {
+    const selected = getSelectedSessions();
+    if (selected.length === 0) {
+        alert('Veuillez sélectionner au moins une session.');
+        return;
+    }
+    
+    if (confirm(`Annuler ${selected.length} session(s) sélectionnée(s) ?`)) {
+        // Implement bulk cancel logic
+        console.log('Cancelling sessions:', selected);
+    }
+}
+
+function exportSessions() {
+    const selected = getSelectedSessions();
+    if (selected.length === 0) {
+        alert('Veuillez sélectionner au moins une session.');
+        return;
+    }
+    
+    // Implement export logic
+    const params = new URLSearchParams();
+    selected.forEach(id => params.append('sessions', id));
+    window.open(`/academic/teacher/sessions/export/?${params.toString()}`, '_blank');
+}
+
+function getSelectedSessions() {
+    const checkboxes = document.querySelectorAll('.session-checkbox:checked');
+    return Array.from(checkboxes).map(checkbox => checkbox.value);
+}
+</script>
+{% endblock %}

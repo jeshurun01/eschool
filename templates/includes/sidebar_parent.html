@@ -1,0 +1,44 @@
+<!-- Navigation Parent -->
+<a href="{% url 'accounts:dashboard' %}" 
+   class="sidebar-link flex items-center px-4 py-3 rounded-lg">
+    <span class="material-icons mr-3">dashboard</span>
+    <span class="font-medium">Tableau de bord</span>
+</a>
+
+<a href="#" 
+   class="sidebar-link flex items-center px-4 py-3 rounded-lg">
+    <span class="material-icons mr-3">child_care</span>
+    <span class="font-medium">Mes Enfants</span>
+</a>
+
+<a href="{% url 'accounts:student_grades_detail' %}" 
+   class="sidebar-link flex items-center px-4 py-3 rounded-lg">
+    <span class="material-icons mr-3">grade</span>
+    <span class="font-medium">Notes</span>
+</a>
+
+<a href="{% url 'academic:attendance_list' %}" 
+   class="sidebar-link flex items-center px-4 py-3 rounded-lg">
+    <span class="material-icons mr-3">check_circle</span>
+    <span class="font-medium">Présences</span>
+</a>
+
+<a href="{% url 'finance:payment_list' %}" 
+   class="sidebar-link flex items-center px-4 py-3 rounded-lg">
+    <span class="material-icons mr-3">payment</span>
+    <span class="font-medium">Paiements</span>
+</a>
+
+<div class="border-t border-white/20 my-4"></div>
+
+<a href="{% url 'communication:message_list' %}" 
+   class="sidebar-link flex items-center px-4 py-3 rounded-lg">
+    <span class="material-icons mr-3">mail</span>
+    <span class="font-medium">Messages</span>
+</a>
+
+<a href="{% url 'communication:announcement_list' %}" 
+   class="sidebar-link flex items-center px-4 py-3 rounded-lg">
+    <span class="material-icons mr-3">campaign</span>
+    <span class="font-medium">Annonces</span>
+</a>

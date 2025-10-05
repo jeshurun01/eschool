@@ -129,12 +129,14 @@
         <div class="px-6 py-4 border-b border-gray-200">
             <div class="flex justify-between items-center">
                 <h2 class="text-lg font-medium text-gray-900">Notes et Évaluations</h2>
+                {% if request.user.role == 'TEACHER' or request.user.role == 'ADMIN' or request.user.role == 'SUPER_ADMIN' %}
                 <a href="{% url 'academic:grade_add' %}" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out">
                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                     </svg>
                     Ajouter une note
                 </a>
+                {% endif %}
             </div>
         </div>
 
@@ -306,9 +308,11 @@
                             Réinitialiser les filtres
                         </a>
                     {% endif %}
+                    {% if request.user.role == 'TEACHER' or request.user.role == 'ADMIN' or request.user.role == 'SUPER_ADMIN' %}
                     <a href="{% url 'academic:grade_add' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out">
                         Ajouter une note
                     </a>
+                    {% endif %}
                 </div>
             </div>
         {% endif %}

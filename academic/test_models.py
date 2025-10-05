@@ -897,3 +897,4 @@ class AcademicModelRelationsTest(TestCase):
         """Test de la relation Student-ClassRoom"""
         self.assertEqual(self.student.current_class, self.classroom)
         self.assertIn(self.student, self.classroom.students.all())
+

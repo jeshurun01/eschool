@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Modifier Session - {{ session.timetable.subject.name }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- En-tête -->
+    <div class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="py-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <a href="{% url 'academic:teacher_session_detail' session.pk %}" 
+                           class="text-gray-400 hover:text-gray-600 mr-4">
+                            <span class="material-icons">arrow_back</span>
+                        </a>
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-900">Modifier la Session</h1>
+                            <p class="text-gray-600">
+                                {{ session.timetable.subject.name }} - {{ session.timetable.classroom.name }} - {{ session.date|date:"d/m/Y" }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-4 rounded-md p-4 {% if message.tags == 'success' %}bg-green-50 border border-green-200{% elif message.tags == 'error' %}bg-red-50 border border-red-200{% endif %}">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            {% if message.tags == 'success' %}
+                                <span class="material-icons text-green-400">check_circle</span>
+                            {% elif message.tags == 'error' %}
+                                <span class="material-icons text-red-400">error</span>
+                            {% endif %}
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm {% if message.tags == 'success' %}text-green-800{% elif message.tags == 'error' %}text-red-800{% endif %}">
+                                {{ message }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <!-- Statut de la session -->
+                    <div>
+                        <label for="status" class="block text-sm font-medium text-gray-700">
+                            Statut de la session *
+                        </label>
+                        <select id="status" name="status" required
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                            <option value="SCHEDULED" {% if session.status == 'SCHEDULED' %}selected{% endif %}>Planifiée</option>
+                            <option value="IN_PROGRESS" {% if session.status == 'IN_PROGRESS' %}selected{% endif %}>En cours</option>
+                            <option value="COMPLETED" {% if session.status == 'COMPLETED' %}selected{% endif %}>Terminée</option>
+                            <option value="CANCELLED" {% if session.status == 'CANCELLED' %}selected{% endif %}>Annulée</option>
+                            <option value="POSTPONED" {% if session.status == 'POSTPONED' %}selected{% endif %}>Reportée</option>
+                        </select>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Définir le statut actuel de la session
+                        </p>
+                    </div>
+
+                    <!-- Titre de la leçon -->
+                    <div>
+                        <label for="lesson_title" class="block text-sm font-medium text-gray-700">
+                            Titre de la leçon
+                        </label>
+                        <input type="text" id="lesson_title" name="lesson_title" 
+                               value="{{ session.lesson_title }}"
+                               placeholder="Ex: Introduction aux fractions, Les verbes du premier groupe..."
+                               class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                        <p class="mt-1 text-sm text-gray-500">
+                            Un titre descriptif pour cette leçon
+                        </p>
+                    </div>
+
+                    <!-- Horaires réels -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="actual_start_time" class="block text-sm font-medium text-gray-700">
+                                Heure de début réelle
+                            </label>
+                            <input type="time" id="actual_start_time" name="actual_start_time" 
+                                   value="{% if session.actual_start_time %}{{ session.actual_start_time|time:'H:i' }}{% endif %}"
+                                   class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                            <p class="mt-1 text-sm text-gray-500">
+                                L'heure effective de début (si différente de l'horaire prévu)
+                            </p>
+                        </div>
+
+                        <div>
+                            <label for="actual_end_time" class="block text-sm font-medium text-gray-700">
+                                Heure de fin réelle
+                            </label>
+                            <input type="time" id="actual_end_time" name="actual_end_time" 
+                                   value="{% if session.actual_end_time %}{{ session.actual_end_time|time:'H:i' }}{% endif %}"
+                                   class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                            <p class="mt-1 text-sm text-gray-500">
+                                L'heure effective de fin (si différente de l'horaire prévu)
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Objectifs de la leçon -->
+                    <div>
+                        <label for="lesson_objectives" class="block text-sm font-medium text-gray-700">
+                            Objectifs de la leçon
+                        </label>
+                        <textarea id="lesson_objectives" name="lesson_objectives" rows="3"
+                                  placeholder="Décrivez les objectifs d'apprentissage de cette leçon..."
+                                  class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">{{ session.lesson_objectives }}</textarea>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Les compétences ou connaissances que les élèves doivent acquérir
+                        </p>
+                    </div>
+
+                    <!-- Contenu de la leçon -->
+                    <div>
+                        <label for="lesson_content" class="block text-sm font-medium text-gray-700">
+                            Contenu de la leçon
+                        </label>
+                        <textarea id="lesson_content" name="lesson_content" rows="5"
+                                  placeholder="Détaillez le contenu de la leçon, les points clés abordés..."
+                                  class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">{{ session.lesson_content }}</textarea>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Le contenu détaillé qui sera enseigné pendant cette session
+                        </p>
+                    </div>
+
+                    <!-- Résumé de la leçon -->
+                    <div>
+                        <label for="lesson_summary" class="block text-sm font-medium text-gray-700">
+                            Résumé de ce qui a été enseigné
+                        </label>
+                        <textarea id="lesson_summary" name="lesson_summary" rows="4"
+                                  placeholder="Résumez ce qui a été effectivement enseigné pendant la session..."
+                                  class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">{{ session.lesson_summary }}</textarea>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Un compte-rendu de ce qui a été réellement couvert (à remplir après la session)
+                        </p>
+                    </div>
+
+                    <!-- Notes de l'enseignant -->
+                    <div>
+                        <label for="teacher_notes" class="block text-sm font-medium text-gray-700">
+                            Notes de l'enseignant
+                        </label>
+                        <textarea id="teacher_notes" name="teacher_notes" rows="4"
+                                  placeholder="Vos observations, remarques, difficultés rencontrées..."
+                                  class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">{{ session.teacher_notes }}</textarea>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Notes personnelles sur le déroulement de la session
+                        </p>
+                    </div>
+
+                    <!-- Devoirs donnés -->
+                    <div>
+                        <label for="homework_given" class="block text-sm font-medium text-gray-700">
+                            Devoirs donnés
+                        </label>
+                        <textarea id="homework_given" name="homework_given" rows="3"
+                                  placeholder="Décrivez les devoirs assignés aux élèves..."
+                                  class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">{{ session.homework_given }}</textarea>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Les devoirs ou exercices assignés pour la prochaine fois
+                        </p>
+                    </div>
+
+                    <!-- Préparation prochaine leçon -->
+                    <div>
+                        <label for="next_lesson_preparation" class="block text-sm font-medium text-gray-700">
+                            Préparation pour la prochaine leçon
+                        </label>
+                        <textarea id="next_lesson_preparation" name="next_lesson_preparation" rows="3"
+                                  placeholder="Notes pour préparer la prochaine session..."
+                                  class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">{{ session.next_lesson_preparation }}</textarea>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Ce qu'il faudra prévoir ou préparer pour la prochaine session
+                        </p>
+                    </div>
+
+                    <!-- Boutons d'action -->
+                    <div class="flex justify-between items-center pt-6 border-t border-gray-200">
+                        <a href="{% url 'academic:teacher_session_detail' session.pk %}"
+                           class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            <span class="material-icons mr-2">cancel</span>
+                            Annuler
+                        </a>
+                        
+                        <div class="flex space-x-3">
+                            <button type="submit" name="action" value="save"
+                                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                                <span class="material-icons mr-2">save</span>
+                                Enregistrer
+                            </button>
+                            
+                            <button type="submit" name="action" value="save_and_continue"
+                                    class="inline-flex items-center px-4 py-2 border border-blue-300 text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50">
+                                <span class="material-icons mr-2">save</span>
+                                Enregistrer et continuer
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Aide contextuelle -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-blue-500">lightbulb</span>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-blue-900">Conseils pour remplir les informations</h3>
+                        <div class="mt-2 text-sm text-blue-700">
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li><strong>Avant la session :</strong> Définissez le titre, les objectifs et le contenu prévu</li>
+                                <li><strong>Pendant la session :</strong> Notez les horaires réels de début et de fin</li>
+                                <li><strong>Après la session :</strong> Complétez le résumé, vos notes, et les devoirs donnés</li>
+                                <li><strong>Changement de statut :</strong> Passez à "En cours" au début, puis "Terminée" à la fin</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations de la session (non modifiables) -->
+        <div class="mt-6 bg-gray-50 border border-gray-200 rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-sm font-medium text-gray-900 mb-3">Informations de base (non modifiables)</h3>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-500">Matière :</span>
+                        <span class="font-medium text-gray-900">{{ session.timetable.subject.name }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Classe :</span>
+                        <span class="font-medium text-gray-900">{{ session.timetable.classroom.name }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Date :</span>
+                        <span class="font-medium text-gray-900">{{ session.date|date:"l d F Y" }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Horaire prévu :</span>
+                        <span class="font-medium text-gray-900">{{ session.timetable.start_time|time:"H:i" }} - {{ session.timetable.end_time|time:"H:i" }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Période :</span>
+                        <span class="font-medium text-gray-900">{{ session.period.name }}</span>
+                    </div>
+                    {% if session.timetable.room %}
+                    <div>
+                        <span class="text-gray-500">Salle :</span>
+                        <span class="font-medium text-gray-900">{{ session.timetable.room }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-save draft periodically (optional)
+    const form = document.querySelector('form');
+    let lastSave = Date.now();
+    
+    // Validation des horaires
+    const startTime = document.getElementById('actual_start_time');
+    const endTime = document.getElementById('actual_end_time');
+    
+    function validateTimes() {
+        if (startTime.value && endTime.value) {
+            if (startTime.value >= endTime.value) {
+                endTime.setCustomValidity('L\'heure de fin doit être après l\'heure de début');
+            } else {
+                endTime.setCustomValidity('');
+            }
+        }
+    }
+    
+    startTime.addEventListener('change', validateTimes);
+    endTime.addEventListener('change', validateTimes);
+});
+</script>
+{% endblock %}

@@ -4,69 +4,127 @@
 {% block title %}Mes Finances - eSchool{% endblock %}
 
 {% block extra_css %}
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <style>
-    .finance-card {
-        transition: all 0.3s ease;
-        border-left: 4px solid #e5e7eb;
+    .material-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
-    .finance-card:hover {
-        border-left-color: #8b5cf6;
+    .material-card:hover {
+        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
         transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
     
-    .status-paid { 
-        background-color: #10b981; 
-        color: white; 
-        border-left-color: #10b981;
-    }
-    .status-pending { 
-        background-color: #f59e0b; 
-        color: white; 
-        border-left-color: #f59e0b;
-    }
-    .status-overdue { 
-        background-color: #ef4444; 
-        color: white; 
-        border-left-color: #ef4444;
+    .material-card.elevated {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.12);
     }
     
-    .balance-success { color: #10b981; }
-    .balance-warning { color: #f59e0b; }
-    .balance-danger { color: #ef4444; }
-    
-    .invoice-item {
-        transition: all 0.3s ease;
+    .finance-summary-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
     }
     
-    .invoice-item:hover {
-        background-color: #f8fafc;
+    .status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
     }
+    
+    .status-paid { background-color: #4CAF50; }
+    .status-pending { background-color: #FF9800; }
+    .status-overdue { background-color: #F44336; }
+    
+    .amount-display {
+        font-family: 'Roboto Mono', monospace;
+        font-weight: 500;
+    }
+    
+    .material-ripple {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .material-ripple:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255,255,255,0.1);
+        transform: scale(0);
+        transition: transform 0.3s;
+    }
+    
+    .material-ripple:hover:before {
+        transform: scale(1);
+    }
+    
+    .fab {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 1000;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 0 12px;
+        height: 32px;
+        font-size: 13px;
+        background-color: #e0e0e0;
+        border-radius: 16px;
+        color: rgba(0,0,0,0.87);
+    }
+    
+    .chip.success { background-color: #c8e6c9; color: #2e7d32; }
+    .chip.warning { background-color: #ffe0b2; color: #f57c00; }
+    .chip.error { background-color: #ffcdd2; color: #d32f2f; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <div class="bg-gradient-to-r from-blue-600 to-cyan-600 text-white">
+    <!-- App Bar -->
+    <div class="finance-summary-card">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="py-8">
+            <div class="py-6">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="text-3xl font-bold">💰 Mes Finances</h1>
-                        <p class="mt-2 text-blue-100">{{ student.user.get_full_name }} • {{ student.current_class.name }}</p>
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                            <span class="material-icons text-white text-2xl">account_balance_wallet</span>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-semibold text-white">Mes Finances</h1>
+                            <p class="text-white/80 text-sm">{{ student.user.get_full_name }} • {{ student.current_class.name }}</p>
+                        </div>
                     </div>
                     <div class="text-right">
-                        <div class="text-4xl font-bold balance-{{ balance_status }}">
-                            {% if total_overdue > 0 %}{{ total_overdue }} FCFA
-                            {% elif total_pending > 0 %}{{ total_pending }} FCFA
-                            {% else %}✓ À jour{% endif %}
+                        <div class="text-3xl font-bold amount-display">
+                            {% if total_overdue > 0 %}
+                                <span class="text-red-200">{{ total_overdue }} FCFA</span>
+                            {% elif total_pending > 0 %}
+                                <span class="text-yellow-200">{{ total_pending }} FCFA</span>
+                            {% else %}
+                                <span class="text-green-200">À jour</span>
+                            {% endif %}
                         </div>
-                        <div class="text-sm text-blue-200">
-                            {% if total_overdue > 0 %}En retard de paiement
-                            {% elif total_pending > 0 %}En attente de paiement
-                            {% else %}Situation financière saine{% endif %}
+                        <div class="text-white/70 text-sm">
+                            {% if total_overdue > 0 %}
+                                <span class="material-icons text-xs align-middle mr-1">warning</span>
+                                En retard de paiement
+                            {% elif total_pending > 0 %}
+                                <span class="material-icons text-xs align-middle mr-1">schedule</span>
+                                En attente de paiement
+                            {% else %}
+                                <span class="material-icons text-xs align-middle mr-1">check_circle</span>
+                                Situation financière saine
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -75,46 +133,101 @@
     </div>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Résumé financier -->
+        <!-- Financial Summary Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="finance-card bg-white rounded-xl shadow-sm border p-6 text-center">
-                <div class="text-3xl font-bold text-yellow-600">{{ total_pending }} FCFA</div>
-                <div class="text-gray-600">En attente</div>
-                <div class="text-sm text-gray-500">{{ pending_invoices|length }} facture(s)</div>
+            <!-- Pending Amount Card -->
+            <div class="material-card bg-white rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                            <span class="material-icons text-orange-600 text-xl">schedule</span>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-gray-600">En attente</h3>
+                            <p class="text-2xl font-bold amount-display text-orange-600">{{ total_pending }} FCFA</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center text-sm text-gray-500">
+                    <span class="material-icons text-xs mr-1">receipt</span>
+                    {{ pending_invoices|length }} facture{{ pending_invoices|length|pluralize }}
+                </div>
             </div>
-            <div class="finance-card bg-white rounded-xl shadow-sm border p-6 text-center">
-                <div class="text-3xl font-bold text-red-600">{{ total_overdue }} FCFA</div>
-                <div class="text-gray-600">En retard</div>
-                <div class="text-sm text-gray-500">{{ overdue_invoices|length }} facture(s)</div>
+
+            <!-- Overdue Amount Card -->
+            <div class="material-card bg-white rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                            <span class="material-icons text-red-600 text-xl">error</span>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-gray-600">En retard</h3>
+                            <p class="text-2xl font-bold amount-display text-red-600">{{ total_overdue }} FCFA</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center text-sm text-gray-500">
+                    <span class="material-icons text-xs mr-1">receipt</span>
+                    {{ overdue_invoices|length }} facture{{ overdue_invoices|length|pluralize }}
+                </div>
             </div>
-            <div class="finance-card bg-white rounded-xl shadow-sm border p-6 text-center">
-                <div class="text-3xl font-bold text-green-600">{{ total_paid }} FCFA</div>
-                <div class="text-gray-600">Payé</div>
-                <div class="text-sm text-gray-500">Cette année</div>
+
+            <!-- Paid Amount Card -->
+            <div class="material-card bg-white rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <span class="material-icons text-green-600 text-xl">check_circle</span>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-gray-600">Payé</h3>
+                            <p class="text-2xl font-bold amount-display text-green-600">{{ total_paid }} FCFA</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center text-sm text-gray-500">
+                    <span class="material-icons text-xs mr-1">calendar_today</span>
+                    Cette année
+                </div>
             </div>
         </div>
 
-        <!-- Prochaines échéances -->
+        <!-- Upcoming Deadlines -->
         {% if upcoming_due %}
-        <div class="bg-white rounded-xl shadow-sm border p-6 mb-8">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">⏰ Prochaines échéances (30 jours)</h3>
-            <div class="space-y-3">
+        <div class="material-card bg-white rounded-2xl p-6 mb-8">
+            <div class="flex items-center mb-6">
+                <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mr-3">
+                    <span class="material-icons text-amber-600">schedule</span>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900">Prochaines échéances</h3>
+                <span class="ml-2 chip warning">{{ upcoming_due|length }} dans 30 jours</span>
+            </div>
+            <div class="space-y-4">
                 {% for invoice in upcoming_due %}
-                <div class="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-4">
-                            <span class="text-lg">⚠️</span>
+                <div class="material-card material-ripple p-4 border border-amber-200 bg-amber-50 rounded-xl">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mr-4">
+                                <span class="material-icons text-amber-600">warning</span>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">{{ invoice.invoice_number }}</h4>
+                                <p class="text-sm text-gray-600">
+                                    <span class="material-icons text-xs align-middle mr-1">calendar_today</span>
+                                    Échéance: {{ invoice.due_date|date:"d/m/Y" }}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <div class="font-medium text-gray-900">{{ invoice.invoice_number }}</div>
-                            <div class="text-sm text-gray-600">Échéance: {{ invoice.due_date|date:"d/m/Y" }}</div>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-lg font-bold text-yellow-600">{{ invoice.total_amount }} FCFA</div>
-                        <div class="text-sm text-gray-600">
-                            {% if invoice.due_date < today %}En retard
-                            {% else %}{{ invoice.due_date|timeuntil }}{% endif %}
+                        <div class="text-right">
+                            <p class="text-xl font-bold amount-display text-amber-700">{{ invoice.total_amount }} FCFA</p>
+                            <p class="text-sm text-gray-600">
+                                {% if invoice.due_date < today %}
+                                    <span class="chip error">En retard</span>
+                                {% else %}
+                                    <span class="chip warning">{{ invoice.due_date|timeuntil }}</span>
+                                {% endif %}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -124,138 +237,223 @@
         {% endif %}
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Factures en attente -->
-            <div class="bg-white rounded-xl shadow-sm border p-6">
-                <h3 class="text-lg font-bold text-gray-900 mb-4">📋 Factures en attente</h3>
+            <!-- Pending Invoices -->
+            <div class="material-card bg-white rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mr-3">
+                            <span class="material-icons text-orange-600">pending_actions</span>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-900">Factures en attente</h3>
+                    </div>
+                    {% if pending_invoices %}
+                    <span class="chip warning">{{ pending_invoices|length }}</span>
+                    {% endif %}
+                </div>
                 <div class="space-y-3">
                     {% for invoice in pending_invoices %}
-                    <div class="invoice-item flex items-center justify-between p-3 border rounded-lg">
-                        <div class="flex items-center">
-                            <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-sm">📄</span>
+                    <div class="material-card material-ripple p-4 border border-gray-200 rounded-xl hover:border-orange-300">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mr-3">
+                                    <span class="material-icons text-orange-600 text-sm">description</span>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900">{{ invoice.invoice_number }}</h4>
+                                    <p class="text-sm text-gray-600">
+                                        <span class="material-icons text-xs align-middle mr-1">today</span>
+                                        {{ invoice.issue_date|date:"d/m/Y" }}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <div class="font-medium text-gray-900">{{ invoice.invoice_number }}</div>
-                                <div class="text-sm text-gray-600">{{ invoice.issue_date|date:"d/m/Y" }}</div>
+                            <div class="text-right">
+                                <p class="font-bold amount-display text-orange-600">{{ invoice.total_amount }} FCFA</p>
+                                <p class="text-xs text-gray-500">
+                                    <span class="material-icons text-xs align-middle mr-1">event</span>
+                                    Échéance: {{ invoice.due_date|date:"d/m/Y" }}
+                                </p>
                             </div>
-                        </div>
-                        <div class="text-right">
-                            <div class="font-bold text-yellow-600">{{ invoice.total_amount }} FCFA</div>
-                            <div class="text-xs text-gray-500">Échéance: {{ invoice.due_date|date:"d/m/Y" }}</div>
                         </div>
                     </div>
                     {% empty %}
-                    <div class="text-center text-gray-500 py-4">
-                        <span class="text-4xl mb-2 block">✅</span>
-                        Aucune facture en attente !
+                    <div class="text-center py-8">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="material-icons text-green-600 text-2xl">check_circle</span>
+                        </div>
+                        <h4 class="text-lg font-medium text-gray-900 mb-2">Aucune facture en attente</h4>
+                        <p class="text-gray-500">Toutes vos factures sont à jour !</p>
                     </div>
                     {% endfor %}
                 </div>
             </div>
 
-            <!-- Factures en retard -->
-            <div class="bg-white rounded-xl shadow-sm border p-6">
-                <h3 class="text-lg font-bold text-gray-900 mb-4">🚨 Factures en retard</h3>
+            <!-- Overdue Invoices -->
+            <div class="material-card bg-white rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                            <span class="material-icons text-red-600">error</span>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-900">Factures en retard</h3>
+                    </div>
+                    {% if overdue_invoices %}
+                    <span class="chip error">{{ overdue_invoices|length }}</span>
+                    {% endif %}
+                </div>
                 <div class="space-y-3">
                     {% for invoice in overdue_invoices %}
-                    <div class="invoice-item flex items-center justify-between p-3 border border-red-200 bg-red-50 rounded-lg">
-                        <div class="flex items-center">
-                            <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-sm">⚠️</span>
+                    <div class="material-card material-ripple p-4 border border-red-200 bg-red-50 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                                    <span class="material-icons text-red-600 text-sm">priority_high</span>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900">{{ invoice.invoice_number }}</h4>
+                                    <p class="text-sm text-red-600">
+                                        <span class="material-icons text-xs align-middle mr-1">access_time</span>
+                                        En retard depuis le {{ invoice.due_date|date:"d/m/Y" }}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <div class="font-medium text-gray-900">{{ invoice.invoice_number }}</div>
-                                <div class="text-sm text-red-600">En retard depuis le {{ invoice.due_date|date:"d/m/Y" }}</div>
+                            <div class="text-right">
+                                <p class="font-bold amount-display text-red-600">{{ invoice.total_amount }} FCFA</p>
+                                <span class="chip error">{{ invoice.due_date|timesince }} de retard</span>
                             </div>
-                        </div>
-                        <div class="text-right">
-                            <div class="font-bold text-red-600">{{ invoice.total_amount }} FCFA</div>
-                            <div class="text-xs text-red-500">{{ invoice.due_date|timesince }} de retard</div>
                         </div>
                     </div>
                     {% empty %}
-                    <div class="text-center text-gray-500 py-4">
-                        <span class="text-4xl mb-2 block">✅</span>
-                        Aucune facture en retard !
+                    <div class="text-center py-8">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="material-icons text-green-600 text-2xl">check_circle</span>
+                        </div>
+                        <h4 class="text-lg font-medium text-gray-900 mb-2">Aucune facture en retard</h4>
+                        <p class="text-gray-500">Excellent ! Vos paiements sont à jour.</p>
                     </div>
                     {% endfor %}
                 </div>
             </div>
         </div>
 
-        <!-- Historique des paiements -->
-        <div class="bg-white rounded-xl shadow-sm border p-6 mt-8">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">💳 Historique des paiements</h3>
+        <!-- Payment History -->
+        <div class="material-card bg-white rounded-2xl p-6 mt-8">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                        <span class="material-icons text-blue-600">payment</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900">Historique des paiements</h3>
+                </div>
+                {% if recent_payments %}
+                <span class="chip">{{ recent_payments|length }} récent{{ recent_payments|length|pluralize }}</span>
+                {% endif %}
+            </div>
             <div class="space-y-3">
                 {% for payment in recent_payments %}
-                <div class="invoice-item flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg">
-                    <div class="flex items-center">
-                        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                            <span class="text-sm">✅</span>
+                <div class="material-card material-ripple p-4 border border-gray-200 rounded-xl hover:border-blue-300">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                <span class="material-icons text-green-600 text-sm">check</span>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-900">{{ payment.invoice.invoice_number }}</h4>
+                                <p class="text-sm text-gray-600">
+                                    <span class="material-icons text-xs align-middle mr-1">access_time</span>
+                                    {{ payment.payment_date|date:"d/m/Y à H:i" }}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <div class="font-medium text-gray-900">{{ payment.invoice.invoice_number }}</div>
-                            <div class="text-sm text-gray-600">{{ payment.payment_date|date:"d/m/Y à H:i" }}</div>
+                        <div class="text-right">
+                            <p class="font-bold amount-display text-green-600">{{ payment.amount }} FCFA</p>
+                            <p class="text-xs text-gray-500">
+                                <span class="material-icons text-xs align-middle mr-1">credit_card</span>
+                                {{ payment.payment_method }}
+                            </p>
                         </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="font-bold text-green-600">{{ payment.amount }} FCFA</div>
-                        <div class="text-xs text-gray-500">{{ payment.payment_method }}</div>
                     </div>
                 </div>
                 {% empty %}
-                <div class="text-center text-gray-500 py-4">
-                    <svg class="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-                    </svg>
-                    <h3 class="text-lg font-medium mb-2">Aucun paiement</h3>
-                    <p>Votre historique de paiements apparaîtra ici.</p>
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="material-icons text-gray-400 text-2xl">payment</span>
+                    </div>
+                    <h4 class="text-lg font-medium text-gray-900 mb-2">Aucun paiement</h4>
+                    <p class="text-gray-500">Votre historique de paiements apparaîtra ici.</p>
                 </div>
                 {% endfor %}
             </div>
         </div>
 
-        <!-- Factures payées récentes -->
-        <div class="bg-white rounded-xl shadow-sm border p-6 mt-8">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">✅ Factures payées récentes</h3>
+        <!-- Recent Paid Invoices -->
+        <div class="material-card bg-white rounded-2xl p-6 mt-8">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                        <span class="material-icons text-green-600">task_alt</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900">Factures payées récentes</h3>
+                </div>
+                {% if paid_invoices %}
+                <span class="chip success">{{ paid_invoices|length }} payée{{ paid_invoices|length|pluralize }}</span>
+                {% endif %}
+            </div>
             <div class="space-y-3">
                 {% for invoice in paid_invoices %}
-                <div class="invoice-item flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg">
-                    <div class="flex items-center">
-                        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                            <span class="text-sm">📄</span>
+                <div class="material-card material-ripple p-4 border border-gray-200 rounded-xl hover:border-green-300">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                <span class="material-icons text-green-600 text-sm">description</span>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-900">{{ invoice.invoice_number }}</h4>
+                                <p class="text-sm text-gray-600">
+                                    <span class="material-icons text-xs align-middle mr-1">event_available</span>
+                                    Payée le {{ invoice.payment_date|date:"d/m/Y" }}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <div class="font-medium text-gray-900">{{ invoice.invoice_number }}</div>
-                            <div class="text-sm text-gray-600">Payée le {{ invoice.payment_date|date:"d/m/Y" }}</div>
+                        <div class="text-right">
+                            <p class="font-bold amount-display text-green-600">{{ invoice.total_amount }} FCFA</p>
+                            <span class="chip success">
+                                <span class="material-icons text-xs mr-1">verified</span>
+                                Payé
+                            </span>
                         </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="font-bold text-green-600">{{ invoice.total_amount }} FCFA</div>
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Payé
-                        </span>
                     </div>
                 </div>
                 {% empty %}
-                <div class="text-center text-gray-500 py-4">
-                    Aucune facture payée récemment
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="material-icons text-gray-400 text-2xl">receipt_long</span>
+                    </div>
+                    <h4 class="text-lg font-medium text-gray-900 mb-2">Aucune facture payée récemment</h4>
+                    <p class="text-gray-500">Vos factures payées apparaîtront ici.</p>
                 </div>
                 {% endfor %}
             </div>
         </div>
 
-        <!-- Actions -->
-        <div class="mt-8 flex justify-center space-x-4">
+        <!-- Action Buttons -->
+        <div class="mt-8 flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-6">
             <a href="{% url 'accounts:dashboard' %}" 
-               class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                ← Retour au dashboard
+               class="inline-flex items-center px-6 py-3 border-2 border-gray-300 rounded-lg font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm">
+                <span class="material-icons mr-2">arrow_back</span>
+                Retour au dashboard
             </a>
             <a href="{% url 'finance:invoice_list' %}" 
-               class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                📄 Voir toutes les factures
+               class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-md transition-all duration-200 transform hover:scale-105">
+                <span class="material-icons mr-2">receipt</span>
+                Voir toutes les factures
             </a>
         </div>
     </div>
+
+    <!-- Floating Action Button -->
+    <a href="{% url 'finance:invoice_list' %}" 
+       class="fab w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-all duration-200 transform hover:scale-110">
+        <span class="material-icons">receipt</span>
+    </a>
 </div>
 {% endblock %}

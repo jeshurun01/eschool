@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
+from decimal import Decimal
 
 # Import des managers RBAC
 from .managers import GradeManager, ClassRoomManager, EnrollmentManager
@@ -66,7 +67,7 @@ class Subject(models.Model):
     name = models.CharField(max_length=100, verbose_name='Nom de la matière')
     code = models.CharField(max_length=10, unique=True, verbose_name='Code')
     description = models.TextField(blank=True, verbose_name='Description')
-    coefficient = models.DecimalField(max_digits=3, decimal_places=1, default=1.0, verbose_name='Coefficient')
+    coefficient = models.DecimalField(max_digits=3, decimal_places=1, default=Decimal('1.0'), verbose_name='Coefficient')
     color = models.CharField(max_length=7, default='#3B82F6', verbose_name='Couleur')  # Hex color
     
     # Relations
@@ -218,7 +219,7 @@ class Timetable(models.Model):
 
 
 class Attendance(models.Model):
-    """Présence/Absence"""
+    """Présence/Absence - MODÈLE TEMPORAIRE POUR MIGRATION"""
     STATUS_CHOICES = [
         ('PRESENT', 'Présent'),
         ('ABSENT', 'Absent'),
@@ -239,8 +240,8 @@ class Attendance(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = 'Présence'
-        verbose_name_plural = 'Présences'
+        verbose_name = 'Présence (Ancien)'
+        verbose_name_plural = 'Présences (Ancien)'
         unique_together = ['student', 'date', 'subject']
         ordering = ['-date']
 
@@ -264,12 +265,15 @@ class Grade(models.Model):
     teacher = models.ForeignKey('accounts.Teacher', on_delete=models.CASCADE, verbose_name='Enseignant')
     classroom = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, verbose_name='Classe')
     
+    # Relation optionnelle avec une session (pour les notes données pendant une session)
+    session = models.ForeignKey('Session', on_delete=models.SET_NULL, null=True, blank=True, related_name='grades', verbose_name='Session associée')
+    
     evaluation_name = models.CharField(max_length=100, verbose_name='Nom de l\'évaluation')
     evaluation_type = models.CharField(max_length=20, choices=EVALUATION_TYPE_CHOICES, verbose_name='Type d\'évaluation')
     
     score = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0)], verbose_name='Note obtenue')
-    max_score = models.DecimalField(max_digits=5, decimal_places=2, default=20, validators=[MinValueValidator(0.01)], verbose_name='Note maximale')
-    coefficient = models.DecimalField(max_digits=3, decimal_places=1, default=1.0, verbose_name='Coefficient')
+    max_score = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('20'), validators=[MinValueValidator(Decimal('0.01'))], verbose_name='Note maximale')
+    coefficient = models.DecimalField(max_digits=3, decimal_places=1, default=Decimal('1.0'), verbose_name='Coefficient')
     
     date = models.DateField(verbose_name='Date d\'évaluation')
     comments = models.TextField(blank=True, verbose_name='Commentaires')
@@ -318,6 +322,9 @@ class Document(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='documents', verbose_name='Matière')
     teacher = models.ForeignKey('accounts.Teacher', on_delete=models.CASCADE, related_name='documents', verbose_name='Enseignant')
     classroom = models.ForeignKey(ClassRoom, on_delete=models.CASCADE, related_name='documents', blank=True, null=True, verbose_name='Classe spécifique')
+    
+    # Liaison optionnelle avec une session (pour les documents partagés pendant une session)
+    session = models.ForeignKey('Session', on_delete=models.SET_NULL, null=True, blank=True, related_name='shared_documents', verbose_name='Session associée')
     
     # Fichier
     file = models.FileField(upload_to='documents/%Y/%m/', verbose_name='Fichier')
@@ -437,3 +444,540 @@ class Period(models.Model):
             # S'assurer qu'une seule période est marquée comme courante par année
             Period.objects.filter(academic_year=self.academic_year, is_current=True).update(is_current=False)
         super().save(*args, **kwargs)
+
+
+class Session(models.Model):
+    """Session de cours - Instance d'un créneau d'emploi du temps"""
+    SESSION_STATUS_CHOICES = [
+        ('SCHEDULED', 'Programmée'),
+        ('IN_PROGRESS', 'En cours'),
+        ('COMPLETED', 'Terminée'),
+        ('CANCELLED', 'Annulée'),
+        ('POSTPONED', 'Reportée'),
+    ]
+
+    # Relations de base
+    timetable = models.ForeignKey(Timetable, on_delete=models.CASCADE, related_name='sessions', verbose_name='Créneau d\'emploi du temps')
+    period = models.ForeignKey(Period, on_delete=models.CASCADE, related_name='sessions', verbose_name='Période')
+    
+    # Informations de la session
+    date = models.DateField(verbose_name='Date de la session')
+    actual_start_time = models.TimeField(blank=True, null=True, verbose_name='Heure de début réelle')
+    actual_end_time = models.TimeField(blank=True, null=True, verbose_name='Heure de fin réelle')
+    status = models.CharField(max_length=20, choices=SESSION_STATUS_CHOICES, default='SCHEDULED', verbose_name='Statut')
+    
+    # Contenu de la leçon
+    lesson_title = models.CharField(max_length=200, blank=True, verbose_name='Titre de la leçon')
+    lesson_objectives = models.TextField(blank=True, verbose_name='Objectifs de la leçon')
+    lesson_content = models.TextField(blank=True, verbose_name='Contenu de la leçon')
+    lesson_summary = models.TextField(blank=True, verbose_name='Résumé de ce qui a été enseigné')
+    
+    # Notes et observations de l'enseignant
+    teacher_notes = models.TextField(blank=True, verbose_name='Notes de l\'enseignant')
+    homework_given = models.TextField(blank=True, verbose_name='Devoirs donnés')
+    next_lesson_preparation = models.TextField(blank=True, verbose_name='Préparation pour la prochaine leçon')
+    
+    # Présences
+    attendance_taken = models.BooleanField(default=False, verbose_name='Appel effectué')
+    attendance_taken_at = models.DateTimeField(blank=True, null=True, verbose_name='Heure de l\'appel')
+    
+    # Métadonnées
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Session de cours'
+        verbose_name_plural = 'Sessions de cours'
+        ordering = ['-date', '-timetable__start_time']
+        unique_together = ['timetable', 'date']
+
+    def __str__(self):
+        return f"{self.timetable.subject.name} - {self.timetable.classroom.name} - {self.date}"
+
+    @property
+    def classroom(self):
+        """Raccourci vers la classe"""
+        return self.timetable.classroom
+
+    @property
+    def subject(self):
+        """Raccourci vers la matière"""
+        return self.timetable.subject
+
+    @property
+    def teacher(self):
+        """Raccourci vers l'enseignant"""
+        return self.timetable.teacher
+
+    @property
+    def planned_start_time(self):
+        """Heure de début planifiée"""
+        return self.timetable.start_time
+
+    @property
+    def planned_end_time(self):
+        """Heure de fin planifiée"""
+        return self.timetable.end_time
+
+    @property
+    def duration_planned(self):
+        """Durée planifiée en minutes"""
+        from datetime import datetime, date
+        planned_start = datetime.combine(date.today(), self.planned_start_time)
+        planned_end = datetime.combine(date.today(), self.planned_end_time)
+        return int((planned_end - planned_start).total_seconds() / 60)
+
+    @property
+    def duration_actual(self):
+        """Durée réelle en minutes"""
+        if self.actual_start_time and self.actual_end_time:
+            from datetime import datetime, date
+            actual_start = datetime.combine(date.today(), self.actual_start_time)
+            actual_end = datetime.combine(date.today(), self.actual_end_time)
+            return int((actual_end - actual_start).total_seconds() / 60)
+        return None
+
+    @property
+    def is_today(self):
+        """Vérifie si la session est aujourd'hui"""
+        return self.date == timezone.now().date()
+
+    @property
+    def is_past(self):
+        """Vérifie si la session est passée"""
+        return self.date < timezone.now().date()
+
+    @property
+    def students_count(self):
+        """Nombre d'étudiants dans la classe"""
+        return self.classroom.students.count()
+
+    @property
+    def present_students_count(self):
+        """Nombre d'étudiants présents"""
+        return self.attendances.filter(status='PRESENT').count()
+
+    @property
+    def absent_students_count(self):
+        """Nombre d'étudiants absents"""
+        return self.attendances.filter(status='ABSENT').count()
+
+    @property
+    def attendance_rate(self):
+        """Taux de présence en pourcentage"""
+        total = self.students_count
+        if total == 0:
+            return 0
+        present = self.present_students_count
+        return round((present / total) * 100, 1)
+
+    def can_be_edited_by(self, user):
+        """Vérifie si l'utilisateur peut modifier cette session"""
+        return user == self.teacher.user or user.role in ['ADMIN', 'SUPER_ADMIN']
+
+    def mark_as_completed(self):
+        """Marquer la session comme terminée"""
+        self.status = 'COMPLETED'
+        if not self.actual_end_time:
+            self.actual_end_time = timezone.now().time()
+        self.save()
+
+    def start_session(self):
+        """Démarrer la session"""
+        self.status = 'IN_PROGRESS'
+        if not self.actual_start_time:
+            self.actual_start_time = timezone.now().time()
+        self.save()
+
+
+class SessionAttendance(models.Model):
+    """Présence pour une session spécifique"""
+    STATUS_CHOICES = [
+        ('PRESENT', 'Présent'),
+        ('ABSENT', 'Absent'),
+        ('LATE', 'En retard'),
+        ('EXCUSED', 'Absent excusé'),
+    ]
+
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='attendances', verbose_name='Session')
+    student = models.ForeignKey('accounts.Student', on_delete=models.CASCADE, related_name='session_attendances', verbose_name='Élève')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, verbose_name='Statut')
+    
+    # Détails supplémentaires
+    arrival_time = models.TimeField(blank=True, null=True, verbose_name='Heure d\'arrivée')
+    justification = models.TextField(blank=True, verbose_name='Justification')
+    notes = models.TextField(blank=True, verbose_name='Notes')
+    
+    # Qui a pris l'appel
+    recorded_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Enregistré par')
+    recorded_at = models.DateTimeField(auto_now_add=True, verbose_name='Enregistré le')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Présence de session'
+        verbose_name_plural = 'Présences de session'
+        unique_together = ['session', 'student']
+        ordering = ['student__user__last_name', 'student__user__first_name']
+
+    def __str__(self):
+        return f"{self.student.user.get_full_name()} - {self.session.date} - {self.get_status_display()}"
+
+    @property
+    def is_late(self):
+        """Vérifie si l'étudiant est arrivé en retard"""
+        if self.arrival_time and self.session.planned_start_time:
+            return self.arrival_time > self.session.planned_start_time
+        return False
+
+    @property
+    def minutes_late(self):
+        """Nombre de minutes de retard"""
+        if self.is_late and self.arrival_time:
+            from datetime import datetime, date
+            planned = datetime.combine(date.today(), self.session.planned_start_time)
+            actual = datetime.combine(date.today(), self.arrival_time)
+            return int((actual - planned).total_seconds() / 60)
+        return 0
+
+
+class DailyAttendanceSummary(models.Model):
+    """Vue agrégée automatique des présences journalières"""
+    DAILY_STATUS_CHOICES = [
+        ('FULLY_PRESENT', 'Entièrement présent'),
+        ('PARTIALLY_PRESENT', 'Partiellement présent'),
+        ('MOSTLY_ABSENT', 'Majoritairement absent'),
+        ('FULLY_ABSENT', 'Entièrement absent'),
+    ]
+
+    student = models.ForeignKey('accounts.Student', on_delete=models.CASCADE, related_name='daily_summaries', verbose_name='Élève')
+    date = models.DateField(verbose_name='Date')
+    
+    # Statistiques calculées automatiquement
+    total_sessions = models.PositiveIntegerField(default=0, verbose_name='Total de sessions')
+    present_sessions = models.PositiveIntegerField(default=0, verbose_name='Sessions présentes')
+    absent_sessions = models.PositiveIntegerField(default=0, verbose_name='Sessions absentes')
+    late_sessions = models.PositiveIntegerField(default=0, verbose_name='Sessions en retard')
+    excused_sessions = models.PositiveIntegerField(default=0, verbose_name='Sessions excusées')
+    
+    # Statut global de la journée (calculé automatiquement)
+    daily_status = models.CharField(max_length=20, choices=DAILY_STATUS_CHOICES, verbose_name='Statut journalier')
+    attendance_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'), verbose_name='Taux de présence (%)')
+    
+    # Informations additionnelles
+    first_arrival_time = models.TimeField(blank=True, null=True, verbose_name='Première arrivée')
+    total_late_minutes = models.PositiveIntegerField(default=0, verbose_name='Total minutes de retard')
+    justification_provided = models.BooleanField(default=False, verbose_name='Justification fournie')
+    
+    # Métadonnées
+    last_updated = models.DateTimeField(auto_now=True, verbose_name='Dernière mise à jour')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Résumé quotidien de présence'
+        verbose_name_plural = 'Résumés quotidiens de présence'
+        unique_together = ['student', 'date']
+        ordering = ['-date', 'student__user__last_name']
+
+    def __str__(self):
+        return f"{self.student.user.get_full_name()} - {self.date} - {self.get_daily_status_display()}"
+
+    @classmethod
+    def calculate_for_student_date(cls, student, date):
+        """Calcule et met à jour le résumé pour un étudiant et une date donnée"""
+        # Récupérer toutes les présences de session pour cette date
+        session_attendances = SessionAttendance.objects.filter(
+            student=student,
+            session__date=date
+        ).select_related('session')
+        
+        if not session_attendances.exists():
+            # Pas de sessions ce jour-là, supprimer le résumé s'il existe
+            cls.objects.filter(student=student, date=date).delete()
+            return None
+        
+        # Calculer les statistiques
+        total_sessions = session_attendances.count()
+        present_sessions = session_attendances.filter(status='PRESENT').count()
+        absent_sessions = session_attendances.filter(status='ABSENT').count()
+        late_sessions = session_attendances.filter(status='LATE').count()
+        excused_sessions = session_attendances.filter(status='EXCUSED').count()
+        
+        # Calculer le taux de présence (présent + en retard = présent)
+        effective_present = present_sessions + late_sessions
+        attendance_rate = (effective_present / total_sessions * 100) if total_sessions > 0 else 0
+        
+        # Déterminer le statut journalier
+        if attendance_rate == 100:
+            daily_status = 'FULLY_PRESENT'
+        elif attendance_rate >= 75:
+            daily_status = 'PARTIALLY_PRESENT'
+        elif attendance_rate >= 25:
+            daily_status = 'MOSTLY_ABSENT'
+        else:
+            daily_status = 'FULLY_ABSENT'
+        
+        # Calculer les détails supplémentaires
+        arrival_times = session_attendances.filter(
+            arrival_time__isnull=False
+        ).values_list('arrival_time', flat=True)
+        first_arrival_time = min(arrival_times) if arrival_times else None
+        
+        # Calculer le total des minutes de retard
+        total_late_minutes = 0
+        for attendance in session_attendances.filter(status='LATE'):
+            if attendance.minutes_late:
+                total_late_minutes += attendance.minutes_late
+        
+        # Vérifier si une justification a été fournie
+        justification_provided = session_attendances.filter(
+            justification__isnull=False,
+            justification__gt=''
+        ).exists()
+        
+        # Créer ou mettre à jour le résumé
+        summary, created = cls.objects.update_or_create(
+            student=student,
+            date=date,
+            defaults={
+                'total_sessions': total_sessions,
+                'present_sessions': present_sessions,
+                'absent_sessions': absent_sessions,
+                'late_sessions': late_sessions,
+                'excused_sessions': excused_sessions,
+                'daily_status': daily_status,
+                'attendance_rate': Decimal(str(round(attendance_rate, 2))),
+                'first_arrival_time': first_arrival_time,
+                'total_late_minutes': total_late_minutes,
+                'justification_provided': justification_provided,
+            }
+        )
+        
+        return summary
+
+    @property
+    def is_problematic(self):
+        """Vérifie si cette journée nécessite une attention particulière"""
+        return (
+            self.daily_status in ['MOSTLY_ABSENT', 'FULLY_ABSENT'] or
+            self.total_late_minutes > 30 or
+            (self.absent_sessions > 0 and not self.justification_provided)
+        )
+
+    @property
+    def attendance_percentage_display(self):
+        """Affichage formaté du pourcentage de présence"""
+        return f"{self.attendance_rate}%"
+
+    def get_detailed_status(self):
+        """Retourne un statut détaillé pour l'affichage"""
+        if self.total_sessions == 0:
+            return "Aucune session"
+        
+        details = []
+        if self.present_sessions > 0:
+            details.append(f"{self.present_sessions} présent(es)")
+        if self.late_sessions > 0:
+            details.append(f"{self.late_sessions} en retard")
+        if self.absent_sessions > 0:
+            details.append(f"{self.absent_sessions} absent(es)")
+        if self.excused_sessions > 0:
+            details.append(f"{self.excused_sessions} excusé(es)")
+        
+        return " • ".join(details)
+
+
+class SessionDocument(models.Model):
+    """Document lié à une session spécifique"""
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='documents', verbose_name='Session')
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='session_links', verbose_name='Document')
+    
+    # Informations sur la liaison
+    shared_at = models.DateTimeField(auto_now_add=True, verbose_name='Partagé le')
+    shared_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Partagé par')
+    purpose = models.TextField(blank=True, verbose_name='Objectif du partage')
+    
+    # Options de partage
+    is_mandatory = models.BooleanField(default=False, verbose_name='Lecture obligatoire')
+    deadline = models.DateTimeField(blank=True, null=True, verbose_name='Date limite de consultation')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Document de session'
+        verbose_name_plural = 'Documents de session'
+        unique_together = ['session', 'document']
+        ordering = ['-shared_at']
+
+    def __str__(self):
+        return f"{self.document.title} - Session {self.session.date}"
+
+    @property
+    def is_overdue(self):
+        """Vérifie si la date limite est dépassée"""
+        if self.deadline:
+            return timezone.now() > self.deadline
+        return False
+
+
+class SessionAssignment(models.Model):
+    """Devoir donné pendant une session"""
+    ASSIGNMENT_TYPE_CHOICES = [
+        ('HOMEWORK', 'Devoir maison'),
+        ('EXERCISE', 'Exercice'),
+        ('PROJECT', 'Projet'),
+        ('RESEARCH', 'Recherche'),
+        ('READING', 'Lecture'),
+        ('PREPARATION', 'Préparation'),
+        ('OTHER', 'Autre'),
+    ]
+
+    PRIORITY_CHOICES = [
+        ('LOW', 'Faible'),
+        ('MEDIUM', 'Moyenne'),
+        ('HIGH', 'Élevée'),
+        ('URGENT', 'Urgente'),
+    ]
+
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='assignments', verbose_name='Session')
+    
+    # Informations du devoir
+    title = models.CharField(max_length=200, verbose_name='Titre du devoir')
+    description = models.TextField(verbose_name='Description détaillée')
+    assignment_type = models.CharField(max_length=20, choices=ASSIGNMENT_TYPE_CHOICES, default='HOMEWORK', verbose_name='Type de devoir')
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='MEDIUM', verbose_name='Priorité')
+    
+    # Dates importantes
+    due_date = models.DateTimeField(verbose_name='Date limite de rendu')
+    estimated_duration = models.PositiveIntegerField(help_text='En minutes', verbose_name='Durée estimée')
+    
+    # Évaluation
+    will_be_graded = models.BooleanField(default=True, verbose_name='Sera noté')
+    max_score = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True, verbose_name='Note maximale')
+    coefficient = models.DecimalField(max_digits=3, decimal_places=1, default=Decimal('1.0'), verbose_name='Coefficient')
+    
+    # Instructions et ressources
+    instructions = models.TextField(blank=True, verbose_name='Instructions spécifiques')
+    resources_needed = models.TextField(blank=True, verbose_name='Ressources nécessaires')
+    submission_format = models.CharField(max_length=100, blank=True, verbose_name='Format de rendu')
+    
+    # Visibilité et accès
+    is_published = models.BooleanField(default=True, verbose_name='Publié aux étudiants')
+    published_at = models.DateTimeField(blank=True, null=True, verbose_name='Publié le')
+    
+    # Métadonnées
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Créé par')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Devoir de session'
+        verbose_name_plural = 'Devoirs de session'
+        ordering = ['due_date']
+
+    def __str__(self):
+        return f"{self.title} - {self.session.subject.name} - Échéance: {self.due_date.strftime('%d/%m/%Y')}"
+
+    @property
+    def is_overdue(self):
+        """Vérifie si le devoir est en retard"""
+        return timezone.now() > self.due_date
+
+    @property
+    def days_until_due(self):
+        """Nombre de jours avant l'échéance"""
+        now = timezone.now()
+        if self.due_date > now:
+            return (self.due_date - now).days
+        return 0
+
+    @property
+    def time_until_due(self):
+        """Temps restant avant l'échéance (format lisible)"""
+        now = timezone.now()
+        if self.due_date > now:
+            delta = self.due_date - now
+            if delta.days > 0:
+                return f"{delta.days} jour(s)"
+            else:
+                hours = delta.seconds // 3600
+                return f"{hours} heure(s)"
+        return "Échéance dépassée"
+
+    @property
+    def classroom(self):
+        """Raccourci vers la classe"""
+        return self.session.classroom
+
+    @property
+    def subject(self):
+        """Raccourci vers la matière"""
+        return self.session.subject
+
+    @property
+    def teacher(self):
+        """Raccourci vers l'enseignant"""
+        return self.session.teacher
+
+    def save(self, *args, **kwargs):
+        if self.is_published and not self.published_at:
+            self.published_at = timezone.now()
+        super().save(*args, **kwargs)
+
+
+class SessionNote(models.Model):
+    """Notes et observations spécifiques à une session"""
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='notes', verbose_name='Session')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Auteur')
+    
+    # Contenu de la note
+    title = models.CharField(max_length=200, blank=True, verbose_name='Titre')
+    content = models.TextField(verbose_name='Contenu')
+    note_type = models.CharField(max_length=20, choices=[
+        ('GENERAL', 'Générale'),
+        ('BEHAVIOR', 'Comportement'),
+        ('PARTICIPATION', 'Participation'),
+        ('DIFFICULTY', 'Difficulté'),
+        ('ACHIEVEMENT', 'Réussite'),
+        ('REMINDER', 'Rappel'),
+    ], default='GENERAL', verbose_name='Type de note')
+    
+    # Visibilité
+    is_private = models.BooleanField(default=False, verbose_name='Note privée (enseignant seulement)')
+    visible_to_students = models.BooleanField(default=False, verbose_name='Visible aux étudiants')
+    visible_to_parents = models.BooleanField(default=False, verbose_name='Visible aux parents')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Note de session'
+        verbose_name_plural = 'Notes de session'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        title = self.title if self.title else f"Note {self.note_type}"
+        return f"{title} - {self.session.date}"
+
+
+# ===== SIGNAUX POUR LA MISE À JOUR AUTOMATIQUE DES RÉSUMÉS =====
+
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+
+@receiver(post_save, sender=SessionAttendance)
+def update_daily_summary_on_attendance_save(sender, instance, **kwargs):
+    """Met à jour le résumé quotidien quand une présence de session est sauvegardée"""
+    DailyAttendanceSummary.calculate_for_student_date(
+        student=instance.student,
+        date=instance.session.date
+    )
+
+@receiver(post_delete, sender=SessionAttendance)
+def update_daily_summary_on_attendance_delete(sender, instance, **kwargs):
+    """Met à jour le résumé quotidien quand une présence de session est supprimée"""
+    DailyAttendanceSummary.calculate_for_student_date(
+        student=instance.student,
+        date=instance.session.date
+    )

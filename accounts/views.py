@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_protect
 from django.utils import timezone
 from datetime import date, timedelta
 from .models import User, Student, Parent, Teacher
-from academic.models import ClassRoom, Subject, Attendance, Enrollment, Level, Grade
+from academic.models import ClassRoom, Subject, Session, SessionAttendance, DailyAttendanceSummary, Enrollment, Level, Grade
 from finance.models import Invoice, Payment, FeeStructure
 from communication.models import Announcement, Message
 from .forms import (
@@ -157,18 +157,20 @@ def admin_dashboard(request):
         'student__user', 'subject', 'teacher__user'
     ).order_by('-created_at')[:10]
     
-    # Présences du jour
-    today_attendances = Attendance.objects.filter(date=today).count()
-    today_absences = Attendance.objects.filter(
-        date=today, 
-        status='ABSENT'
-    ).count()
+    # Présences du jour (nouveau système basé sur les sessions)
+    today_summaries = DailyAttendanceSummary.objects.filter(date=today)
+    today_total_sessions = today_summaries.aggregate(
+        total=Sum('total_sessions')
+    )['total'] or 0
+    today_absent_sessions = today_summaries.aggregate(
+        total=Sum('absent_sessions')
+    )['total'] or 0
     
-    # Calcul du taux de présence
+    # Calcul du taux de présence global
     attendance_rate = 0
-    if today_attendances > 0:
-        present_count = today_attendances - today_absences
-        attendance_rate = round((present_count / today_attendances) * 100, 1)
+    if today_total_sessions > 0:
+        present_sessions = today_total_sessions - today_absent_sessions
+        attendance_rate = round((present_sessions / today_total_sessions) * 100, 1)
     
     # Annonces récentes (7 derniers jours)
     recent_announcements_count = Announcement.objects.filter(
@@ -203,9 +205,9 @@ def admin_dashboard(request):
             withdrawal_date__isnull=True
         ).count(),
         
-        # Présences du jour
-        'today_attendances': today_attendances,
-        'today_absences': today_absences,
+        # Présences du jour (nouveau système)
+        'today_total_sessions': today_total_sessions,
+        'today_absent_sessions': today_absent_sessions,
         'attendance_rate': attendance_rate,
         
         # Annonces et notes récentes
@@ -310,22 +312,55 @@ def student_dashboard(request):
             context['average_grade'] = round(avg_grade, 2) if avg_grade else None
             context['average_percentage'] = round((avg_grade / 20) * 100, 1) if avg_grade else 0
         
-        # Présences du mois
-        monthly_attendances = Attendance.objects.filter(
+        # Présences du mois (nouveau système basé sur les résumés quotidiens)
+        monthly_summaries = DailyAttendanceSummary.objects.filter(
             student=student,
             date__gte=month_ago
         )
-        present_count = monthly_attendances.filter(status='PRESENT').count()
-        total_days = monthly_attendances.count()
-        attendance_rate = round((present_count / total_days * 100), 1) if total_days > 0 else 0
+        
+        # Initialiser les valeurs par défaut
+        monthly_stats = {
+            'total_sessions': 0,
+            'present_sessions': 0,
+            'absent_sessions': 0,
+            'late_sessions': 0
+        }
+        present_count = 0
+        total_days = 0
+        attendance_rate = 0
+        
+        if monthly_summaries.exists():
+            # Calculer les totaux du mois
+            monthly_stats = monthly_summaries.aggregate(
+                total_sessions=Sum('total_sessions'),
+                present_sessions=Sum('present_sessions'),
+                absent_sessions=Sum('absent_sessions'),
+                late_sessions=Sum('late_sessions')
+            )
+            
+            # Convertir les None en 0
+            for key in monthly_stats:
+                if monthly_stats[key] is None:
+                    monthly_stats[key] = 0
+            
+            total_sessions = monthly_stats['total_sessions']
+            present_sessions = monthly_stats['present_sessions']
+            late_sessions = monthly_stats['late_sessions']
+            
+            # Calculer le taux de présence (présent + en retard = présent)
+            effective_present = present_sessions + late_sessions
+            attendance_rate = round((effective_present / total_sessions * 100), 1) if total_sessions > 0 else 0
+            
+            present_count = effective_present
+            total_days = len(monthly_summaries)  # Nombre de jours avec des sessions
         
         context.update({
             'recent_grades': recent_grades,
             'attendance_rate': attendance_rate,
             'monthly_attendances': {
                 'present': present_count,
-                'absent': monthly_attendances.filter(status='ABSENT').count(),
-                'late': monthly_attendances.filter(status='LATE').count(),
+                'absent': monthly_stats.get('absent_sessions', 0),
+                'late': monthly_stats.get('late_sessions', 0),
                 'total': total_days,
                 'attendance_rate': attendance_rate
             }
@@ -352,12 +387,20 @@ def student_dashboard(request):
         context['next_classes'] = next_classes
     
         # Statistiques étudiant détaillées
+        # Calculer les matières enseignées dans la classe via les emplois du temps
+        from academic.models import Timetable
+        class_subjects_count = 0
+        if student.current_class:
+            class_subjects_count = Timetable.objects.filter(
+                classroom=student.current_class
+            ).values('subject').distinct().count()
+        
         student_stats = {
             'present_days': present_count,
             'total_days': total_days,
             'attendance_rate': attendance_rate,
-            'total_subjects': student.current_class.subjects.count() if student.current_class else 0,
-            'active_subjects': student.current_class.subjects.count() if student.current_class else 0,
+            'total_subjects': class_subjects_count,
+            'active_subjects': class_subjects_count,
         }
     else:
         # Valeurs par défaut si pas de classe assignée
@@ -488,23 +531,45 @@ def teacher_dashboard(request):
     average_grade = grades_this_month.aggregate(avg=Avg('score'))['avg'] or 0
     total_grades_given = grades_this_month.count()
     
-    # Présences du jour pour les classes de l'enseignant
-    today_attendance = Attendance.objects.filter(
-        teacher=teacher,
-        date=today
-    ).select_related('student__user', 'classroom')
+    # Présences du jour pour les classes de l'enseignant (nouveau système)
+    # Récupérer les classes où ce teacher est soit professeur principal soit enseignant assigné
+    teacher_classes = ClassRoom.objects.filter(
+        Q(head_teacher=teacher) | Q(teachers=teacher)
+    ).distinct()
     
-    attendance_stats = {
-        'present': today_attendance.filter(status='PRESENT').count(),
-        'absent': today_attendance.filter(status='ABSENT').count(),
-        'late': today_attendance.filter(status='LATE').count(),
-        'excused': today_attendance.filter(status='EXCUSED').count(),
-    }
-    attendance_stats['total'] = sum(attendance_stats.values())
-    attendance_stats['attendance_rate'] = int(
-        (attendance_stats['present'] / attendance_stats['total'] * 100) 
-        if attendance_stats['total'] > 0 else 0
-    )
+    today_summaries = DailyAttendanceSummary.objects.filter(
+        student__current_class__in=teacher_classes,
+        date=today
+    ).select_related('student__user')
+    
+    if today_summaries.exists():
+        attendance_totals = today_summaries.aggregate(
+            total_sessions=Sum('total_sessions'),
+            present_sessions=Sum('present_sessions'),
+            absent_sessions=Sum('absent_sessions'),
+            late_sessions=Sum('late_sessions')
+        )
+        
+        attendance_stats = {
+            'present': attendance_totals.get('present_sessions', 0) or 0,
+            'absent': attendance_totals.get('absent_sessions', 0) or 0,
+            'late': attendance_totals.get('late_sessions', 0) or 0,
+            'excused': 0,  # À implémenter si nécessaire avec le nouveau système
+        }
+        attendance_stats['total'] = sum(attendance_stats.values())
+        attendance_stats['attendance_rate'] = int(
+            (attendance_stats['present'] / attendance_stats['total'] * 100) 
+            if attendance_stats['total'] > 0 else 0
+        )
+    else:
+        attendance_stats = {
+            'present': 0,
+            'absent': 0,
+            'late': 0,
+            'excused': 0,
+            'total': 0,
+            'attendance_rate': 0
+        }
     
     # Emploi du temps de la semaine (simulé pour le moment)
     from django.utils import timezone
@@ -556,27 +621,31 @@ def teacher_dashboard(request):
             'color': 'blue'
         })
     
-    # Ajout des présences récentes
-    recent_attendance = Attendance.objects.filter(
-        teacher=teacher,
+    # Ajout des présences récentes (nouveau système)
+    recent_sessions = Session.objects.filter(
+        timetable__teacher=teacher,
         date__gte=week_ago
-    ).select_related('student__user', 'classroom').order_by('-date')[:5]
+    ).select_related('timetable__classroom', 'timetable__subject').prefetch_related(
+        'attendances__student__user'
+    ).order_by('-date', '-actual_start_time')[:5]
     
-    for attendance in recent_attendance:
-        status_colors = {
-            'PRESENT': 'green',
-            'ABSENT': 'red',
-            'LATE': 'yellow',
-            'EXCUSED': 'blue'
-        }
-        recent_activities.append({
-            'type': 'attendance',
-            'icon': 'user-check',
-            'title': f'Présence enregistrée',
-            'description': f'{attendance.student.user.first_name} {attendance.student.user.last_name} - {attendance.status}',
-            'date': attendance.date,
-            'color': status_colors.get(attendance.status, 'gray')
-        })
+    for session in recent_sessions:
+        attendances = session.attendances.all()
+        for attendance in attendances:
+            status_colors = {
+                'PRESENT': 'green',
+                'ABSENT': 'red',
+                'LATE': 'yellow',
+                'EXCUSED': 'blue'
+            }
+            recent_activities.append({
+                'type': 'attendance',
+                'icon': 'user-check',
+                'title': f'Présence de session',
+                'description': f'{attendance.student.user.first_name} {attendance.student.user.last_name} - {attendance.status}',
+                'date': session.date,
+                'color': status_colors.get(attendance.status, 'gray')
+            })
     
     # Tri par date décroissante
     def get_date(activity):
@@ -588,15 +657,18 @@ def teacher_dashboard(request):
     
     recent_activities.sort(key=get_date, reverse=True)
     
-    # Classes avec le plus d'absences cette semaine (pour cet enseignant)
+    # Classes avec le plus d'absences cette semaine (nouveau système)
     classes_with_absences = []
     for class_obj in assigned_classes:
-        week_absences = Attendance.objects.filter(
-            teacher=teacher,
-            classroom=class_obj,
-            date__gte=week_ago,
-            status='ABSENT'
-        ).count()
+        # Calculer les absences via les résumés quotidiens
+        week_summaries = DailyAttendanceSummary.objects.filter(
+            student__current_class=class_obj,
+            date__gte=week_ago
+        ).aggregate(
+            total_absences=Sum('absent_sessions')
+        )
+        
+        week_absences = week_summaries.get('total_absences', 0) or 0
         
         if week_absences > 0:
             classes_with_absences.append({
@@ -686,31 +758,47 @@ def parent_dashboard(request):
         all_grades = Grade.objects.filter(student=child)
         average_grade = all_grades.aggregate(avg=Avg('score'))['avg'] or 0
         
-        # Présences de l'enfant cette semaine
-        week_attendance = Attendance.objects.filter(
+        # Présences de l'enfant cette semaine (nouveau système)
+        week_summaries = DailyAttendanceSummary.objects.filter(
             student=child,
             date__gte=week_ago
         )
         
-        attendance_stats = {
-            'present': week_attendance.filter(status='PRESENT').count(),
-            'absent': week_attendance.filter(status='ABSENT').count(),
-            'late': week_attendance.filter(status='LATE').count(),
-            'excused': week_attendance.filter(status='EXCUSED').count(),
-        }
-        attendance_stats['total'] = sum(attendance_stats.values())
-        attendance_stats['attendance_rate'] = int(
-            (attendance_stats['present'] / attendance_stats['total'] * 100) 
-            if attendance_stats['total'] > 0 else 100
-        )
+        if week_summaries.exists():
+            week_totals = week_summaries.aggregate(
+                total_sessions=Sum('total_sessions'),
+                present_sessions=Sum('present_sessions'),
+                absent_sessions=Sum('absent_sessions'),
+                late_sessions=Sum('late_sessions')
+            )
+            
+            attendance_stats = {
+                'present': week_totals.get('present_sessions', 0) or 0,
+                'absent': week_totals.get('absent_sessions', 0) or 0,
+                'late': week_totals.get('late_sessions', 0) or 0,
+                'excused': 0,  # À implémenter si nécessaire
+            }
+            attendance_stats['total'] = sum(attendance_stats.values())
+            attendance_stats['attendance_rate'] = int(
+                (attendance_stats['present'] / attendance_stats['total'] * 100) 
+                if attendance_stats['total'] > 0 else 100
+            )
+        else:
+            attendance_stats = {
+                'present': 0,
+                'absent': 0,
+                'late': 0,
+                'excused': 0,
+                'total': 0,
+                'attendance_rate': 100
+            }
         
-        # Absences non justifiées
-        recent_absences = Attendance.objects.filter(
+        # Absences récentes (nouveau système - sessions individuelles avec absence)
+        recent_absences_sessions = SessionAttendance.objects.filter(
             student=child,
             status='ABSENT',
-            date__gte=week_ago,
-            justification__isnull=True
-        ).order_by('-date')[:3]
+            session__date__gte=week_ago
+        ).select_related('session').order_by('-session__date')[:3]
         
         # Informations financières de l'enfant
         pending_invoices = Invoice.objects.filter(
@@ -744,7 +832,7 @@ def parent_dashboard(request):
             'recent_grades': recent_grades,
             'average_grade': round(average_grade, 2),
             'attendance_stats': attendance_stats,
-            'recent_absences': recent_absences,
+            'recent_absences': recent_absences_sessions,
             'pending_invoices': pending_invoices,
             'total_pending': total_pending,
             'recent_payments': recent_payments,
@@ -1302,8 +1390,8 @@ def parent_detail(request, parent_id):
             student=child
         ).order_by('-created_at')[:3]
         
-        # Récupérer les présences récentes
-        recent_attendance = Attendance.objects.filter(
+        # Récupérer les présences récentes (nouveau système)
+        recent_attendance_summaries = DailyAttendanceSummary.objects.filter(
             student=child
         ).order_by('-date')[:5]
         
@@ -1311,7 +1399,7 @@ def parent_detail(request, parent_id):
             'student': child,
             'current_enrollment': current_enrollment,
             'recent_invoices': recent_invoices,
-            'recent_attendance': recent_attendance,
+            'recent_attendance': recent_attendance_summaries,
         })
     
     # Statistiques financières
@@ -1378,16 +1466,27 @@ def admin_children_overview(request):
         
         average_grade = recent_grades.aggregate(avg=Avg('score'))['avg'] or 0
         
-        # Présences du mois
-        monthly_attendance = Attendance.objects.filter(
+        # Présences du mois (nouveau système)
+        monthly_summaries = DailyAttendanceSummary.objects.filter(
             student=student,
             date__gte=start_of_month
         )
         
         attendance_rate = 0
-        if monthly_attendance.exists():
-            present_count = monthly_attendance.filter(status='PRESENT').count()
-            attendance_rate = round((present_count / monthly_attendance.count()) * 100, 1)
+        if monthly_summaries.exists():
+            monthly_totals = monthly_summaries.aggregate(
+                total_sessions=Sum('total_sessions'),
+                present_sessions=Sum('present_sessions'),
+                late_sessions=Sum('late_sessions')
+            )
+            
+            total_sessions = monthly_totals.get('total_sessions', 0) or 0
+            present_sessions = monthly_totals.get('present_sessions', 0) or 0
+            late_sessions = monthly_totals.get('late_sessions', 0) or 0
+            
+            # Compter présent + en retard comme présence effective
+            effective_present = present_sessions + late_sessions
+            attendance_rate = round((effective_present / total_sessions) * 100, 1) if total_sessions > 0 else 0
         
         # Situation financière
         pending_invoices = Invoice.objects.filter(
@@ -1820,10 +1919,44 @@ def teacher_create(request):
 @user_passes_test(is_admin_or_staff)
 def teacher_detail(request, teacher_id):
     """Détail d'un enseignant"""
-    teacher = get_object_or_404(Teacher, id=teacher_id)
+    from academic.models import TeacherAssignment, AcademicYear
+    
+    teacher = get_object_or_404(Teacher, pk=teacher_id)
+    
+    # Récupérer l'année académique courante
+    current_year = AcademicYear.objects.filter(is_current=True).first()
+    
+    # Récupérer les assignations de l'enseignant pour l'année courante
+    teacher_assignments = TeacherAssignment.objects.filter(
+        teacher=teacher,
+        academic_year=current_year
+    ).select_related('classroom', 'subject', 'academic_year')
+    
+    # Grouper par classe
+    classes_taught = {}
+    for assignment in teacher_assignments:
+        classroom_name = assignment.classroom.name
+        if classroom_name not in classes_taught:
+            classes_taught[classroom_name] = {
+                'classroom': assignment.classroom,
+                'subjects': [],
+                'total_hours': 0
+            }
+        classes_taught[classroom_name]['subjects'].append({
+            'subject': assignment.subject,
+            'hours_per_week': assignment.hours_per_week
+        })
+        classes_taught[classroom_name]['total_hours'] += assignment.hours_per_week
+    
+    # Classes où l'enseignant est professeur principal
+    head_classes = teacher.head_classes.filter(academic_year=current_year)
     
     context = {
         'teacher': teacher,
+        'classes_taught': classes_taught,
+        'head_classes': head_classes,
+        'current_year': current_year,
+        'teacher_assignments': teacher_assignments,
     }
     return render(request, 'accounts/teacher_detail.html', context)
 
@@ -1875,7 +2008,7 @@ def teacher_edit(request, teacher_id):
             )
         
         messages.success(request, f'Les informations de {user.full_name} ont été mises à jour.')
-        return redirect('accounts:teacher_detail', teacher_id=teacher.id)
+        return redirect('accounts:teacher_detail', teacher_id=teacher.pk)
     
     # Récupérer toutes les matières pour le formulaire
     from academic.models import Subject
@@ -1971,56 +2104,128 @@ def student_attendance_detail(request):
     else:
         start_date = today - timedelta(days=30)
     
-    # Récupération des présences
-    attendances = Attendance.objects.filter(
+    # Récupération des présences (nouveau système)
+    summaries = DailyAttendanceSummary.objects.filter(
         student=student,
         date__gte=start_date
     ).order_by('-date')
     
-    # Statistiques
-    total_days = attendances.count()
-    present_days = attendances.filter(status='PRESENT').count()
-    absent_days = attendances.filter(status='ABSENT').count()
-    late_days = attendances.filter(status='LATE').count()
+    # Statistiques basées sur les résumés quotidiens
+    if summaries.exists():
+        total_stats = summaries.aggregate(
+            total_sessions=Sum('total_sessions'),
+            present_sessions=Sum('present_sessions'),
+            absent_sessions=Sum('absent_sessions'),
+            late_sessions=Sum('late_sessions'),
+            excused_sessions=Sum('excused_sessions')
+        )
+        
+        total_sessions = total_stats.get('total_sessions', 0) or 0
+        present_sessions = total_stats.get('present_sessions', 0) or 0
+        absent_sessions = total_stats.get('absent_sessions', 0) or 0
+        late_sessions = total_stats.get('late_sessions', 0) or 0
+        excused_sessions = total_stats.get('excused_sessions', 0) or 0
+        
+        # Calculer les jours (nombre de jours avec des sessions)
+        total_days = summaries.count()
+        
+        # Calculer les présences effectives (présent + en retard)
+        effective_present = present_sessions + late_sessions
+        attendance_rate = round((effective_present / total_sessions * 100), 1) if total_sessions > 0 else 0
+        
+        # Jours présents (jours avec au moins une session présente)
+        present_days = summaries.filter(
+            Q(present_sessions__gt=0) | Q(late_sessions__gt=0)
+        ).count()
+        
+        # Jours absents (jours uniquement avec des absences)
+        absent_days = summaries.filter(
+            absent_sessions__gt=0,
+            present_sessions=0,
+            late_sessions=0
+        ).count()
+        
+        # Jours avec retards
+        late_days = summaries.filter(late_sessions__gt=0).count()
+    else:
+        total_days = present_days = absent_days = late_days = 0
+        total_sessions = present_sessions = absent_sessions = late_sessions = excused_sessions = 0
+        attendance_rate = 0
     
-    attendance_rate = round((present_days / total_days * 100), 1) if total_days > 0 else 0
-    
-    # Présences par matière
+    # Présences par matière (nouveau système basé sur SessionAttendance)
     attendance_by_subject = {}
-    subjects = Subject.objects.filter(attendance__student=student).distinct()
+    
+    # Récupérer toutes les présences de session pour l'étudiant dans la période
+    session_attendances = SessionAttendance.objects.filter(
+        student=student,
+        session__date__gte=start_date
+    ).select_related('session__timetable__subject')
+    
+    # Grouper par matière
+    subjects = Subject.objects.filter(
+        timetable__sessions__attendances__student=student,
+        timetable__sessions__date__gte=start_date
+    ).distinct()
     
     for subject in subjects:
-        subject_attendances = attendances.filter(subject=subject)
-        subject_present = subject_attendances.filter(status='PRESENT').count()
-        subject_total = subject_attendances.count()
-        subject_rate = round((subject_present / subject_total * 100), 1) if subject_total > 0 else 0
+        subject_sessions = session_attendances.filter(
+            session__timetable__subject=subject
+        )
+        subject_present = subject_sessions.filter(status='PRESENT').count()
+        subject_late = subject_sessions.filter(status='LATE').count()
+        subject_absent = subject_sessions.filter(status='ABSENT').count()
+        subject_total = subject_sessions.count()
+        
+        # Calculer le taux (présent + en retard = présence effective)
+        effective_present = subject_present + subject_late
+        subject_rate = round((effective_present / subject_total * 100), 1) if subject_total > 0 else 0
         
         attendance_by_subject[subject] = {
             'total': subject_total,
             'present': subject_present,
-            'absent': subject_attendances.filter(status='ABSENT').count(),
-            'late': subject_attendances.filter(status='LATE').count(),
+            'absent': subject_absent,
+            'late': subject_late,
             'rate': subject_rate
         }
     
-    # Tendance hebdomadaire
+    # Tendance hebdomadaire (basée sur les résumés quotidiens)
     weekly_trend = []
     for i in range(7):
         day_date = today - timedelta(days=i)
-        day_attendance = attendances.filter(date=day_date).first()
+        day_summary = summaries.filter(date=day_date).first()
+        
+        if day_summary:
+            # Déterminer le statut dominant du jour
+            if day_summary.present_sessions > 0:
+                if day_summary.late_sessions > day_summary.present_sessions:
+                    status = 'LATE'
+                else:
+                    status = 'PRESENT'
+            elif day_summary.absent_sessions > 0:
+                status = 'ABSENT'
+            else:
+                status = 'NO_CLASS'
+        else:
+            status = 'NO_CLASS'
+            
         weekly_trend.append({
             'date': day_date,
-            'status': day_attendance.status if day_attendance else 'NO_CLASS',
-            'subject': day_attendance.subject.name if day_attendance and day_attendance.subject else None
+            'status': status,
+            'summary': day_summary
         })
     
     context = {
         'student': student,
-        'attendances': attendances[:20],  # 20 dernières
+        'summaries': summaries[:20],  # 20 derniers résumés
+        'session_attendances': session_attendances[:30],  # 30 dernières sessions
         'total_days': total_days,
         'present_days': present_days,
         'absent_days': absent_days,
         'late_days': late_days,
+        'total_sessions': total_sessions,
+        'present_sessions': present_sessions,
+        'absent_sessions': absent_sessions,
+        'late_sessions': late_sessions,
         'attendance_rate': attendance_rate,
         'attendance_by_subject': attendance_by_subject,
         'weekly_trend': reversed(weekly_trend),
@@ -2105,40 +2310,176 @@ def student_academic_calendar(request):
         messages.error(request, 'Profil étudiant non trouvé.')
         return redirect('accounts:dashboard')
     
-    # Simulation d'événements (à remplacer par vrai modèle Assignment/Exam)
+    # Récupérer les vraies données depuis la base de données
+    from academic.models import Grade, Timetable, AcademicYear, Document, Session, TeacherAssignment
+    from datetime import datetime, timedelta
+    import calendar
+    
     today = date.today()
+    
+    # Récupérer l'année académique courante
+    try:
+        current_year = AcademicYear.objects.get(is_current=True)
+    except AcademicYear.DoesNotExist:
+        current_year = None
+    
+    # Récupérer l'inscription active de l'étudiant
+    active_enrollment = student.enrollments.filter(is_active=True).first()
+    current_class = active_enrollment.classroom if active_enrollment else None
+    
     events = []
     
-    # Événements simulés pour les 30 prochains jours
-    for i in range(30):
-        event_date = today + timedelta(days=i)
+    if current_class and current_year:
+        # Récupérer les matières de la classe de l'étudiant
+        subject_ids = TeacherAssignment.objects.filter(
+            classroom=current_class,
+            academic_year=current_year
+        ).values_list('subject_id', flat=True)
         
-        # Simulation aléatoire d'événements
-        if i % 7 == 1:  # Examens le lundi
+        # Plage de dates : 7 jours passés + 30 jours futurs
+        start_date = today - timedelta(days=7)
+        end_date = today + timedelta(days=30)
+        
+        # 1. Récupérer les sessions (cours réels) de la classe
+        sessions = Session.objects.filter(
+            timetable__classroom=current_class,
+            date__gte=start_date,
+            date__lte=end_date
+        ).select_related('timetable__subject', 'timetable__teacher__user', 'timetable__classroom')
+        
+        for session in sessions:
+            # Utiliser les propriétés du modèle Session
+            start_time = session.actual_start_time or session.timetable.start_time
+            end_time = session.actual_end_time or session.timetable.end_time
+            
+            # Calculer la durée
+            if start_time and end_time:
+                duration = int((datetime.combine(session.date, end_time) - 
+                              datetime.combine(session.date, start_time)).total_seconds() / 60)
+            else:
+                duration = 60
+            
             events.append({
-                'date': event_date,
+                'date': session.date,
+                'type': 'class',
+                'title': session.lesson_title or f"{session.subject.name}",
+                'description': f"Cours de {session.subject.name}" + (f" - {session.lesson_title}" if session.lesson_title else ""),
+                'subject': session.subject.name,
+                'time': start_time.strftime('%H:%M') if start_time else '08:00',
+                'duration': duration,
+                'importance': 'normal',
+                'teacher': session.teacher.user.get_full_name() if session.teacher else '',
+                'room': session.timetable.room or '',
+                'status': session.status
+            })
+        
+        # 2. Récupérer les documents/devoirs (type EXERCISE ou EXAM) accessibles
+        from django.db.models import Q
+        documents = Document.objects.filter(
+            Q(subject_id__in=subject_ids) | Q(is_public=True),
+            document_type__in=['EXERCISE', 'EXAM'],
+            access_date__gte=start_date,
+            access_date__lte=end_date
+        ).select_related('subject', 'teacher__user')
+        
+        for doc in documents:
+            event_type = 'exam' if doc.document_type == 'EXAM' else 'assignment'
+            importance = 'high' if doc.document_type == 'EXAM' else 'medium'
+            
+            events.append({
+                'date': doc.access_date if doc.access_date else doc.created_at.date(),
+                'type': event_type,
+                'title': doc.title,
+                'description': doc.description or f"{'Examen' if doc.document_type == 'EXAM' else 'Devoir'} de {doc.subject.name}",
+                'subject': doc.subject.name,
+                'time': '08:00',
+                'duration': 120 if doc.document_type == 'EXAM' else 60,
+                'importance': importance,
+                'teacher': doc.teacher.user.get_full_name() if doc.teacher else '',
+                'expiry_date': doc.expiry_date.strftime('%Y-%m-%d') if doc.expiry_date else None
+            })
+        
+        # 3. Récupérer les examens à venir depuis les notes
+        upcoming_exams = Grade.objects.filter(
+            student=student,
+            classroom=current_class,
+            evaluation_type__in=['EXAM', 'TEST'],
+            date__gte=start_date,
+            date__lte=end_date
+        ).select_related('subject', 'teacher')
+        
+        for exam in upcoming_exams:
+            events.append({
+                'date': exam.date,
                 'type': 'exam',
-                'title': f'Examen Mathématiques',
-                'description': 'Examen trimestriel',
-                'subject': 'Mathématiques',
+                'title': f"{exam.evaluation_name}",
+                'description': f"Examen de {exam.subject.name}",
+                'subject': exam.subject.name,
                 'time': '08:00',
                 'duration': 120,
-                'importance': 'high'
+                'importance': 'high',
+                'teacher': exam.teacher.user.get_full_name() if exam.teacher else ''
             })
         
-        if i % 5 == 3:  # Devoirs le jeudi
+        # 4. Récupérer les devoirs depuis les notes
+        upcoming_homework = Grade.objects.filter(
+            student=student,
+            classroom=current_class,
+            evaluation_type__in=['HOMEWORK', 'PROJECT'],
+            date__gte=start_date,
+            date__lte=end_date
+        ).select_related('subject', 'teacher')
+        
+        for homework in upcoming_homework:
             events.append({
-                'date': event_date,
+                'date': homework.date,
                 'type': 'assignment',
-                'title': f'Devoir Français',
-                'description': 'Rédaction à rendre',
-                'subject': 'Français',
+                'title': f"{homework.evaluation_name}",
+                'description': f"Devoir de {homework.subject.name}",
+                'subject': homework.subject.name,
                 'time': '14:00',
                 'duration': 60,
-                'importance': 'medium'
+                'importance': 'medium',
+                'teacher': homework.teacher.user.get_full_name() if homework.teacher else ''
             })
+        
+        # 5. Récupérer l'emploi du temps pour les cours réguliers (si pas de sessions)
+        timetables = Timetable.objects.filter(
+            classroom=current_class
+        ).select_related('subject', 'teacher')
+        
+        # Générer les cours réguliers uniquement pour les jours sans session
+        session_dates = {s.date for s in sessions}
+        
+        for i in range(-7, 30):  # 7 jours passés + 30 futurs
+            current_date = today + timedelta(days=i)
+            
+            # Skip si une session existe déjà pour cette date
+            if current_date in session_dates:
+                continue
+                
+            weekday = current_date.isoweekday()
+            day_courses = timetables.filter(weekday=weekday)
+            
+            for course in day_courses:
+                events.append({
+                    'date': current_date,
+                    'type': 'class',
+                    'title': f"{course.subject.name}",
+                    'description': f"Cours de {course.subject.name}",
+                    'subject': course.subject.name,
+                    'time': course.start_time.strftime('%H:%M'),
+                    'duration': int((datetime.combine(current_date, course.end_time) - 
+                                   datetime.combine(current_date, course.start_time)).total_seconds() / 60),
+                    'importance': 'normal',
+                    'teacher': course.teacher.user.get_full_name() if course.teacher else '',
+                    'room': course.room or ''
+                })
     
-    # Grouper par date
+    # Trier les événements par date
+    events.sort(key=lambda x: x['date'])
+    
+    # Grouper par date pour le calendrier JavaScript
     events_by_date = {}
     for event in events:
         date_str = event['date'].strftime('%Y-%m-%d')
@@ -2146,12 +2487,22 @@ def student_academic_calendar(request):
             events_by_date[date_str] = []
         events_by_date[date_str].append(event)
     
+    # Convertir les événements pour JSON (sérialiser les dates)
+    events_json = []
+    for event in events:
+        event_json = event.copy()
+        event_json['date'] = event['date'].strftime('%Y-%m-%d')
+        events_json.append(event_json)
+    
     context = {
         'student': student,
-        'events': events,
+        'events': events_json,
         'events_by_date': events_by_date,
         'current_month': today.strftime('%B %Y'),
-        'today': today,
+        'today': today.strftime('%Y-%m-%d'),  # Convertir today en string pour cohérence
+        'today_date': today,  # Garder l'objet date original si besoin
+        'current_class': current_class,
+        'current_year': current_year,
     }
     
     return render(request, 'accounts/student_calendar.html', context)
@@ -2214,16 +2565,26 @@ def parent_children_overview(request):
         best_grade = recent_grades.order_by('-score').first()
         worst_grade = recent_grades.order_by('score').first()
         
-        # Statistiques de présence
-        attendances = Attendance.objects.filter(
+        # Statistiques de présence (nouveau système)
+        child_summaries = DailyAttendanceSummary.objects.filter(
             student=child,
             date__gte=start_date
         )
         
         attendance_rate = 0
-        if attendances.exists():
-            present_count = attendances.filter(status='PRESENT').count()
-            attendance_rate = round((present_count / attendances.count()) * 100, 1)
+        if child_summaries.exists():
+            summary_totals = child_summaries.aggregate(
+                total_sessions=Sum('total_sessions'),
+                present_sessions=Sum('present_sessions'),
+                late_sessions=Sum('late_sessions')
+            )
+            
+            total_sessions = summary_totals.get('total_sessions', 0) or 0
+            present_sessions = summary_totals.get('present_sessions', 0) or 0
+            late_sessions = summary_totals.get('late_sessions', 0) or 0
+            
+            effective_present = present_sessions + late_sessions
+            attendance_rate = round((effective_present / total_sessions) * 100, 1) if total_sessions > 0 else 0
         
         # Situation financière
         pending_invoices = Invoice.objects.filter(
@@ -2246,11 +2607,12 @@ def parent_children_overview(request):
             subject_grades = recent_grades.filter(subject=subject)
             if subject_grades.exists():
                 subject_avg = subject_grades.aggregate(avg=Avg('score'))['avg']
+                best_grade = subject_grades.order_by('-score').first()
                 subjects_performance.append({
                     'subject': subject,
                     'average': round(subject_avg, 2),
                     'grades_count': subject_grades.count(),
-                    'best_score': subject_grades.order_by('-score').first().score,
+                    'best_score': best_grade.score if best_grade else 0,
                     'trend': 'up' if subject_avg >= 12 else 'down'
                 })
         
@@ -2329,24 +2691,41 @@ def parent_child_detail(request, child_id):
     
     average_grade = Grade.objects.filter(student=child).aggregate(avg=Avg('score'))['avg'] or 0
     
-    # Données de présence
-    all_recent_attendances = Attendance.objects.filter(
+    # Données de présence (nouveau système)
+    child_summaries = DailyAttendanceSummary.objects.filter(
         student=child,
         date__gte=month_ago
     ).order_by('-date')
     
-    # Calculer les stats avant le slicing
-    attendance_stats = {
-        'present': all_recent_attendances.filter(status='PRESENT').count(),
-        'absent': all_recent_attendances.filter(status='ABSENT').count(),
-        'late': all_recent_attendances.filter(status='LATE').count(),
-    }
-    
-    total_days = all_recent_attendances.count()
-    attendance_rate = round((attendance_stats['present'] / total_days * 100), 1) if total_days > 0 else 0
+    # Calculer les stats à partir des résumés
+    if child_summaries.exists():
+        summary_totals = child_summaries.aggregate(
+            total_sessions=Sum('total_sessions'),
+            present_sessions=Sum('present_sessions'),
+            absent_sessions=Sum('absent_sessions'),
+            late_sessions=Sum('late_sessions')
+        )
+        
+        attendance_stats = {
+            'present': summary_totals.get('present_sessions', 0) or 0,
+            'absent': summary_totals.get('absent_sessions', 0) or 0,
+            'late': summary_totals.get('late_sessions', 0) or 0,
+        }
+        
+        total_sessions = summary_totals.get('total_sessions', 0) or 0
+        total_days = child_summaries.count()
+    else:
+        attendance_stats = {
+            'present': 0,
+            'absent': 0,
+            'late': 0,
+        }
+        total_sessions = 0
+        total_days = 0
+    attendance_rate = round((attendance_stats['present'] / total_sessions * 100), 1) if total_sessions > 0 else 0
     
     # Limiter à 15 pour l'affichage
-    recent_attendances = all_recent_attendances[:15]
+    recent_summaries = child_summaries[:15]
     
     # Données financières
     pending_invoices = Invoice.objects.filter(
@@ -2385,7 +2764,7 @@ def parent_child_detail(request, child_id):
         'section': section,
         'recent_grades': recent_grades,
         'average_grade': round(average_grade, 2),
-        'recent_attendances': recent_attendances,
+        'recent_attendances': recent_summaries,
         'attendance_stats': attendance_stats,
         'attendance_rate': attendance_rate,
         'pending_invoices': pending_invoices,

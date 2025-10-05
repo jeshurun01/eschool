@@ -1,0 +1,354 @@
+{% extends 'academic/student/base_student.html' %}
+{% load academic_extras %}
+
+{% block title %}
+    Mes Documents - Interface Étudiant
+{% endblock %}
+
+{% block student_content %}
+<div class="px-4 py-6 sm:px-0">
+    <!-- En-tête -->
+    <div class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">Mes Documents de Cours</h2>
+        
+        <!-- Statistiques rapides -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="student-card bg-white rounded-lg p-4 shadow">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-blue-500 text-2xl">folder</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-500">Total documents</p>
+                        <p class="text-lg font-semibold text-gray-900">{{ total_documents|default:0 }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="student-card bg-white rounded-lg p-4 shadow">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-green-500 text-2xl">new_releases</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-500">Cette semaine</p>
+                        <p class="text-lg font-semibold text-gray-900">{{ new_documents|default:0 }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="student-card bg-white rounded-lg p-4 shadow">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-purple-500 text-2xl">class</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-500">Matières</p>
+                        <p class="text-lg font-semibold text-gray-900">{{ subjects_count|default:0 }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="student-card bg-white rounded-lg p-4 shadow">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-yellow-500 text-2xl">download</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-500">Téléchargements</p>
+                        <p class="text-lg font-semibold text-gray-900">{{ downloads_count|default:0 }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="bg-white rounded-lg shadow mb-6 p-4">
+        <form method="get" class="flex flex-wrap items-center gap-4">
+            <div class="flex-1 min-w-64">
+                <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Rechercher</label>
+                <input type="text" name="search" id="search" value="{{ request.GET.search }}" 
+                       placeholder="Titre, description..." 
+                       class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            
+            <div class="min-w-40">
+                <label for="subject" class="block text-sm font-medium text-gray-700 mb-1">Matière</label>
+                <select name="subject" id="subject" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="">Toutes les matières</option>
+                    {% for subject in subjects %}
+                        <option value="{{ subject.id }}" {% if request.GET.subject == subject.id|stringformat:"s" %}selected{% endif %}>
+                            {{ subject.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="min-w-40">
+                <label for="file_type" class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                <select name="file_type" id="file_type" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="">Tous les types</option>
+                    <option value="pdf" {% if request.GET.file_type == 'pdf' %}selected{% endif %}>PDF</option>
+                    <option value="doc" {% if request.GET.file_type == 'doc' %}selected{% endif %}>Documents Word</option>
+                    <option value="ppt" {% if request.GET.file_type == 'ppt' %}selected{% endif %}>Présentations</option>
+                    <option value="image" {% if request.GET.file_type == 'image' %}selected{% endif %}>Images</option>
+                    <option value="video" {% if request.GET.file_type == 'video' %}selected{% endif %}>Vidéos</option>
+                </select>
+            </div>
+            
+            <div class="flex items-end">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    <span class="material-icons text-sm mr-1">search</span>
+                    Filtrer
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Navigation par onglets -->
+    <div class="mb-6">
+        <nav class="flex space-x-8">
+            <a href="?tab=all{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.subject %}&subject={{ request.GET.subject }}{% endif %}" 
+               class="{% if not request.GET.tab or request.GET.tab == 'all' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %} whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                Tous les documents
+            </a>
+            <a href="?tab=recent{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.subject %}&subject={{ request.GET.subject }}{% endif %}" 
+               class="{% if request.GET.tab == 'recent' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %} whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                Récents
+            </a>
+            <a href="?tab=by_session{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.subject %}&subject={{ request.GET.subject }}{% endif %}" 
+               class="{% if request.GET.tab == 'by_session' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %} whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                Par session
+            </a>
+            <a href="?tab=favorites{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.subject %}&subject={{ request.GET.subject }}{% endif %}" 
+               class="{% if request.GET.tab == 'favorites' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %} whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                Favoris
+            </a>
+        </nav>
+    </div>
+
+    <!-- Liste des documents -->
+    {% if documents %}
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="divide-y divide-gray-200">
+                {% for document in documents %}
+                    <div class="p-6 hover:bg-gray-50 transition-colors">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start space-x-4">
+                                <!-- Icône du type de fichier -->
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 rounded-lg flex items-center justify-center
+                                              {% if document.file_type == 'pdf' %}bg-red-100
+                                              {% elif document.file_type == 'doc' or document.file_type == 'docx' %}bg-blue-100
+                                              {% elif document.file_type == 'ppt' or document.file_type == 'pptx' %}bg-orange-100
+                                              {% elif document.file_type == 'xlsx' or document.file_type == 'xls' %}bg-green-100
+                                              {% else %}bg-gray-100{% endif %}">
+                                        <span class="material-icons 
+                                                   {% if document.file_type == 'pdf' %}text-red-600
+                                                   {% elif document.file_type == 'doc' or document.file_type == 'docx' %}text-blue-600
+                                                   {% elif document.file_type == 'ppt' or document.file_type == 'pptx' %}text-orange-600
+                                                   {% elif document.file_type == 'xlsx' or document.file_type == 'xls' %}text-green-600
+                                                   {% else %}text-gray-600{% endif %}">
+                                            {% if document.file_type == 'pdf' %}picture_as_pdf
+                                            {% elif document.file_type == 'doc' or document.file_type == 'docx' %}description
+                                            {% elif document.file_type == 'ppt' or document.file_type == 'pptx' %}slideshow
+                                            {% elif document.file_type == 'xlsx' or document.file_type == 'xls' %}table_chart
+                                            {% else %}insert_drive_file{% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Informations du document -->
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center mb-2">
+                                        <h3 class="text-lg font-medium text-gray-900 truncate">{{ document.title }}</h3>
+                                        {% if document.is_new %}
+                                            <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                Nouveau
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    {% if document.description %}
+                                        <p class="text-gray-600 text-sm mb-3">{{ document.description|truncatewords:20 }}</p>
+                                    {% endif %}
+                                    
+                                    <div class="flex items-center text-sm text-gray-500 space-x-4">
+                                        <div class="flex items-center">
+                                            <span class="material-icons text-sm mr-1">class</span>
+                                            {{ document.subject.name }}
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="material-icons text-sm mr-1">person</span>
+                                            {{ document.teacher.user.get_full_name }}
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="material-icons text-sm mr-1">schedule</span>
+                                            {{ document.created_at|date:"d/m/Y H:i" }}
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="material-icons text-sm mr-1">data_usage</span>
+                                            {{ document.file_size|filesizeformat }}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Session associée -->
+                                    {% if document.session %}
+                                        <div class="mt-2">
+                                            <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                                                <span class="material-icons text-xs mr-1">event</span>
+                                                Session du {{ document.session.date|date:"d/m/Y" }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="flex-shrink-0 ml-4">
+                                <div class="flex items-center space-x-2">
+                                    <button onclick="toggleFavorite({{ document.id }})" 
+                                            class="text-gray-400 hover:text-yellow-500 p-2 rounded-md">
+                                        <span class="material-icons text-sm">
+                                            {% if document.is_favorite %}star{% else %}star_border{% endif %}
+                                        </span>
+                                    </button>
+                                    
+                                    <a href="{{ document.file.url }}" target="_blank" 
+                                       onclick="trackDownload({{ document.id }})"
+                                       class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                                        <span class="material-icons text-sm mr-1">download</span>
+                                        Télécharger
+                                    </a>
+                                    
+                                    {% if document.can_preview %}
+                                        <button onclick="previewDocument({{ document.id }})" 
+                                                class="bg-gray-50 hover:bg-gray-100 text-gray-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                                            <span class="material-icons text-sm mr-1">visibility</span>
+                                            Aperçu
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <div class="text-center py-12">
+            <span class="material-icons text-gray-300 text-6xl mb-4">folder_open</span>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun document trouvé</h3>
+            <p class="text-gray-500">
+                {% if request.GET.search or request.GET.subject or request.GET.file_type %}
+                    Essayez de modifier vos critères de recherche.
+                {% else %}
+                    Les documents partagés par vos enseignants apparaîtront ici.
+                {% endif %}
+            </p>
+        </div>
+    {% endif %}
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+        <div class="mt-8 flex justify-center">
+            <nav class="flex space-x-2">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.subject %}&subject={{ request.GET.subject }}{% endif %}{% if request.GET.file_type %}&file_type={{ request.GET.file_type }}{% endif %}{% if request.GET.tab %}&tab={{ request.GET.tab }}{% endif %}" 
+                       class="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        <span class="material-icons text-sm">first_page</span>
+                    </a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.subject %}&subject={{ request.GET.subject }}{% endif %}{% if request.GET.file_type %}&file_type={{ request.GET.file_type }}{% endif %}{% if request.GET.tab %}&tab={{ request.GET.tab }}{% endif %}" 
+                       class="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        <span class="material-icons text-sm">chevron_left</span>
+                    </a>
+                {% endif %}
+                
+                <span class="px-3 py-2 text-sm font-medium text-gray-700">
+                    Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+                </span>
+                
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.subject %}&subject={{ request.GET.subject }}{% endif %}{% if request.GET.file_type %}&file_type={{ request.GET.file_type }}{% endif %}{% if request.GET.tab %}&tab={{ request.GET.tab }}{% endif %}" 
+                       class="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        <span class="material-icons text-sm">chevron_right</span>
+                    </a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.subject %}&subject={{ request.GET.subject }}{% endif %}{% if request.GET.file_type %}&file_type={{ request.GET.file_type }}{% endif %}{% if request.GET.tab %}&tab={{ request.GET.tab }}{% endif %}" 
+                       class="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        <span class="material-icons text-sm">last_page</span>
+                    </a>
+                {% endif %}
+            </nav>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Modal d'aperçu -->
+<div id="previewModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg max-w-4xl w-full max-h-full overflow-hidden">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-medium text-gray-900">Aperçu du document</h3>
+                <button onclick="closePreview()" class="text-gray-400 hover:text-gray-600">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div id="previewContent" class="p-4 max-h-96 overflow-auto">
+                <!-- Contenu de l'aperçu -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleFavorite(documentId) {
+    // Implémenter la logique de favori
+    fetch(`/academic/student/documents/${documentId}/toggle_favorite/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+function trackDownload(documentId) {
+    // Tracker les téléchargements
+    fetch(`/academic/student/documents/${documentId}/track_download/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+    });
+}
+
+function previewDocument(documentId) {
+    // Afficher l'aperçu du document
+    document.getElementById('previewModal').classList.remove('hidden');
+    // Charger le contenu de l'aperçu
+    fetch(`/academic/student/documents/${documentId}/preview/`)
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('previewContent').innerHTML = html;
+        });
+}
+
+function closePreview() {
+    document.getElementById('previewModal').classList.add('hidden');
+}
+
+// Fermer le modal en cliquant à l'extérieur
+document.getElementById('previewModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closePreview();
+    }
+});
+</script>
+{% endblock %}

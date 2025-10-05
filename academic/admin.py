@@ -1,8 +1,9 @@
 from django.contrib import admin
 from .models import (
     AcademicYear, Level, Subject, ClassRoom, TeacherAssignment, 
-    Enrollment, Timetable, Attendance, Grade, Period,
-    Document, DocumentAccess
+    Enrollment, Timetable, Attendance, Grade, Period, Document, DocumentAccess,
+    Session, SessionAttendance, DailyAttendanceSummary, SessionDocument, 
+    SessionAssignment, SessionNote
 )
 
 
@@ -59,10 +60,59 @@ class TimetableAdmin(admin.ModelAdmin):
 
 @admin.register(Attendance)
 class AttendanceAdmin(admin.ModelAdmin):
+    """Admin temporaire pour l'ancien modèle Attendance"""
     list_display = ('student', 'date', 'status', 'subject', 'teacher')
     list_filter = ('status', 'date', 'subject', 'classroom__level')
     search_fields = ('student__user__first_name', 'student__user__last_name', 'student__matricule')
     date_hierarchy = 'date'
+
+
+@admin.register(Session)
+class SessionAdmin(admin.ModelAdmin):
+    list_display = ('timetable', 'date', 'status', 'lesson_title', 'attendance_taken')
+    list_filter = ('status', 'date', 'timetable__subject', 'timetable__classroom__level')
+    search_fields = ('lesson_title', 'timetable__classroom__name', 'timetable__subject__name')
+    date_hierarchy = 'date'
+    readonly_fields = ('attendance_rate', 'students_count', 'present_students_count')
+
+
+@admin.register(SessionAttendance)
+class SessionAttendanceAdmin(admin.ModelAdmin):
+    list_display = ('student', 'session', 'status', 'arrival_time', 'recorded_by')
+    list_filter = ('status', 'session__date', 'session__timetable__subject')
+    search_fields = ('student__user__first_name', 'student__user__last_name', 'student__matricule')
+    date_hierarchy = 'session__date'
+
+
+@admin.register(DailyAttendanceSummary)
+class DailyAttendanceSummaryAdmin(admin.ModelAdmin):
+    list_display = ('student', 'date', 'daily_status', 'attendance_rate', 'total_sessions', 'present_sessions')
+    list_filter = ('daily_status', 'date', 'student__current_class__level')
+    search_fields = ('student__user__first_name', 'student__user__last_name')
+    date_hierarchy = 'date'
+    readonly_fields = ('total_sessions', 'present_sessions', 'absent_sessions', 'late_sessions', 'attendance_rate')
+
+
+@admin.register(SessionDocument)
+class SessionDocumentAdmin(admin.ModelAdmin):
+    list_display = ('document', 'session', 'shared_by', 'is_mandatory', 'shared_at')
+    list_filter = ('is_mandatory', 'shared_at', 'session__timetable__subject')
+    search_fields = ('document__title', 'session__lesson_title')
+
+
+@admin.register(SessionAssignment)
+class SessionAssignmentAdmin(admin.ModelAdmin):
+    list_display = ('title', 'session', 'assignment_type', 'due_date', 'priority', 'will_be_graded')
+    list_filter = ('assignment_type', 'priority', 'will_be_graded', 'due_date')
+    search_fields = ('title', 'description', 'session__lesson_title')
+    date_hierarchy = 'due_date'
+
+
+@admin.register(SessionNote)
+class SessionNoteAdmin(admin.ModelAdmin):
+    list_display = ('session', 'author', 'note_type', 'title', 'is_private', 'created_at')
+    list_filter = ('note_type', 'is_private', 'visible_to_students', 'visible_to_parents')
+    search_fields = ('title', 'content', 'session__lesson_title')
 
 
 @admin.register(Grade)

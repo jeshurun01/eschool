@@ -72,7 +72,7 @@
                                     <a href="{% url 'accounts:dashboard' %}" class="text-gray-300 hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
                                         {% if user.role == 'STUDENT' %}<span class="material-icons mr-1 text-sm">dashboard</span> Mon tableau de bord
                                         {% elif user.role == 'PARENT' %}<span class="material-icons mr-1 text-sm">child_care</span> Mes enfants
-                                        {% elif user.role == 'TEACHER' %}<span class="material-icons mr-1 text-sm">menu_book</span> Mes classes
+                                        {% elif user.role == 'TEACHER' %}<span class="material-icons mr-1 text-sm">menu_book</span> Accueil
                                         {% else %}<span class="material-icons mr-1 text-sm">settings</span> Administration{% endif %}
                                     </a>
                                     
@@ -283,25 +283,8 @@
             </div>
         </nav>
 
-
-
-        <!-- Page header -->
-        <header class="bg-white shadow">
-            <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                <h1 class="text-3xl font-bold tracking-tight text-gray-900">
-                    {% block page_title %}
-                        {% if user.is_authenticated %}
-                            Bienvenue, {{ user.first_name }} !
-                        {% else %}
-                            Bienvenue sur eSchool
-                        {% endif %}
-                    {% endblock %}
-                </h1>
-            </div>
-        </header>
-
         <!-- Main content -->
-        <main>
+        <main class="mt-4">
             <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
                 <!-- Messages Django -->
                 {% if messages %}

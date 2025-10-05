@@ -1,0 +1,188 @@
+{% extends 'academic/teacher/base_teacher.html' %}
+{% load static %}
+
+{% block title %}Mes Étudiants - Interface Enseignant{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <!-- En-tête de page -->
+    <div class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div class="sm:flex-auto">
+                <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+                    <span class="material-icons text-yellow-600 mr-3">people</span>
+                    Mes Étudiants
+                </h1>
+                <p class="mt-2 text-sm text-gray-700">
+                    Vue d'ensemble de tous mes étudiants par classe
+                </p>
+            </div>
+            
+            <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'academic:teacher_sessions' %}" 
+                       class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <span class="material-icons mr-1">schedule</span>
+                        Mes sessions
+                    </a>
+                    
+                    <a href="{% url 'academic:teacher_timetable' %}" 
+                       class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <span class="material-icons mr-1">calendar_today</span>
+                        Emploi du temps
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vue d'ensemble des classes -->
+    {% if class_stats %}
+        <div class="space-y-8">
+            {% for class_stat in class_stats %}
+                <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                    <!-- En-tête de classe -->
+                    <div class="px-4 py-5 sm:px-6 bg-gradient-to-r from-blue-50 to-indigo-50">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg leading-6 font-medium text-gray-900 flex items-center">
+                                    <span class="material-icons text-blue-600 mr-2">class</span>
+                                    Classe {{ class_stat.classroom.name }}
+                                </h3>
+                                <p class="mt-1 max-w-2xl text-sm text-gray-500">
+                                    {{ class_stat.classroom.level.name }} • {{ class_stat.student_count }} étudiant{{ class_stat.student_count|pluralize }}
+                                </p>
+                            </div>
+                            
+                            <div class="flex items-center space-x-4">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-blue-600">{{ class_stat.avg_attendance_rate }}%</div>
+                                    <div class="text-xs text-gray-500">Présence moyenne</div>
+                                </div>
+                                
+                                <a href="{% url 'academic:teacher_class_detail' class_stat.classroom.pk %}" 
+                                   class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                                    <span class="material-icons mr-1">visibility</span>
+                                    Voir détails
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Statistiques de la classe -->
+                    <div class="px-4 py-5 sm:p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                            <div class="text-center">
+                                <div class="text-lg font-semibold text-gray-900">{{ class_stat.student_count }}</div>
+                                <div class="text-sm text-gray-500">Étudiants</div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <div class="text-lg font-semibold text-gray-900">{{ class_stat.recent_sessions }}</div>
+                                <div class="text-sm text-gray-500">Sessions (30j)</div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <div class="text-lg font-semibold text-gray-900">{{ class_stat.subjects.count }}</div>
+                                <div class="text-sm text-gray-500">Matière{{ class_stat.subjects.count|pluralize }}</div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <div class="text-lg font-semibold text-gray-900">{{ class_stat.avg_attendance_rate }}%</div>
+                                <div class="text-sm text-gray-500">Assiduité</div>
+                            </div>
+                        </div>
+
+                        <!-- Matières enseignées dans cette classe -->
+                        <div class="mb-4">
+                            <h4 class="text-sm font-medium text-gray-900 mb-2">Matières enseignées :</h4>
+                            <div class="flex flex-wrap gap-2">
+                                {% for subject in class_stat.subjects %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                          style="background-color: {{ subject.color }}20; color: {{ subject.color }};">
+                                        {{ subject.name }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Actions rapides pour cette classe -->
+                        <div class="flex flex-wrap gap-2">
+                            <a href="{% url 'academic:teacher_class_detail' class_stat.classroom.pk %}" 
+                               class="inline-flex items-center px-3 py-1.5 border border-blue-300 shadow-sm text-xs font-medium rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">
+                                <span class="material-icons text-sm mr-1">people</span>
+                                Liste des étudiants
+                            </a>
+                            
+                            <a href="{% url 'academic:teacher_sessions' %}?classroom={{ class_stat.classroom.pk }}" 
+                               class="inline-flex items-center px-3 py-1.5 border border-green-300 shadow-sm text-xs font-medium rounded-lg text-green-700 bg-green-50 hover:bg-green-100 transition-colors">
+                                <span class="material-icons text-sm mr-1">schedule</span>
+                                Sessions
+                            </a>
+                            
+                            <a href="{% url 'academic:teacher_sessions' %}?classroom={{ class_stat.classroom.pk }}&action=attendance" 
+                               class="inline-flex items-center px-3 py-1.5 border border-orange-300 shadow-sm text-xs font-medium rounded-lg text-orange-700 bg-orange-50 hover:bg-orange-100 transition-colors">
+                                <span class="material-icons text-sm mr-1">assignment</span>
+                                Prendre présences
+                            </a>
+                            
+                            <a href="{% url 'academic:document_list' %}?classroom={{ class_stat.classroom.pk }}" 
+                               class="inline-flex items-center px-3 py-1.5 border border-purple-300 shadow-sm text-xs font-medium rounded-lg text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors">
+                                <span class="material-icons text-sm mr-1">description</span>
+                                Documents
+                            </a>
+                            
+                            <a href="{% url 'academic:grade_list' %}?classroom={{ class_stat.classroom.pk }}" 
+                               class="inline-flex items-center px-3 py-1.5 border border-indigo-300 shadow-sm text-xs font-medium rounded-lg text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors">
+                                <span class="material-icons text-sm mr-1">grade</span>
+                                Notes
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- État vide -->
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">Aucune classe assignée</h3>
+            <p class="mt-1 text-sm text-gray-500">
+                Vous n'êtes actuellement assigné à aucune classe. Contactez l'administration pour obtenir vos assignations.
+            </p>
+            <div class="mt-6">
+                <a href="{% url 'accounts:dashboard' %}" 
+                   class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                    <span class="material-icons mr-2">dashboard</span>
+                    Retour au dashboard
+                </a>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Actions globales -->
+    {% if class_stats %}
+        <div class="mt-8 flex justify-center space-x-4">
+            <a href="{% url 'academic:teacher_sessions' %}" 
+               class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                <span class="material-icons mr-2">schedule</span>
+                Voir toutes mes sessions
+            </a>
+            
+            <a href="{% url 'academic:teacher_timetable' %}" 
+               class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                <span class="material-icons mr-2">calendar_today</span>
+                Mon emploi du temps
+            </a>
+            
+            <a href="{% url 'academic:teacher_documents' %}" 
+               class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                <span class="material-icons mr-2">folder</span>
+                Mes documents
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

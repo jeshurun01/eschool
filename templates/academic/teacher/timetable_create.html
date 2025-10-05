@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Créer un Créneau d'Emploi du Temps{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- En-tête -->
+    <div class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="py-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <a href="{% url 'academic:teacher_timetable' %}" 
+                           class="text-gray-400 hover:text-gray-600 mr-4">
+                            <span class="material-icons">arrow_back</span>
+                        </a>
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-900">Créer un Créneau d'Emploi du Temps</h1>
+                            <p class="text-gray-600">Ajouter un nouveau créneau à votre emploi du temps</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <!-- Messages d'erreur/succès -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="rounded-md p-4 {% if message.tags == 'success' %}bg-green-50 border border-green-200{% elif message.tags == 'error' %}bg-red-50 border border-red-200{% endif %}">
+                                <div class="flex">
+                                    <div class="flex-shrink-0">
+                                        {% if message.tags == 'success' %}
+                                            <span class="material-icons text-green-400">check_circle</span>
+                                        {% elif message.tags == 'error' %}
+                                            <span class="material-icons text-red-400">error</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-sm {% if message.tags == 'success' %}text-green-800{% elif message.tags == 'error' %}text-red-800{% endif %}">
+                                            {{ message }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Sélection de la matière -->
+                    <div>
+                        <label for="subject_id" class="block text-sm font-medium text-gray-700">
+                            Matière *
+                        </label>
+                        <select id="subject_id" name="subject_id" required
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                            <option value="">Sélectionnez une matière</option>
+                            {% for subject in subjects %}
+                                <option value="{{ subject.id }}">{{ subject.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Choisissez la matière à enseigner pour ce créneau
+                        </p>
+                    </div>
+
+                    <!-- Sélection de la classe -->
+                    <div>
+                        <label for="classroom_id" class="block text-sm font-medium text-gray-700">
+                            Classe *
+                        </label>
+                        <select id="classroom_id" name="classroom_id" required
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                            <option value="">Sélectionnez une classe</option>
+                            {% for classroom in classrooms %}
+                                <option value="{{ classroom.id }}">{{ classroom.name }} - {{ classroom.level.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Choisissez la classe pour ce créneau
+                        </p>
+                    </div>
+
+                    <!-- Jour de la semaine -->
+                    <div>
+                        <label for="weekday" class="block text-sm font-medium text-gray-700">
+                            Jour de la semaine *
+                        </label>
+                        <select id="weekday" name="weekday" required
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                            <option value="">Sélectionnez un jour</option>
+                            {% for value, display in weekday_choices %}
+                                <option value="{{ value }}">{{ display }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Jour de la semaine pour ce créneau
+                        </p>
+                    </div>
+
+                    <!-- Horaires -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="start_time" class="block text-sm font-medium text-gray-700">
+                                Heure de début *
+                            </label>
+                            <input type="time" id="start_time" name="start_time" required
+                                   class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                            <p class="mt-1 text-sm text-gray-500">
+                                Heure de début du créneau
+                            </p>
+                        </div>
+
+                        <div>
+                            <label for="end_time" class="block text-sm font-medium text-gray-700">
+                                Heure de fin *
+                            </label>
+                            <input type="time" id="end_time" name="end_time" required
+                                   class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                            <p class="mt-1 text-sm text-gray-500">
+                                Heure de fin du créneau
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Salle -->
+                    <div>
+                        <label for="room" class="block text-sm font-medium text-gray-700">
+                            Salle (optionnel)
+                        </label>
+                        <input type="text" id="room" name="room" 
+                               placeholder="Ex: Salle A101, Laboratoire, Bibliothèque..."
+                               class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                        <p class="mt-1 text-sm text-gray-500">
+                            Nom ou numéro de la salle où se déroule le cours
+                        </p>
+                    </div>
+
+                    <!-- Boutons d'action -->
+                    <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                        <a href="{% url 'academic:teacher_timetable' %}"
+                           class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            <span class="material-icons mr-2">cancel</span>
+                            Annuler
+                        </a>
+                        
+                        <button type="submit"
+                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                            <span class="material-icons mr-2">add_circle</span>
+                            Créer le créneau
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Aperçu des assignations -->
+        {% if assignments %}
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg font-medium text-blue-900 mb-4">Vos assignations pour cette année</h3>
+                <div class="space-y-2">
+                    {% for assignment in assignments %}
+                    <div class="flex items-center justify-between bg-white px-3 py-2 rounded-md">
+                        <div class="flex items-center">
+                            <span class="material-icons text-blue-500 mr-2">book</span>
+                            <span class="font-medium text-gray-900">{{ assignment.subject.name }}</span>
+                            <span class="mx-2 text-gray-400">•</span>
+                            <span class="text-gray-600">{{ assignment.classroom.name }}</span>
+                        </div>
+                        <span class="text-xs text-gray-500">{{ assignment.classroom.level.name }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                <p class="mt-3 text-sm text-blue-700">
+                    Vous ne pouvez créer des créneaux que pour les matières et classes qui vous sont assignées.
+                </p>
+            </div>
+        </div>
+        {% else %}
+        <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-md p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <span class="material-icons text-yellow-400">warning</span>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">Aucune assignation trouvée</h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <p>Vous n'avez pas d'assignations pour l'année courante. 
+                           Contactez l'administration pour vous assigner des matières et classes.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startTimeInput = document.getElementById('start_time');
+    const endTimeInput = document.getElementById('end_time');
+
+    // Validation des horaires
+    function validateTimes() {
+        if (startTimeInput.value && endTimeInput.value) {
+            if (startTimeInput.value >= endTimeInput.value) {
+                endTimeInput.setCustomValidity('L\'heure de fin doit être après l\'heure de début');
+            } else {
+                endTimeInput.setCustomValidity('');
+            }
+        }
+    }
+
+    startTimeInput.addEventListener('change', validateTimes);
+    endTimeInput.addEventListener('change', validateTimes);
+
+    // Valeurs par défaut
+    if (!startTimeInput.value) startTimeInput.value = '08:00';
+    if (!endTimeInput.value) endTimeInput.value = '10:00';
+});
+</script>
+{% endblock %}

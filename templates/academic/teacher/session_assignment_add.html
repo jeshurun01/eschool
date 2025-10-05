@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Créer un devoir - Session{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Breadcrumb -->
+    <nav class="mb-6 text-sm">
+        <ol class="flex items-center space-x-2 text-gray-600">
+            <li><a href="{% url 'academic:teacher_sessions' %}" class="hover:text-primary-600">Mes sessions</a></li>
+            <li><span class="mx-2">/</span></li>
+            <li><span class="mx-2">/</span></li>
+            <li><a href="{% url 'academic:teacher_session_detail' session.id %}" class="hover:text-primary-600">Session du {{ session.date }}</a></li>
+            <li><span class="mx-2">/</span></li>
+            <li class="text-gray-900 font-medium">Créer un devoir</li>
+        </ol>
+    </nav>
+
+    <!-- En-tête -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Créer un devoir</h1>
+        <p class="text-gray-600">
+            Session: {{ session.timetable.subject.name }} - {{ session.timetable.classroom.name }}
+            <span class="mx-2">•</span>
+            {{ session.date|date:"d/m/Y" }} de {{ session.start_time|time:"H:i" }} à {{ session.end_time|time:"H:i" }}
+        </p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <form method="post" action="">
+            {% csrf_token %}
+
+            <!-- Informations de base -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-info-circle text-primary-600 mr-2"></i>
+                    Informations de base
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Titre -->
+                    <div class="md:col-span-2">
+                        <label for="title" class="block text-sm font-medium text-gray-700 mb-2">
+                            Titre du devoir <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            name="title" 
+                            id="title"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            placeholder="Ex: Exercices sur les équations du second degré"
+                            required
+                        >
+                    </div>
+
+                    <!-- Type de devoir -->
+                    <div>
+                        <label for="assignment_type" class="block text-sm font-medium text-gray-700 mb-2">
+                            Type de devoir <span class="text-red-500">*</span>
+                        </label>
+                        <select 
+                            name="assignment_type" 
+                            id="assignment_type"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            required
+                        >
+                            {% for value, label in assignment_types %}
+                            <option value="{{ value }}" {% if value == 'HOMEWORK' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Priorité -->
+                    <div>
+                        <label for="priority" class="block text-sm font-medium text-gray-700 mb-2">
+                            Priorité <span class="text-red-500">*</span>
+                        </label>
+                        <select 
+                            name="priority" 
+                            id="priority"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            required
+                        >
+                            {% for value, label in priorities %}
+                            <option value="{{ value }}" {% if value == 'MEDIUM' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description et consignes -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-file-alt text-primary-600 mr-2"></i>
+                    Description et consignes
+                </h2>
+
+                <!-- Description -->
+                <div class="mb-6">
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+                        Description détaillée <span class="text-red-500">*</span>
+                    </label>
+                    <textarea 
+                        name="description" 
+                        id="description" 
+                        rows="4"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        placeholder="Décrivez le devoir en détail..."
+                        required
+                    ></textarea>
+                </div>
+
+                <!-- Instructions spécifiques -->
+                <div class="mb-6">
+                    <label for="instructions" class="block text-sm font-medium text-gray-700 mb-2">
+                        Instructions spécifiques
+                    </label>
+                    <textarea 
+                        name="instructions" 
+                        id="instructions" 
+                        rows="3"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        placeholder="Instructions particulières pour réaliser le devoir..."
+                    ></textarea>
+                </div>
+
+                <!-- Ressources nécessaires -->
+                <div class="mb-6">
+                    <label for="resources_needed" class="block text-sm font-medium text-gray-700 mb-2">
+                        Ressources nécessaires
+                    </label>
+                    <textarea 
+                        name="resources_needed" 
+                        id="resources_needed" 
+                        rows="2"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        placeholder="Ex: Manuel page 45-50, calculatrice, feuille quadrillée..."
+                    ></textarea>
+                </div>
+
+                <!-- Format de rendu -->
+                <div>
+                    <label for="submission_format" class="block text-sm font-medium text-gray-700 mb-2">
+                        Format de rendu attendu
+                    </label>
+                    <input 
+                        type="text" 
+                        name="submission_format" 
+                        id="submission_format"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        placeholder="Ex: PDF, Copie manuscrite, Fichier Word..."
+                    >
+                </div>
+            </div>
+
+            <!-- Dates et durée -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-clock text-primary-600 mr-2"></i>
+                    Dates et durée
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Date limite -->
+                    <div>
+                        <label for="due_date" class="block text-sm font-medium text-gray-700 mb-2">
+                            Date limite de rendu <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="datetime-local" 
+                            name="due_date" 
+                            id="due_date"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            required
+                        >
+                    </div>
+
+                    <!-- Durée estimée -->
+                    <div>
+                        <label for="estimated_duration" class="block text-sm font-medium text-gray-700 mb-2">
+                            Durée estimée (minutes) <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="number" 
+                            name="estimated_duration" 
+                            id="estimated_duration"
+                            min="1"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            placeholder="Ex: 60"
+                            required
+                        >
+                        <p class="mt-1 text-sm text-gray-500">Temps estimé pour réaliser le devoir</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Évaluation -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-star text-primary-600 mr-2"></i>
+                    Évaluation
+                </h2>
+
+                <!-- Sera noté -->
+                <div class="mb-4">
+                    <label class="flex items-center space-x-3">
+                        <input 
+                            type="checkbox" 
+                            name="will_be_graded" 
+                            id="will_be_graded"
+                            class="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                            onchange="toggleGradingFields()"
+                            checked
+                        >
+                        <span class="text-sm font-medium text-gray-700">Ce devoir sera noté</span>
+                    </label>
+                </div>
+
+                <div id="grading-fields" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Note maximale -->
+                    <div>
+                        <label for="max_score" class="block text-sm font-medium text-gray-700 mb-2">
+                            Note maximale
+                        </label>
+                        <input 
+                            type="number" 
+                            name="max_score" 
+                            id="max_score"
+                            step="0.01"
+                            min="0"
+                            value="20"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        >
+                    </div>
+
+                    <!-- Coefficient -->
+                    <div>
+                        <label for="coefficient" class="block text-sm font-medium text-gray-700 mb-2">
+                            Coefficient
+                        </label>
+                        <input 
+                            type="number" 
+                            name="coefficient" 
+                            id="coefficient"
+                            step="0.1"
+                            min="0.1"
+                            value="1.0"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="flex items-center justify-end space-x-4 pt-6 border-t">
+                <a 
+                    href="{% url 'academic:teacher_session_detail' session.id %}" 
+                    class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                >
+                    Annuler
+                </a>
+                <button 
+                    type="submit"
+                    class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                >
+                    <i class="fas fa-check mr-2"></i>
+                    Créer le devoir
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Définir une date par défaut (7 jours après la session)
+document.addEventListener('DOMContentLoaded', function() {
+    const sessionDate = new Date('{{ session.date|date:"Y-m-d" }}');
+    sessionDate.setDate(sessionDate.getDate() + 7);
+    sessionDate.setHours(23, 59);
+    document.getElementById('due_date').value = sessionDate.toISOString().slice(0, 16);
+});
+
+function toggleGradingFields() {
+    const willBeGraded = document.getElementById('will_be_graded').checked;
+    const gradingFields = document.getElementById('grading-fields');
+    const maxScoreInput = document.getElementById('max_score');
+    const coefficientInput = document.getElementById('coefficient');
+    
+    if (willBeGraded) {
+        gradingFields.classList.remove('opacity-50', 'pointer-events-none');
+        maxScoreInput.required = true;
+        coefficientInput.required = true;
+    } else {
+        gradingFields.classList.add('opacity-50', 'pointer-events-none');
+        maxScoreInput.required = false;
+        coefficientInput.required = false;
+    }
+}
+</script>
+{% endblock %}

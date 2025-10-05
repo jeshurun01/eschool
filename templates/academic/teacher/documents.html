@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mes documents{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- En-tête -->
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Mes documents</h1>
+            <p class="text-gray-600">Gérez vos documents pédagogiques</p>
+        </div>
+        <a href="{% url 'academic:document_add' %}" class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition flex items-center">
+            <i class="fas fa-plus mr-2"></i>
+            Nouveau document
+        </a>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Total documents</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ stats.total_documents }}</p>
+                </div>
+                <div class="p-3 bg-blue-100 rounded-lg">
+                    <i class="fas fa-file-alt text-2xl text-blue-600"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Total téléchargements</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ stats.total_downloads }}</p>
+                </div>
+                <div class="p-3 bg-green-100 rounded-lg">
+                    <i class="fas fa-download text-2xl text-green-600"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Total vues</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ stats.total_views }}</p>
+                </div>
+                <div class="p-3 bg-purple-100 rounded-lg">
+                    <i class="fas fa-eye text-2xl text-purple-600"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres et recherche -->
+    <div class="bg-white rounded-lg shadow p-4 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Recherche -->
+            <div class="md:col-span-2">
+                <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
+                <input 
+                    type="text" 
+                    name="search" 
+                    id="search"
+                    value="{{ search|default:'' }}"
+                    placeholder="Titre ou description..."
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+            </div>
+
+            <!-- Matière -->
+            <div>
+                <label for="subject" class="block text-sm font-medium text-gray-700 mb-2">Matière</label>
+                <select 
+                    name="subject" 
+                    id="subject"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                    <option value="">Toutes les matières</option>
+                    {% for subject in subjects %}
+                    <option value="{{ subject.id }}" {% if current_subject == subject.id|stringformat:"s" %}selected{% endif %}>
+                        {{ subject.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Type -->
+            <div>
+                <label for="type" class="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <select 
+                    name="type" 
+                    id="type"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                    <option value="">Tous les types</option>
+                    {% for value, label in document_types %}
+                    <option value="{{ value }}" {% if current_type == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Boutons -->
+            <div class="md:col-span-4 flex justify-end space-x-2">
+                <a href="{% url 'academic:teacher_documents' %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                    Réinitialiser
+                </a>
+                <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                    <i class="fas fa-search mr-2"></i>
+                    Rechercher
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Liste des documents -->
+    <div class="bg-white rounded-lg shadow">
+        {% if documents %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Document
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Type
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Matière
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Statistiques
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Date
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for doc in documents %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10">
+                                    <div class="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                                        <i class="fas fa-file-pdf text-blue-600"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">{{ doc.title }}</div>
+                                    {% if doc.description %}
+                                    <div class="text-sm text-gray-500 truncate max-w-md">{{ doc.description|truncatewords:10 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                {{ doc.get_document_type_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if doc.subject %}
+                            <div class="text-sm text-gray-900">{{ doc.subject.name }}</div>
+                            {% else %}
+                            <span class="text-sm text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center space-x-3 text-sm text-gray-500">
+                                <span title="Téléchargements">
+                                    <i class="fas fa-download mr-1"></i>{{ doc.download_count }}
+                                </span>
+                                <span title="Vues">
+                                    <i class="fas fa-eye mr-1"></i>{{ doc.view_count }}
+                                </span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ doc.created_at|date:"d/m/Y" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div class="flex items-center justify-end space-x-2">
+                                {% if doc.file %}
+                                <a href="{{ doc.file.url }}" target="_blank" 
+                                   class="text-blue-600 hover:text-blue-900" title="Télécharger">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'academic:document_edit' doc.id %}" class="text-gray-600 hover:text-gray-900" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'academic:document_delete' doc.id %}" class="text-red-600 hover:text-red-900" title="Supprimer"
+                                   onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce document ?');">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="px-6 py-4 border-t border-gray-200">
+            <nav class="flex items-center justify-between">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if current_subject %}&subject={{ current_subject }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}" 
+                       class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Précédent
+                    </a>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if current_subject %}&subject={{ current_subject }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}" 
+                       class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Suivant
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Page <span class="font-medium">{{ page_obj.number }}</span> sur <span class="font-medium">{{ page_obj.paginator.num_pages }}</span>
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                            {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if current_subject %}&subject={{ current_subject }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}" 
+                               class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                            {% endif %}
+                            {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if current_subject %}&subject={{ current_subject }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}" 
+                               class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                            {% endif %}
+                        </nav>
+                    </div>
+                </div>
+            </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <!-- État vide -->
+        <div class="text-center py-12">
+            <i class="fas fa-folder-open text-6xl text-gray-300 mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun document trouvé</h3>
+            <p class="text-gray-500 mb-6">
+                {% if search or current_subject or current_type %}
+                Aucun document ne correspond à vos critères de recherche.
+                {% else %}
+                Commencez par ajouter votre premier document.
+                {% endif %}
+            </p>
+            {% if search or current_subject or current_type %}
+            <a href="{% url 'academic:teacher_documents' %}" 
+               class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                <i class="fas fa-times mr-2"></i>
+                Réinitialiser les filtres
+            </a>
+            {% else %}
+            <a href="{% url 'academic:document_add' %}" 
+               class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700">
+                <i class="fas fa-plus mr-2"></i>
+                Ajouter un document
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

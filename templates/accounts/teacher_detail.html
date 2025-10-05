@@ -208,7 +208,7 @@
         Classes actuelles
       </h3>
       
-      {% if teacher.current_class_assignments %}
+      {% if teacher_assignments %}
         <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
           <table class="min-w-full divide-y divide-gray-300">
             <thead class="bg-gray-50">
@@ -220,7 +220,7 @@
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-              {% for assignment in teacher.current_class_assignments %}
+              {% for assignment in teacher_assignments %}
                 <tr class="hover:bg-gray-50">
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="flex items-center">
@@ -238,7 +238,7 @@
                     {{ assignment.hours_per_week }}h
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <a href="{% url 'academic:classroom_detail' assignment.classroom.id %}" 
+                    <a href="{% url 'academic:classroom_detail' assignment.classroom.pk %}" 
                        class="text-indigo-600 hover:text-indigo-900">Voir classe</a>
                   </td>
                 </tr>
@@ -257,7 +257,7 @@
       {% endif %}
 
       <!-- Classes en tant que professeur principal -->
-      {% if teacher.principal_classes %}
+      {% if head_classes %}
         <div class="mt-6 pt-6 border-t border-gray-200">
           <h4 class="text-md font-medium text-gray-900 mb-3 flex items-center">
             <svg class="w-4 h-4 mr-2 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
@@ -266,8 +266,8 @@
             Professeur principal
           </h4>
           <div class="flex flex-wrap gap-2">
-            {% for classroom in teacher.principal_classes %}
-              <a href="{% url 'academic:classroom_detail' classroom.id %}" 
+            {% for classroom in head_classes %}
+              <a href="{% url 'academic:classroom_detail' classroom.pk %}" 
                  class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors">
                 👑 {{ classroom.name }} ({{ classroom.level.name }})
               </a>

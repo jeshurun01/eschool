@@ -1,0 +1,374 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ session.timetable.subject.name }} - Session du {{ session.date|date:"d/m/Y" }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- En-tête -->
+    <div class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="py-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <a href="{% url 'academic:teacher_sessions' %}" 
+                           class="text-gray-400 hover:text-gray-600 mr-4">
+                            <span class="material-icons">arrow_back</span>
+                        </a>
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-900">
+                                {% if session.lesson_title %}
+                                    {{ session.lesson_title }}
+                                {% else %}
+                                    Session de {{ session.timetable.subject.name }}
+                                {% endif %}
+                            </h1>
+                            <p class="text-gray-600">
+                                {{ session.timetable.classroom.name }} - {{ session.date|date:"l d F Y" }}
+                                {{ session.timetable.start_time|time:"H:i" }} - {{ session.timetable.end_time|time:"H:i" }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-3">
+                        <a href="{% url 'academic:teacher_session_edit' session.pk %}"
+                           class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            <span class="material-icons mr-2">edit</span>
+                            Modifier
+                        </a>
+                        
+                        <a href="{% url 'academic:teacher_attendance' session.pk %}"
+                           class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                            <span class="material-icons mr-2">assignment</span>
+                            Prendre présences
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Statut de la session -->
+        <div class="bg-white shadow rounded-lg mb-6">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-2">Statut de la session</h3>
+                        <div class="flex items-center space-x-4">
+                            {% if session.status == 'COMPLETED' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                    <span class="material-icons mr-1 text-sm">check_circle</span>
+                                    Terminée
+                                </span>
+                            {% elif session.status == 'IN_PROGRESS' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                    <span class="material-icons mr-1 text-sm">play_circle</span>
+                                    En cours
+                                </span>
+                            {% elif session.status == 'SCHEDULED' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                                    <span class="material-icons mr-1 text-sm">event</span>
+                                    Planifiée
+                                </span>
+                            {% elif session.status == 'CANCELLED' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                                    <span class="material-icons mr-1 text-sm">cancel</span>
+                                    Annulée
+                                </span>
+                            {% elif session.status == 'POSTPONED' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                                    <span class="material-icons mr-1 text-sm">schedule</span>
+                                    Reportée
+                                </span>
+                            {% endif %}
+                            
+                            {% if session.attendance_taken %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                                    <span class="material-icons mr-1 text-sm">fact_check</span>
+                                    Appel effectué
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="text-right">
+                        <div class="text-sm text-gray-500">Période</div>
+                        <div class="font-medium text-gray-900">{{ session.period.name }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Colonne principale -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Informations de base -->
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Informations de la session</h3>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-start">
+                                <span class="material-icons text-blue-500 mr-3">book</span>
+                                <div class="flex-1">
+                                    <div class="text-sm text-gray-500">Matière</div>
+                                    <div class="font-medium text-gray-900">{{ session.timetable.subject.name }}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start">
+                                <span class="material-icons text-green-500 mr-3">class</span>
+                                <div class="flex-1">
+                                    <div class="text-sm text-gray-500">Classe</div>
+                                    <div class="font-medium text-gray-900">{{ session.timetable.classroom.name }}</div>
+                                </div>
+                            </div>
+                            
+                            {% if session.timetable.room %}
+                            <div class="flex items-start">
+                                <span class="material-icons text-purple-500 mr-3">room</span>
+                                <div class="flex-1">
+                                    <div class="text-sm text-gray-500">Salle</div>
+                                    <div class="font-medium text-gray-900">{{ session.timetable.room }}</div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="flex items-start">
+                                <span class="material-icons text-orange-500 mr-3">schedule</span>
+                                <div class="flex-1">
+                                    <div class="text-sm text-gray-500">Horaires</div>
+                                    <div class="font-medium text-gray-900">
+                                        {{ session.timetable.start_time|time:"H:i" }} - {{ session.timetable.end_time|time:"H:i" }}
+                                        {% if session.actual_start_time %}
+                                            <span class="text-sm text-gray-500">(Réel: {{ session.actual_start_time|time:"H:i" }} - {{ session.actual_end_time|time:"H:i" }})</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenu de la leçon -->
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Contenu de la leçon</h3>
+                        
+                        {% if session.lesson_objectives %}
+                        <div class="mb-4">
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">Objectifs</h4>
+                            <div class="text-sm text-gray-600 whitespace-pre-line">{{ session.lesson_objectives }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if session.lesson_content %}
+                        <div class="mb-4">
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">Contenu</h4>
+                            <div class="text-sm text-gray-600 whitespace-pre-line">{{ session.lesson_content }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if session.lesson_summary %}
+                        <div class="mb-4">
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">Résumé</h4>
+                            <div class="text-sm text-gray-600 whitespace-pre-line">{{ session.lesson_summary }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if not session.lesson_objectives and not session.lesson_content and not session.lesson_summary %}
+                        <p class="text-gray-500 text-sm">Aucun contenu de leçon défini</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Notes et devoirs -->
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Notes et devoirs</h3>
+                        
+                        {% if session.teacher_notes %}
+                        <div class="mb-4">
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">
+                                <span class="material-icons text-sm align-middle">note</span>
+                                Notes de l'enseignant
+                            </h4>
+                            <div class="text-sm text-gray-600 whitespace-pre-line bg-gray-50 p-3 rounded">{{ session.teacher_notes }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if session.homework_given %}
+                        <div class="mb-4">
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">
+                                <span class="material-icons text-sm align-middle">assignment</span>
+                                Devoirs donnés
+                            </h4>
+                            <div class="text-sm text-gray-600 whitespace-pre-line bg-blue-50 p-3 rounded">{{ session.homework_given }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if session.next_lesson_preparation %}
+                        <div class="mb-4">
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">
+                                <span class="material-icons text-sm align-middle">next_plan</span>
+                                Préparation prochaine leçon
+                            </h4>
+                            <div class="text-sm text-gray-600 whitespace-pre-line bg-green-50 p-3 rounded">{{ session.next_lesson_preparation }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if not session.teacher_notes and not session.homework_given and not session.next_lesson_preparation %}
+                        <p class="text-gray-500 text-sm">Aucune note ajoutée</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Colonne latérale -->
+            <div class="space-y-6">
+                <!-- Présences -->
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Présences</h3>
+                        
+                        {% if session.attendance_taken %}
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Présents</span>
+                                <span class="text-lg font-semibold text-green-600">{{ attendance_stats.present }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Absents</span>
+                                <span class="text-lg font-semibold text-red-600">{{ attendance_stats.absent }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">En retard</span>
+                                <span class="text-lg font-semibold text-yellow-600">{{ attendance_stats.late }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Excusés</span>
+                                <span class="text-lg font-semibold text-blue-600">{{ attendance_stats.excused }}</span>
+                            </div>
+                            <div class="pt-3 border-t border-gray-200">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-medium text-gray-900">Total</span>
+                                    <span class="text-lg font-bold text-gray-900">{{ attendance_stats.total }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <a href="{% url 'academic:teacher_attendance' session.pk %}"
+                           class="mt-4 w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            <span class="material-icons mr-2">edit</span>
+                            Modifier les présences
+                        </a>
+                        {% else %}
+                        <p class="text-gray-500 text-sm mb-4">L'appel n'a pas encore été fait</p>
+                        <a href="{% url 'academic:teacher_attendance' session.pk %}"
+                           class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                            <span class="material-icons mr-2">assignment</span>
+                            Prendre les présences
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Documents -->
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Documents</h3>
+                        
+                        {% if documents %}
+                        <ul class="space-y-2">
+                            {% for doc in documents %}
+                            <li class="flex items-center justify-between">
+                                <div class="flex items-center flex-1 min-w-0">
+                                    <span class="material-icons text-blue-500 mr-2 text-sm">description</span>
+                                    <span class="text-sm text-gray-900 truncate">{{ doc.document.title }}</span>
+                                </div>
+                                <a href="{{ doc.document.file.url }}" target="_blank"
+                                   class="ml-2 text-blue-600 hover:text-blue-800">
+                                    <span class="material-icons text-sm">download</span>
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-gray-500 text-sm">Aucun document partagé</p>
+                        {% endif %}
+                        
+                        <a href="{% url 'academic:teacher_session_document_add' session.id %}" 
+                           class="mt-4 w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            <span class="material-icons mr-2">add</span>
+                            Ajouter un document
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Devoirs -->
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Devoirs assignés</h3>
+                        
+                        {% if assignments %}
+                        <ul class="space-y-3">
+                            {% for assignment in assignments %}
+                            <li class="border-l-4 border-blue-500 pl-3">
+                                <div class="text-sm font-medium text-gray-900">{{ assignment.title }}</div>
+                                <div class="text-xs text-gray-500">
+                                    À rendre: {{ assignment.due_date|date:"d/m/Y" }}
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-gray-500 text-sm">Aucun devoir assigné</p>
+                        {% endif %}
+                        
+                        <a href="{% url 'academic:teacher_session_assignment_add' session.id %}" 
+                           class="mt-4 w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            <span class="material-icons mr-2">add</span>
+                            Créer un devoir
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Actions</h3>
+                        
+                        <div class="space-y-2">
+                            <a href="{% url 'academic:teacher_session_edit' session.pk %}"
+                               class="w-full flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md">
+                                <span class="material-icons mr-3">edit</span>
+                                Modifier la session
+                            </a>
+                            
+                            <button class="w-full flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md">
+                                <span class="material-icons mr-3">share</span>
+                                Partager un document
+                            </button>
+                            
+                            <button class="w-full flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md">
+                                <span class="material-icons mr-3">assignment</span>
+                                Créer un devoir
+                            </button>
+                            
+                            <button class="w-full flex items-center px-3 py-2 text-sm text-red-700 hover:bg-red-50 rounded-md">
+                                <span class="material-icons mr-3">cancel</span>
+                                Annuler la session
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

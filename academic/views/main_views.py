@@ -17,10 +17,10 @@ from core.decorators.permissions import (
     admin_required, teacher_or_student_required
 )
 
-from .models import (
+from ..models import (
     AcademicYear, Level, Subject, ClassRoom, 
     TeacherAssignment, Enrollment, Grade, Attendance, Timetable,
-    Document, DocumentAccess
+    Document, DocumentAccess, Session, SessionAttendance, DailyAttendanceSummary
 )
 from accounts.models import Teacher, Student
 
@@ -112,9 +112,9 @@ def classroom_detail(request, classroom_id):
         has_access = True
     
     # Les étudiants peuvent voir leur propre classe
-    elif user.role == 'STUDENT' and hasattr(user, 'student'):
+    elif user.role == 'STUDENT' and hasattr(user, 'student_profile'):
         student_classrooms = Enrollment.objects.filter(
-            student=user.student,
+            student=user.student_profile,
             is_active=True
         ).values_list('classroom_id', flat=True)
         has_access = classroom_id in student_classrooms
@@ -735,9 +735,9 @@ def attendance_list(request):
     if hasattr(user, 'teacher_profile') and not user.is_superuser:
         # Enseignant : uniquement ses présences
         attendances = attendances.filter(teacher=user.teacher_profile)
-    elif hasattr(user, 'student'):
+    elif hasattr(user, 'student_profile'):
         # Élève : uniquement ses propres présences
-        attendances = attendances.filter(student=user.student)
+        attendances = attendances.filter(student=user.student_profile)
     elif hasattr(user, 'parent'):
         # Parent : uniquement les présences de ses enfants
         children_ids = user.parent.students.values_list('id', flat=True)
@@ -816,9 +816,9 @@ def attendance_list(request):
         
         classrooms = classrooms.filter(id__in=classroom_ids)
         subjects = subjects.filter(id__in=subject_ids)
-    elif hasattr(user, 'student'):
+    elif hasattr(user, 'student_profile'):
         # Élève : uniquement ses classes
-        enrollment_classroom_ids = user.student.enrollments.filter(
+        enrollment_classroom_ids = user.student_profile.enrollments.filter(
             is_active=True
         ).values_list('classroom_id', flat=True)
         classrooms = classrooms.filter(id__in=enrollment_classroom_ids)
@@ -1199,13 +1199,20 @@ def grade_list(request):
         
         # Étudiants uniquement de ses classes
         students = students.filter(enrollments__classroom_id__in=classroom_ids)
-    elif hasattr(request.user, 'student'):
+    elif hasattr(request.user, 'student_profile'):
         # Élève : uniquement ses propres classes et notes
-        enrollment_classroom_ids = request.user.student.enrollments.filter(
+        enrollment_classroom_ids = request.user.student_profile.enrollments.filter(
             is_active=True
         ).values_list('classroom_id', flat=True)
         classrooms = classrooms.filter(id__in=enrollment_classroom_ids)
-        students = students.filter(id=request.user.student.id)
+        students = students.filter(id=request.user.student_profile.id)
+        
+        # Filtrer les matières : uniquement celles enseignées dans sa classe
+        subject_ids = TeacherAssignment.objects.filter(
+            classroom_id__in=enrollment_classroom_ids,
+            academic_year__is_current=True
+        ).values_list('subject_id', flat=True).distinct()
+        subjects = subjects.filter(id__in=subject_ids)
     elif hasattr(request.user, 'parent'):
         # Parent : classes et étudiants de ses enfants
         children_ids = request.user.parent.students.values_list('id', flat=True)
@@ -1215,6 +1222,13 @@ def grade_list(request):
         ).values_list('classroom_id', flat=True)
         classrooms = classrooms.filter(id__in=children_classroom_ids)
         students = students.filter(id__in=children_ids)
+        
+        # Filtrer les matières : uniquement celles enseignées dans les classes des enfants
+        subject_ids = TeacherAssignment.objects.filter(
+            classroom_id__in=children_classroom_ids,
+            academic_year__is_current=True
+        ).values_list('subject_id', flat=True).distinct()
+        subjects = subjects.filter(id__in=subject_ids)
     
     # Statistiques
     total_grades = grades.count()
@@ -1593,17 +1607,89 @@ def course_detail(request, assignment_id):
 # VUES POUR LA GESTION DES DOCUMENTS
 # ===============================
 
-@teacher_required
+@login_required
 def document_list(request):
-    """Liste des documents de l'enseignant"""
-    documents = Document.objects.filter(
-        teacher=request.user.teacher_profile
-    ).select_related('subject', 'classroom').order_by('-created_at')
+    """Liste des documents selon le rôle de l'utilisateur"""
+    from django.db.models import Q
     
-    # Filtres
+    # Filtrer selon le rôle
+    if request.user.role == 'TEACHER':
+        # Enseignant : voir ses propres documents
+        documents = Document.objects.filter(
+            teacher=request.user.teacher_profile
+        ).select_related('subject', 'classroom').order_by('-created_at')
+        
+        # Données pour les filtres (RBAC)
+        teacher_assignments = TeacherAssignment.objects.filter(
+            teacher=request.user.teacher_profile,
+            academic_year__is_current=True
+        ).select_related('classroom', 'subject')
+        
+        subjects = Subject.objects.filter(
+            id__in=teacher_assignments.values_list('subject_id', flat=True)
+        ).distinct()
+        
+        classrooms = ClassRoom.objects.filter(
+            id__in=teacher_assignments.values_list('classroom_id', flat=True)
+        ).distinct()
+        
+    elif request.user.role == 'STUDENT':
+        # Étudiant : voir les documents de ses cours (matières de sa classe)
+        try:
+            student = request.user.student_profile
+            # Récupérer l'inscription active de l'étudiant
+            active_enrollment = student.enrollments.filter(is_active=True).first()
+            
+            if active_enrollment:
+                current_classroom = active_enrollment.classroom
+                
+                # Récupérer toutes les matières enseignées dans la classe de l'étudiant
+                subject_ids = TeacherAssignment.objects.filter(
+                    classroom=current_classroom,
+                    academic_year__is_current=True
+                ).values_list('subject_id', flat=True)
+                
+                # Documents accessibles : matières de sa classe OU documents publics
+                documents = Document.objects.filter(
+                    Q(subject_id__in=subject_ids) | Q(is_public=True)
+                ).select_related('subject', 'classroom', 'teacher__user').order_by('-created_at')
+                
+                # Filtres pour étudiants : matières de sa classe
+                subjects = Subject.objects.filter(id__in=subject_ids).distinct()
+                classrooms = ClassRoom.objects.filter(id=current_classroom.id)
+            else:
+                # Pas d'inscription active : documents publics uniquement
+                documents = Document.objects.filter(
+                    is_public=True
+                ).select_related('subject', 'classroom', 'teacher__user').order_by('-created_at')
+                
+                subjects = Subject.objects.filter(document__is_public=True).distinct()
+                classrooms = ClassRoom.objects.none()
+                
+        except AttributeError as e:
+            # L'utilisateur n'a pas de profil étudiant
+            messages.error(request, "Votre compte n'est pas correctement configuré comme étudiant. Contactez l'administration.")
+            return redirect('accounts:dashboard')
+        except Exception as e:
+            # Autre erreur
+            messages.error(request, f"Erreur lors de la récupération des documents: {str(e)}")
+            import traceback
+            print(traceback.format_exc())  # Pour debug
+            documents = Document.objects.none()
+            subjects = Subject.objects.none()
+            classrooms = ClassRoom.objects.none()
+    
+    else:
+        # Autres rôles : tous les documents ou documents publics
+        documents = Document.objects.all().select_related('subject', 'classroom', 'teacher__user').order_by('-created_at')
+        subjects = Subject.objects.all()
+        classrooms = ClassRoom.objects.all()
+    
+    # Filtres communs
     subject_id = request.GET.get('subject')
     document_type = request.GET.get('type')
     classroom_id = request.GET.get('classroom')
+    search_query = request.GET.get('search')
     
     if subject_id:
         documents = documents.filter(subject_id=subject_id)
@@ -1611,20 +1697,15 @@ def document_list(request):
         documents = documents.filter(document_type=document_type)
     if classroom_id:
         documents = documents.filter(classroom_id=classroom_id)
+    if search_query:
+        documents = documents.filter(
+            Q(title__icontains=search_query) | 
+            Q(description__icontains=search_query)
+        )
     
-    # Données pour les filtres (RBAC)
-    teacher_assignments = TeacherAssignment.objects.filter(
-        teacher=request.user.teacher_profile,
-        academic_year__is_current=True
-    ).select_related('classroom', 'subject')
-    
-    subjects = Subject.objects.filter(
-        id__in=teacher_assignments.values_list('subject_id', flat=True)
-    ).distinct()
-    
-    classrooms = ClassRoom.objects.filter(
-        id__in=teacher_assignments.values_list('classroom_id', flat=True)
-    ).distinct()
+    # Calculer les statistiques
+    total_views = sum(doc.view_count for doc in documents)
+    total_downloads = sum(doc.download_count for doc in documents)
     
     context = {
         'documents': documents,
@@ -1634,6 +1715,9 @@ def document_list(request):
         'selected_subject': subject_id,
         'selected_type': document_type,
         'selected_classroom': classroom_id,
+        'search_query': search_query,
+        'total_views': total_views,
+        'total_downloads': total_downloads,
     }
     
     return render(request, 'academic/document_list.html', context)
@@ -1790,38 +1874,36 @@ def document_delete(request, document_id):
 @login_required
 def document_view(request, document_id):
     """Voir/télécharger un document"""
+    from django.db.models import Q
+    
     document = get_object_or_404(Document, id=document_id)
     
-    # Vérifier les permissions d'accès
+    # Vérifier les permissions d'accès selon le rôle
     can_access = False
     
-    if hasattr(request.user, 'teacher_profile'):
-        # Enseignants : leurs propres documents ou documents de matières qu'ils enseignent
-        if document.teacher == request.user.teacher_profile:
-            can_access = True
-        elif TeacherAssignment.objects.filter(
-            teacher=request.user.teacher_profile,
-            subject=document.subject,
-            academic_year__is_current=True
-        ).exists():
-            can_access = True
+    if request.user.role == 'TEACHER' and hasattr(request.user, 'teacher_profile'):
+        # Enseignants : leurs propres documents uniquement
+        can_access = (document.teacher == request.user.teacher_profile)
     
-    elif hasattr(request.user, 'student'):
-        # Étudiants : documents publics de leurs classes/matières
-        if document.is_public and document.is_accessible:
-            student_enrollments = request.user.student.enrollments.filter(is_active=True)
-            if document.classroom:
-                # Document spécifique à une classe
-                can_access = student_enrollments.filter(classroom=document.classroom).exists()
-            else:
-                # Document général pour la matière
-                # Vérifier si l'étudiant a cette matière (via TeacherAssignment)
-                student_classrooms = student_enrollments.values_list('classroom_id', flat=True)
-                can_access = TeacherAssignment.objects.filter(
-                    classroom_id__in=student_classrooms,
-                    subject=document.subject,
-                    academic_year__is_current=True
-                ).exists()
+    elif request.user.role == 'STUDENT' and hasattr(request.user, 'student_profile'):
+        # Étudiants : documents des matières de leur classe OU documents publics
+        student = request.user.student_profile
+        active_enrollment = student.enrollments.filter(is_active=True).first()
+        
+        if active_enrollment:
+            current_classroom = active_enrollment.classroom
+            # Matières de sa classe
+            subject_ids = TeacherAssignment.objects.filter(
+                classroom=current_classroom,
+                academic_year__is_current=True
+            ).values_list('subject_id', flat=True)
+            
+            # Document accessible si : matière de sa classe OU public
+            can_access = (document.subject_id in subject_ids) or document.is_public
+    
+    else:
+        # Autres rôles (ADMIN, etc.) : accès complet
+        can_access = True
     
     if not can_access:
         messages.error(request, "Vous n'avez pas l'autorisation d'accéder à ce document.")
@@ -1875,9 +1957,9 @@ def document_subject_list(request, subject_id):
             # Voir tous les documents de la matière
             documents = documents.select_related('teacher', 'classroom')
         
-    elif hasattr(request.user, 'student'):
+    elif hasattr(request.user, 'student_profile'):
         # Étudiants : vérifier qu'ils ont cette matière
-        student_enrollments = request.user.student.enrollments.filter(is_active=True)
+        student_enrollments = request.user.student_profile.enrollments.filter(is_active=True)
         student_classrooms = student_enrollments.values_list('classroom_id', flat=True)
         
         if TeacherAssignment.objects.filter(
@@ -1942,39 +2024,40 @@ def document_subject_list(request, subject_id):
 @login_required
 def document_detail(request, document_id):
     """Voir les détails d'un document"""
+    from django.db.models import Q
+    
     document = get_object_or_404(Document, id=document_id)
     
-    # Vérifier les permissions d'accès
+    # Vérifier les permissions d'accès selon le rôle
     can_access = False
     can_edit = False
     
-    if hasattr(request.user, 'teacher_profile'):
-        # Enseignants : leurs propres documents ou documents de matières qu'ils enseignent
+    if request.user.role == 'TEACHER' and hasattr(request.user, 'teacher_profile'):
+        # Enseignants : leurs propres documents uniquement
         if document.teacher == request.user.teacher_profile:
             can_access = True
             can_edit = True
-        elif TeacherAssignment.objects.filter(
-            teacher=request.user.teacher_profile,
-            subject=document.subject,
-            academic_year__is_current=True
-        ).exists():
-            can_access = True
     
-    elif hasattr(request.user, 'student'):
-        # Étudiants : documents publics de leurs classes/matières
-        if document.is_public and document.is_accessible:
-            student_enrollments = request.user.student.enrollments.filter(is_active=True)
-            if document.classroom:
-                # Document spécifique à une classe
-                can_access = student_enrollments.filter(classroom=document.classroom).exists()
-            else:
-                # Document général pour la matière
-                student_classrooms = student_enrollments.values_list('classroom_id', flat=True)
-                can_access = TeacherAssignment.objects.filter(
-                    classroom_id__in=student_classrooms,
-                    subject=document.subject,
-                    academic_year__is_current=True
-                ).exists()
+    elif request.user.role == 'STUDENT' and hasattr(request.user, 'student_profile'):
+        # Étudiants : documents des matières de leur classe OU documents publics
+        student = request.user.student_profile
+        active_enrollment = student.enrollments.filter(is_active=True).first()
+        
+        if active_enrollment:
+            current_classroom = active_enrollment.classroom
+            # Matières de sa classe
+            subject_ids = TeacherAssignment.objects.filter(
+                classroom=current_classroom,
+                academic_year__is_current=True
+            ).values_list('subject_id', flat=True)
+            
+            # Document accessible si : matière de sa classe OU public
+            can_access = (document.subject_id in subject_ids) or document.is_public
+    
+    else:
+        # Autres rôles (ADMIN, etc.) : accès complet
+        can_access = True
+        can_edit = True
     
     if not can_access:
         messages.error(request, "Vous n'avez pas l'autorisation d'accéder à ce document.")

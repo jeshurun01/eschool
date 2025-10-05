@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Créer une Session{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- En-tête -->
+    <div class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="py-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <a href="{% url 'academic:teacher_sessions' %}" 
+                           class="text-gray-400 hover:text-gray-600 mr-4">
+                            <span class="material-icons">arrow_back</span>
+                        </a>
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-900">Créer une Session</h1>
+                            <p class="text-gray-600">Planifier une nouvelle session de cours</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <!-- Messages d'erreur/succès -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="rounded-md p-4 {% if message.tags == 'success' %}bg-green-50 border border-green-200{% elif message.tags == 'error' %}bg-red-50 border border-red-200{% endif %}">
+                                <div class="flex">
+                                    <div class="flex-shrink-0">
+                                        {% if message.tags == 'success' %}
+                                            <span class="material-icons text-green-400">check_circle</span>
+                                        {% elif message.tags == 'error' %}
+                                            <span class="material-icons text-red-400">error</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-sm {% if message.tags == 'success' %}text-green-800{% elif message.tags == 'error' %}text-red-800{% endif %}">
+                                            {{ message }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Sélection du créneau -->
+                    <div>
+                        <label for="timetable_id" class="block text-sm font-medium text-gray-700">
+                            Créneau d'emploi du temps *
+                        </label>
+                        <select id="timetable_id" name="timetable_id" required
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                            <option value="">Sélectionnez un créneau</option>
+                            {% for timetable in timetables %}
+                                <option value="{{ timetable.id }}" 
+                                        data-subject="{{ timetable.subject.name }}"
+                                        data-classroom="{{ timetable.classroom.name }}"
+                                        data-time="{{ timetable.start_time|time:'H:i' }} - {{ timetable.end_time|time:'H:i' }}"
+                                        data-weekday="{{ timetable.get_weekday_display }}">
+                                    {{ timetable.get_weekday_display }} {{ timetable.start_time|time:"H:i" }}-{{ timetable.end_time|time:"H:i" }} | 
+                                    {{ timetable.subject.name }} - {{ timetable.classroom.name }}
+                                </option>
+                            {% empty %}
+                                <option value="" disabled>Aucun créneau d'emploi du temps trouvé</option>
+                            {% endfor %}
+                        </select>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Choisissez le créneau d'emploi du temps pour cette session
+                        </p>
+                    </div>
+
+                    <!-- Aperçu du créneau sélectionné -->
+                    <div id="timetable-preview" class="hidden bg-blue-50 border border-blue-200 rounded-md p-4">
+                        <h3 class="text-sm font-medium text-blue-800 mb-2">Aperçu du créneau sélectionné :</h3>
+                        <div class="grid grid-cols-2 gap-4 text-sm text-blue-700">
+                            <div>
+                                <span class="font-medium">Matière :</span>
+                                <span id="preview-subject">-</span>
+                            </div>
+                            <div>
+                                <span class="font-medium">Classe :</span>
+                                <span id="preview-classroom">-</span>
+                            </div>
+                            <div>
+                                <span class="font-medium">Jour :</span>
+                                <span id="preview-weekday">-</span>
+                            </div>
+                            <div>
+                                <span class="font-medium">Heure :</span>
+                                <span id="preview-time">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Date de la session -->
+                    <div>
+                        <label for="date" class="block text-sm font-medium text-gray-700">
+                            Date de la session *
+                        </label>
+                        <input type="date" id="date" name="date" required
+                               min="{{ today|date:'Y-m-d' }}"
+                               class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                        <p class="mt-1 text-sm text-gray-500">
+                            Date à laquelle la session aura lieu
+                        </p>
+                    </div>
+
+                    <!-- Notes -->
+                    <div>
+                        <label for="notes" class="block text-sm font-medium text-gray-700">
+                            Notes (optionnel)
+                        </label>
+                        <textarea id="notes" name="notes" rows="4"
+                                  placeholder="Notes ou commentaires sur cette session..."
+                                  class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></textarea>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Vous pouvez ajouter des notes ou commentaires pour cette session
+                        </p>
+                    </div>
+
+                    <!-- Boutons d'action -->
+                    <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                        <a href="{% url 'academic:teacher_sessions' %}"
+                           class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            <span class="material-icons mr-2">cancel</span>
+                            Annuler
+                        </a>
+                        
+                        <button type="submit"
+                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                            <span class="material-icons mr-2">add_circle</span>
+                            Créer la session
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Information sur les créneaux -->
+        {% if not timetables %}
+        <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-md p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <span class="material-icons text-yellow-400">warning</span>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">Aucun créneau d'emploi du temps</h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <p>Vous n'avez pas encore de créneaux d'emploi du temps configurés. 
+                           Vous devez d'abord créer vos créneaux d'emploi du temps pour pouvoir planifier des sessions.</p>
+                    </div>
+                    <div class="mt-3">
+                        <a href="{% url 'academic:teacher_timetable' %}"
+                           class="text-sm font-medium text-yellow-800 hover:text-yellow-900">
+                            Gérer l'emploi du temps →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const timetableSelect = document.getElementById('timetable_id');
+    const preview = document.getElementById('timetable-preview');
+    const previewSubject = document.getElementById('preview-subject');
+    const previewClassroom = document.getElementById('preview-classroom');
+    const previewWeekday = document.getElementById('preview-weekday');
+    const previewTime = document.getElementById('preview-time');
+
+    timetableSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        
+        if (selectedOption.value) {
+            // Afficher l'aperçu
+            preview.classList.remove('hidden');
+            
+            // Remplir les informations
+            previewSubject.textContent = selectedOption.dataset.subject || '-';
+            previewClassroom.textContent = selectedOption.dataset.classroom || '-';
+            previewWeekday.textContent = selectedOption.dataset.weekday || '-';
+            previewTime.textContent = selectedOption.dataset.time || '-';
+        } else {
+            // Masquer l'aperçu
+            preview.classList.add('hidden');
+        }
+    });
+
+    // Définir la date par défaut à aujourd'hui
+    const dateInput = document.getElementById('date');
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.value = today;
+});
+</script>
+{% endblock %}

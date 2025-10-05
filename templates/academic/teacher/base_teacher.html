@@ -1,0 +1,33 @@
+{% extends 'base_with_sidebar.html' %}
+{% load academic_extras %}
+
+{% block title %}
+    {{ title|default:"Interface Enseignant" }} - eSchool
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .teacher-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid #059669;
+    }
+    .teacher-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .session-status-active { background-color: #10b981; color: white; }
+    .session-status-completed { background-color: #6b7280; color: white; }
+    .session-status-upcoming { background-color: #3b82f6; color: white; }
+    .session-status-cancelled { background-color: #ef4444; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+    {% block teacher_content %}
+    <!-- Le contenu spécifique de chaque page enseignant va ici -->
+    {% endblock %}
+{% endblock %}
+
+{% block extra_js %}
+{% endblock %}

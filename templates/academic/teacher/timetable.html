@@ -1,0 +1,246 @@
+{% extends 'academic/teacher/base_teacher.html' %}
+{% load static %}
+{% load academic_extras %}
+
+{% block title %}Mon Emploi du Temps - Interface Enseignant{% endblock %}
+
+{% block teacher_content %}
+<!-- En-tête de page -->
+<div class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div class="sm:flex-auto">
+                <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+                    <span class="material-icons text-green-600 mr-3">schedule</span>
+                    Mon Emploi du Temps
+                </h1>
+                <p class="mt-2 text-sm text-gray-700">
+                    Vue hebdomadaire de mes créneaux d'enseignement
+                </p>
+            </div>
+            
+            <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+                <div class="flex items-center space-x-3">
+                    <!-- Bouton Ajouter un créneau -->
+                    <a href="{% url 'academic:teacher_timetable_create' %}" 
+                       class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                        <span class="material-icons mr-2">add</span>
+                        Ajouter un créneau
+                    </a>
+                    
+                    <!-- Navigation semaine précédente/suivante -->
+                    <a href="?week={{ previous_week|date:'Y-m-d' }}" 
+                       class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <span class="material-icons mr-1">chevron_left</span>
+                        Précédent
+                    </a>
+                    
+                    <span class="px-4 py-2 text-sm font-medium text-gray-900 bg-gray-100 rounded-md">
+                        Semaine du {{ current_week|date:"d/m/Y" }}
+                    </span>
+                    
+                    <a href="?week={{ next_week|date:'Y-m-d' }}" 
+                       class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Suivant
+                        <span class="material-icons ml-1">chevron_right</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-blue-600">schedule</span>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Heures cette semaine</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ weekly_stats.total_hours|default:0 }}h</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-green-600">class</span>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Classes différentes</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ weekly_stats.different_classes|default:0 }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-purple-600">subject</span>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Matières enseignées</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ weekly_stats.different_subjects|default:0 }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="material-icons text-indigo-600">event</span>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Sessions programmées</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ weekly_stats.total_sessions|default:0 }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emploi du temps -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="overflow-x-auto">
+                <div class="min-w-full">
+                    <!-- En-tête avec les jours -->
+                    <div class="grid grid-cols-6 gap-4 mb-6">
+                        <div class="font-semibold text-gray-900 text-center py-3">
+                            Horaires
+                        </div>
+                        {% for day in week_days %}
+                            <div class="font-semibold text-gray-900 text-center py-3 {% if day.is_today %}bg-blue-50 rounded-lg{% endif %}">
+                                <div class="text-sm text-gray-500">{{ day.name }}</div>
+                                <div class="text-lg font-bold text-gray-900 mt-1">{{ day.date|date:"d/m" }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Grille des créneaux -->
+                    {% for time_slot in time_slots %}
+                        <div class="grid grid-cols-6 gap-4 mb-4 min-h-24">
+                            <!-- Colonne horaire -->
+                            <div class="flex flex-col justify-center items-center border-r border-gray-200 pr-4">
+                                <div class="font-semibold">{{ time_slot.start_time|time:"H:i" }}</div>
+                                <div class="text-xs text-gray-500">{{ time_slot.end_time|time:"H:i" }}</div>
+                            </div>
+
+                            <!-- Colonnes des jours -->
+                            {% for day in week_days %}
+                                <div class="min-h-24 border border-gray-200 rounded-lg p-2 {% if day.is_today %}bg-blue-50{% endif %}">
+                                    {% with timetable=timetable_grid|get_item:day.weekday|get_item:time_slot.time_key %}
+                                        {% if timetable %}
+                                            <a href="{% url 'academic:teacher_timetable_detail' timetable.id %}" 
+                                               class="block h-full rounded-md p-2 text-white text-xs relative overflow-hidden hover:opacity-90 transition-opacity cursor-pointer"
+                                               style="background-color: {{ timetable.subject.color }};">
+                                                <div class="font-semibold truncate">
+                                                    {{ timetable.subject.name }}
+                                                </div>
+                                                <div class="text-xs opacity-90 truncate">
+                                                    {{ timetable.classroom.name }}
+                                                </div>
+                                                {% if timetable.room %}
+                                                    <div class="text-xs opacity-75 truncate">
+                                                        {{ timetable.room }}
+                                                    </div>
+                                                {% endif %}
+                                                
+                                                <!-- Sessions associées -->
+                                                {% with session=sessions_by_timetable|get_item:timetable.pk %}
+                                                    {% if session %}
+                                                        <div class="mt-1">
+                                                            {% if session.status == 'completed' %}
+                                                                <span class="inline-flex items-center px-1 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                                    <span class="material-icons text-xs mr-1">check_circle</span>
+                                                                    Terminé
+                                                                </span>
+                                                            {% elif session.status == 'in_progress' %}
+                                                                <span class="inline-flex items-center px-1 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                                    <span class="material-icons text-xs mr-1">play_circle</span>
+                                                                    En cours
+                                                                </span>
+                                                            {% elif session.status == 'cancelled' %}
+                                                                <span class="inline-flex items-center px-1 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                                                    <span class="material-icons text-xs mr-1">cancel</span>
+                                                                    Annulé
+                                                                </span>
+                                                            {% endif %}
+                                                        </div>
+                                                        
+                                                        <!-- Actions rapides -->
+                                                        <div class="absolute top-1 right-1">
+                                                            <a href="{% url 'academic:teacher_session_detail' session.pk %}" 
+                                                               class="text-white hover:text-gray-200" title="Voir session"
+                                                               onclick="event.stopPropagation();">
+                                                                <span class="material-icons text-sm">visibility</span>
+                                                            </a>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endwith %}
+                                            </a>
+                                        {% endif %}
+                                    {% endwith %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Légende -->
+    <div class="mt-8 bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Légende</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="flex items-center">
+                <div class="w-4 h-4 bg-green-500 rounded mr-2"></div>
+                <span class="text-sm text-gray-700">Session terminée</span>
+            </div>
+            <div class="flex items-center">
+                <div class="w-4 h-4 bg-yellow-500 rounded mr-2"></div>
+                <span class="text-sm text-gray-700">Session en cours</span>
+            </div>
+            <div class="flex items-center">
+                <div class="w-4 h-4 bg-red-500 rounded mr-2"></div>
+                <span class="text-sm text-gray-700">Session annulée</span>
+            </div>
+            <div class="flex items-center">
+                <div class="w-4 h-4 bg-blue-100 border-2 border-blue-300 rounded mr-2"></div>
+                <span class="text-sm text-gray-700">Aujourd'hui</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="mt-8 flex justify-center space-x-4">
+        <a href="{% url 'academic:teacher_sessions' %}" 
+           class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+            <span class="material-icons mr-2">list</span>
+            Voir toutes mes sessions
+        </a>
+        
+        <a href="{% url 'academic:teacher_students' %}" 
+           class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            <span class="material-icons mr-2">people</span>
+            Mes étudiants
+        </a>
+    </div>
+{% endblock %}

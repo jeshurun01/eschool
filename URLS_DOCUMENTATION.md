@@ -161,6 +161,27 @@ Cette documentation liste toutes les URLs disponibles dans l'application eSchool
 | `/academic/documents/<document_id>/view/` | `academic:document_view` | Voir un document |
 | `/academic/documents/subject/<subject_id>/` | `academic:document_subject_list` | Documents d'une matière |
 
+### 🎓 Interface Étudiant (Nouvellement Améliorée - Oct 2025)
+| URL | Nom | Description | Design |
+|-----|-----|-------------|--------|
+| `/academic/student/sessions/` | `academic:student_sessions` | Mes sessions de cours | ✅ Cartes bleues, filtres avancés |
+| `/academic/student/session/<session_id>/` | `academic:student_session_detail` | Détails d'une session | Avec documents et devoirs |
+| `/academic/student/assignments/` | `academic:student_assignments` | Mes devoirs | ✅ Cartes violettes, dates limites |
+| `/academic/student/documents/` | `academic:student_documents` | Mes documents | Filtrés par matières de classe |
+| `/academic/student/attendance/` | `academic:student_attendance` | Mes présences | Statistiques et historique |
+| `/academic/student/grades/` | `academic:student_grades` | Mes notes | Par matière et période |
+| `/academic/student/timetable/` | `academic:student_timetable` | Mon emploi du temps | Vue hebdomadaire |
+| `/accounts/student/academic-calendar/` | `accounts:student_academic_calendar` | Mon calendrier | ✅ Sessions, devoirs, examens |
+
+**Améliorations Octobre 2025** :
+- ✅ Navigation unifiée avec sidebar latérale
+- ✅ Corrections des accès aux données (`.student_profile`)
+- ✅ Filtrage automatique par classe et matières
+- ✅ Design moderne avec Tailwind CSS
+- ✅ Statistiques et cartes visuelles
+- ✅ Filtres de recherche et tri avancés
+- ✅ Gestion correcte des dates (datetime vs date)
+
 ### 📋 Bulletins et Rapports
 | URL | Nom | Description |
 |-----|-----|-------------|

@@ -1,0 +1,280 @@
+{% extends 'academic/student/base_student.html' %}
+{% load academic_extras %}
+
+{% block title %}
+    Mon Emploi du Temps - Interface Étudiant
+{% endblock %}
+
+{% block student_content %}
+<div class="px-4 py-6 sm:px-0">
+    <!-- En-tête avec navigation semaine -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-2xl font-bold text-gray-900">Mon Emploi du Temps</h2>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center bg-white rounded-lg shadow-sm">
+                    <a href="?week={{ prev_week.isoformat }}" 
+                       class="p-2 text-gray-400 hover:text-gray-600 border-r border-gray-200">
+                        <span class="material-icons">chevron_left</span>
+                    </a>
+                    <div class="px-4 py-2 text-sm font-medium text-gray-900">
+                        Semaine du {{ current_week|date:"d/m/Y" }}
+                    </div>
+                    <a href="?week={{ next_week.isoformat }}" 
+                       class="p-2 text-gray-400 hover:text-gray-600 border-l border-gray-200">
+                        <span class="material-icons">chevron_right</span>
+                    </a>
+                </div>
+                
+                <a href="{% url 'academic:student_timetable' %}" 
+                   class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
+                    <span class="material-icons text-sm mr-1">today</span>
+                    Semaine actuelle
+                </a>
+            </div>
+        </div>
+        
+        <!-- Informations de classe -->
+        <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <span class="material-icons text-indigo-600 text-2xl mr-3">class</span>
+                    <div>
+                        <h3 class="font-semibold text-gray-900">{{ user.student_profile.current_class.name }}</h3>
+                        <p class="text-gray-600 text-sm">{{ user.student_profile.current_class.level.name }} - {{ user.student_profile.current_class.academic_year.name }}</p>
+                    </div>
+                </div>
+                <div class="text-right text-sm text-gray-500">
+                    <p>{{ total_hours_week }} heures cette semaine</p>
+                    <p>{{ total_sessions_week }} sessions programmées</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grille de l'emploi du temps -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                            Horaires
+                        </th>
+                        {% for day in days %}
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <div>{{ day.name }}</div>
+                                <div class="text-lg font-bold text-gray-900 mt-1">{{ day.date|date:"d/m" }}</div>
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for time_slot in time_slots %}
+                        <tr class="{% cycle 'bg-white' 'bg-gray-50' %}">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200">
+                                <div class="text-center">
+                                    <div class="font-semibold">{{ time_slot.start_time|time:"H:i" }}</div>
+                                    <div class="text-xs text-gray-500">{{ time_slot.end_time|time:"H:i" }}</div>
+                                </div>
+                            </td>
+                            {% for day in days %}
+                                <td class="px-2 py-4 text-center align-top">
+                                    {% with session=timetable_grid|get_item:day.weekday|get_item:time_slot.time_key %}
+                                        {% if session %}
+                                            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer session-card"
+                                                 onclick="showSessionDetails('{{ session.id }}')">
+                                                <div class="font-semibold text-sm mb-1">{{ session.timetable.subject.name }}</div>
+                                                <div class="text-xs opacity-90 mb-2">{{ session.timetable.teacher.user.get_full_name }}</div>
+                                                <div class="text-xs opacity-75 flex items-center justify-center">
+                                                    <span class="material-icons text-xs mr-1">location_on</span>
+                                                    {{ session.timetable.classroom.name }}
+                                                </div>
+                                                
+                                                <!-- Indicateur de statut -->
+                                                <div class="mt-2 flex justify-center">
+                                                    {% if session.status == 'completed' %}
+                                                        {% with attendance=session|get_student_attendance:user.student_profile %}
+                                                            {% if attendance %}
+                                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium
+                                                                           {% if attendance.status == 'present' %}bg-green-200 text-green-800
+                                                                           {% elif attendance.status == 'late' %}bg-yellow-200 text-yellow-800
+                                                                           {% else %}bg-red-200 text-red-800{% endif %}">
+                                                                    {% if attendance.status == 'present' %}P
+                                                                    {% elif attendance.status == 'late' %}R
+                                                                    {% else %}A{% endif %}
+                                                                </span>
+                                                            {% endif %}
+                                                        {% endwith %}
+                                                    {% elif session.status == 'cancelled' %}
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-200 text-red-800">
+                                                            Annulé
+                                                        </span>
+                                                    {% elif session.status == 'in_progress' %}
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-200 text-blue-800">
+                                                            En cours
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Légende -->
+    <div class="mt-6 bg-white rounded-lg shadow p-4">
+        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+            <span class="material-icons mr-2">info</span>
+            Légende
+        </h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div class="flex items-center">
+                <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                <span class="text-gray-700">P = Présent(e)</span>
+            </div>
+            <div class="flex items-center">
+                <span class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
+                <span class="text-gray-700">R = Retard</span>
+            </div>
+            <div class="flex items-center">
+                <span class="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+                <span class="text-gray-700">A = Absent(e)</span>
+            </div>
+            <div class="flex items-center">
+                <span class="w-3 h-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full mr-2"></span>
+                <span class="text-gray-700">Session programmée</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sessions du jour (si c'est aujourd'hui) -->
+    {% if today_sessions %}
+        <div class="mt-6 bg-blue-50 rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <span class="material-icons mr-2 text-blue-600">today</span>
+                Mes sessions d'aujourd'hui
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for session in today_sessions %}
+                    <div class="bg-white rounded-lg p-4 shadow-sm border-l-4 border-blue-500">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-gray-900">{{ session.timetable.subject.name }}</h4>
+                                <p class="text-sm text-gray-600 mb-2">{{ session.timetable.teacher.user.get_full_name }}</p>
+                                <div class="flex items-center text-sm text-gray-500 mb-2">
+                                    <span class="material-icons text-sm mr-1">schedule</span>
+                                    {{ session.timetable.start_time }} - {{ session.timetable.end_time }}
+                                </div>
+                                <div class="flex items-center text-sm text-gray-500">
+                                    <span class="material-icons text-sm mr-1">location_on</span>
+                                    {{ session.timetable.classroom.name }}
+                                </div>
+                            </div>
+                            <a href="{% url 'academic:student_session_detail' session.id %}" 
+                               class="text-blue-600 hover:text-blue-800">
+                                <span class="material-icons text-sm">arrow_forward</span>
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Actions rapides -->
+    <div class="mt-6 flex flex-wrap gap-4">
+        <button onclick="printTimetable()" 
+                class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium">
+            <span class="material-icons text-sm mr-2">print</span>
+            Imprimer
+        </button>
+        <button onclick="exportTimetable()" 
+                class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-4 py-2 rounded-md text-sm font-medium">
+            <span class="material-icons text-sm mr-2">get_app</span>
+            Exporter
+        </button>
+        <a href="{% url 'academic:student_sessions' %}" 
+           class="bg-purple-100 hover:bg-purple-200 text-purple-700 px-4 py-2 rounded-md text-sm font-medium">
+            <span class="material-icons text-sm mr-2">list</span>
+            Voir toutes les sessions
+        </a>
+    </div>
+</div>
+
+<!-- Modal pour les détails de session -->
+<div id="sessionModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg max-w-lg w-full p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Détails de la session</h3>
+                <button onclick="closeSessionModal()" class="text-gray-400 hover:text-gray-600">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div id="sessionModalContent">
+                <!-- Contenu chargé dynamiquement -->
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button onclick="closeSessionModal()" 
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium">
+                    Fermer
+                </button>
+                <a id="sessionDetailLink" href="#" 
+                   class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    Voir détails complets
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showSessionDetails(sessionId) {
+    // Afficher le modal avec les détails de la session
+    document.getElementById('sessionModal').classList.remove('hidden');
+    document.getElementById('sessionDetailLink').href = `/academic/student/session/${sessionId}/`;
+    
+    // Charger le contenu via AJAX (optionnel)
+    // fetch(`/academic/session/${sessionId}/details/`)
+    //     .then(response => response.json())
+    //     .then(data => {
+    //         document.getElementById('sessionModalContent').innerHTML = data.html;
+    //     });
+}
+
+function closeSessionModal() {
+    document.getElementById('sessionModal').classList.add('hidden');
+}
+
+function printTimetable() {
+    window.print();
+}
+
+function exportTimetable() {
+    // Fonction d'export (à implémenter selon les besoins)
+    alert('Fonction d\'export à implémenter');
+}
+
+// Gestion des clics en dehors du modal
+document.getElementById('sessionModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeSessionModal();
+    }
+});
+</script>
+
+<style>
+@media print {
+    .no-print { display: none !important; }
+    .session-card { break-inside: avoid; }
+    body { font-size: 12px; }
+}
+</style>
+{% endblock %}
