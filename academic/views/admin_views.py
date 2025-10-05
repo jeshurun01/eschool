@@ -66,9 +66,9 @@ def admin_dashboard_overview(request):
     ).aggregate(
         avg_attendance_rate=Avg('attendance_rate'),
         total_student_days=Count('id'),
-        total_present=Count('id', filter=Q(status='PRESENT')),
-        total_absent=Count('id', filter=Q(status='ABSENT')),
-        total_late=Count('id', filter=Q(status='LATE'))
+        total_present=Count('id', filter=Q(daily_status='PRESENT')),
+        total_absent=Count('id', filter=Q(daily_status='ABSENT')),
+        total_late=Count('id', filter=Q(daily_status='LATE'))
     )
     
     # Sessions d'aujourd'hui
@@ -514,10 +514,10 @@ def admin_export_attendance_csv(request):
             summary.student.user.first_name,
             summary.student.matricule,
             summary.student.current_class.name if summary.student.current_class else '',
-            summary.get_status_display(),
+            summary.get_daily_status_display(),
             f"{summary.attendance_rate:.1f}%",
             summary.total_sessions,
-            summary.attended_sessions,
+            summary.present_sessions,
         ])
     
     return response

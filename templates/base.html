@@ -91,9 +91,36 @@
                                         <a href="{% url 'academic:classroom_list' %}" class="text-gray-300 hover:bg-purple-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">meeting_room</span> Classes</a>
                                     {% elif user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
                                         <a href="{% url 'academic:classroom_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">meeting_room</span> Classes</a>
-                                        <a href="{% url 'accounts:student_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">school</span> Élèves</a>
-                                        <a href="{% url 'accounts:teacher_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">person</span> Enseignants</a>
-                                        <a href="{% url 'accounts:parent_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">family_restroom</span> Parents</a>
+                                        
+                                        <!-- Dropdown Utilisateurs -->
+                                        <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                                            <button @click="open = !open" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                                <span class="material-icons mr-1 text-sm">groups</span> Utilisateurs
+                                                <svg class="ml-1 h-4 w-4" :class="{'rotate-180': open}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+                                            
+                                            <div x-show="open" 
+                                                 x-transition:enter="transition ease-out duration-200" 
+                                                 x-transition:enter-start="opacity-0 scale-95" 
+                                                 x-transition:enter-end="opacity-100 scale-100" 
+                                                 x-transition:leave="transition ease-in duration-75" 
+                                                 x-transition:leave-start="opacity-100 scale-100" 
+                                                 x-transition:leave-end="opacity-0 scale-95"
+                                                 class="absolute left-0 z-50 mt-2 w-48 origin-top-left rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none" style="display: none;">
+                                                <a href="{% url 'accounts:student_list' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 flex items-center">
+                                                    <span class="material-icons mr-2 text-sm">school</span> Élèves
+                                                </a>
+                                                <a href="{% url 'accounts:teacher_list' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 flex items-center">
+                                                    <span class="material-icons mr-2 text-sm">person</span> Enseignants
+                                                </a>
+                                                <a href="{% url 'accounts:parent_list' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 flex items-center">
+                                                    <span class="material-icons mr-2 text-sm">family_restroom</span> Parents
+                                                </a>
+                                            </div>
+                                        </div>
+                                        
                                         <a href="{% url 'finance:invoice_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">account_balance</span> Finances</a>
                                     {% endif %}
                                     
@@ -239,9 +266,31 @@
                         <a href="{% url 'academic:classroom_list' %}" class="text-white hover:bg-purple-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">meeting_room</span> Classes</a>
                     {% elif user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
                         <a href="{% url 'academic:classroom_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">meeting_room</span> Classes</a>
-                        <a href="{% url 'accounts:student_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">school</span> Élèves</a>
-                        <a href="{% url 'accounts:teacher_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">person</span> Enseignants</a>
-                        <a href="{% url 'accounts:parent_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">family_restroom</span> Parents</a>
+                        
+                        <!-- Dropdown Utilisateurs Mobile -->
+                        <div x-data="{ open: false }">
+                            <button @click="open = !open" class="text-white hover:bg-indigo-700 w-full text-left px-3 py-2 rounded-md text-base font-medium flex items-center justify-between">
+                                <span class="flex items-center">
+                                    <span class="material-icons mr-2 text-sm">groups</span> Utilisateurs
+                                </span>
+                                <svg class="h-5 w-5" :class="{'rotate-180': open}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            
+                            <div x-show="open" x-transition class="pl-6 space-y-1">
+                                <a href="{% url 'accounts:student_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                    <span class="material-icons mr-2 text-sm">school</span> Élèves
+                                </a>
+                                <a href="{% url 'accounts:teacher_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                    <span class="material-icons mr-2 text-sm">person</span> Enseignants
+                                </a>
+                                <a href="{% url 'accounts:parent_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                    <span class="material-icons mr-2 text-sm">family_restroom</span> Parents
+                                </a>
+                            </div>
+                        </div>
+                        
                         <a href="{% url 'finance:invoice_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">account_balance</span> Finances</a>
                     {% endif %}
                     

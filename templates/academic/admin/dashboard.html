@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tableau de Bord - Administration - eSchool{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- En-tête -->
+    <div class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Tableau de Bord Administration</h1>
+                    <p class="text-gray-600 mt-1">Vue d'ensemble de l'établissement</p>
+                </div>
+                <div>
+                    <form method="GET" class="flex items-center space-x-2">
+                        <label for="period" class="text-sm text-gray-600">Période :</label>
+                        <select name="period" id="period" class="px-3 py-2 border border-gray-300 rounded-md" onchange="this.form.submit()">
+                            <option value="7" {% if period_days == 7 %}selected{% endif %}>7 jours</option>
+                            <option value="30" {% if period_days == 30 %}selected{% endif %}>30 jours</option>
+                            <option value="90" {% if period_days == 90 %}selected{% endif %}>90 jours</option>
+                        </select>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Statistiques globales -->
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                        <span class="material-icons">school</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Élèves</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ global_stats.total_students }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-100 text-green-600">
+                        <span class="material-icons">person</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Enseignants</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ global_stats.total_teachers }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                        <span class="material-icons">family_restroom</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Parents</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ global_stats.total_parents }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                        <span class="material-icons">class</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Classes</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ global_stats.total_classes }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-indigo-100 text-indigo-600">
+                        <span class="material-icons">menu_book</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Matières</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ global_stats.total_subjects }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-red-100 text-red-600">
+                        <span class="material-icons">event</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Sessions</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ global_stats.total_sessions }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistiques de la période -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">Sessions récentes</h3>
+                <p class="text-3xl font-bold text-blue-600">{{ period_stats.recent_sessions }}</p>
+                <p class="text-sm text-gray-600 mt-1">Derniers {{ period_days }} jours</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">Sessions complétées</h3>
+                <p class="text-3xl font-bold text-green-600">{{ period_stats.completed_sessions }}</p>
+                <p class="text-sm text-gray-600 mt-1">Sur la période</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">Sessions annulées</h3>
+                <p class="text-3xl font-bold text-red-600">{{ period_stats.cancelled_sessions }}</p>
+                <p class="text-sm text-gray-600 mt-1">Sur la période</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">Taux de présence moyen</h3>
+                <p class="text-3xl font-bold text-purple-600">
+                    {% if attendance_stats.avg_attendance_rate %}
+                        {{ attendance_stats.avg_attendance_rate|floatformat:1 }}%
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </p>
+                <p class="text-sm text-gray-600 mt-1">Sur la période</p>
+            </div>
+        </div>
+
+        <!-- Sessions d'aujourd'hui et Classes problématiques -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Sessions d'aujourd'hui -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <span class="material-icons text-blue-600 mr-2">today</span>
+                    Sessions d'aujourd'hui
+                </h3>
+                {% if today_sessions %}
+                    <div class="space-y-3">
+                        {% for session in today_sessions|slice:":5" %}
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="h-10 w-10 rounded-full flex items-center justify-center text-white text-sm font-bold" 
+                                     style="background-color: {{ session.timetable.subject.color }};">
+                                    {{ session.timetable.subject.code }}
+                                </div>
+                                <div>
+                                    <p class="font-medium text-gray-900">{{ session.timetable.subject.name }}</p>
+                                    <p class="text-sm text-gray-600">{{ session.timetable.classroom.name }}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm font-medium text-gray-900">
+                                    {{ session.timetable.start_time|time:"H:i" }}
+                                </p>
+                                {% if session.status == 'COMPLETED' %}
+                                    <span class="text-xs text-green-600">✓ Complétée</span>
+                                {% elif session.status == 'IN_PROGRESS' %}
+                                    <span class="text-xs text-blue-600">● En cours</span>
+                                {% else %}
+                                    <span class="text-xs text-gray-500">○ Planifiée</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-500 text-center py-8">Aucune session aujourd'hui</p>
+                {% endif %}
+            </div>
+
+            <!-- Classes avec problèmes d'assiduité -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <span class="material-icons text-red-600 mr-2">warning</span>
+                    Classes à surveiller
+                </h3>
+                {% if problematic_classes %}
+                    <div class="space-y-3">
+                        {% for classroom in problematic_classes %}
+                        <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                            <div>
+                                <p class="font-medium text-gray-900">{{ classroom.name }}</p>
+                                <p class="text-sm text-gray-600">{{ classroom.level.name }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-lg font-bold text-red-600">
+                                    {% if classroom.avg_absence_rate %}
+                                        {{ classroom.avg_absence_rate|floatformat:0 }}%
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </p>
+                                <p class="text-xs text-gray-600">présence</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-500 text-center py-8">Toutes les classes sont assidues ✓</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Enseignants actifs et Documents récents -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Enseignants les plus actifs -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <span class="material-icons text-green-600 mr-2">star</span>
+                    Enseignants actifs
+                </h3>
+                {% if active_teachers %}
+                    <div class="space-y-3">
+                        {% for teacher in active_teachers %}
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                                <p class="font-medium text-gray-900">{{ teacher.user.get_full_name }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-lg font-bold text-green-600">{{ teacher.recent_sessions }}</p>
+                                <p class="text-xs text-gray-600">sessions</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-500 text-center py-8">Aucune donnée disponible</p>
+                {% endif %}
+            </div>
+
+            <!-- Devoirs à venir -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <span class="material-icons text-yellow-600 mr-2">assignment</span>
+                    Devoirs à venir (7 jours)
+                </h3>
+                {% if upcoming_deadlines %}
+                    <div class="space-y-3">
+                        {% for assignment in upcoming_deadlines|slice:":5" %}
+                        <div class="p-3 bg-yellow-50 rounded-lg">
+                            <div class="flex justify-between items-start mb-1">
+                                <p class="font-medium text-gray-900">{{ assignment.title }}</p>
+                                <span class="text-xs text-yellow-600 font-medium">
+                                    {{ assignment.due_date|date:"d/m" }}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600">
+                                {{ assignment.session.timetable.subject.name }} - {{ assignment.session.timetable.classroom.name }}
+                            </p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-500 text-center py-8">Aucun devoir à venir</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Actions rapides -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Actions rapides</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <a href="{% url 'academic:admin_sessions' %}" class="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition">
+                    <span class="material-icons text-blue-600 text-3xl mb-2">event</span>
+                    <span class="text-sm font-medium text-gray-900">Gérer Sessions</span>
+                </a>
+                <a href="{% url 'academic:classroom_list' %}" class="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition">
+                    <span class="material-icons text-green-600 text-3xl mb-2">class</span>
+                    <span class="text-sm font-medium text-gray-900">Classes</span>
+                </a>
+                <a href="{% url 'accounts:teacher_list' %}" class="flex flex-col items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition">
+                    <span class="material-icons text-purple-600 text-3xl mb-2">people</span>
+                    <span class="text-sm font-medium text-gray-900">Enseignants</span>
+                </a>
+                <a href="{% url 'accounts:student_list' %}" class="flex flex-col items-center p-4 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition">
+                    <span class="material-icons text-yellow-600 text-3xl mb-2">school</span>
+                    <span class="text-sm font-medium text-gray-900">Élèves</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

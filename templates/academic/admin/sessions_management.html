@@ -1,0 +1,356 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestion des Sessions - Administration - eSchool{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- En-tête -->
+    <div class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Gestion des Sessions</h1>
+                    <p class="text-gray-600 mt-1">Administration des sessions de cours</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Statistiques -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                        <span class="material-icons">event</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Total Sessions</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.total_sessions }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-100 text-green-600">
+                        <span class="material-icons">check_circle</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Complétées</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.completed }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                        <span class="material-icons">schedule</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Planifiées</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.scheduled }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-red-100 text-red-600">
+                        <span class="material-icons">cancel</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Annulées</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.cancelled }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <!-- Filtre de date -->
+                <div>
+                    <label for="date" class="block text-sm font-medium text-gray-700 mb-2">
+                        Période
+                    </label>
+                    <select id="date" 
+                            name="date"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="all" {% if date_filter == 'all' %}selected{% endif %}>Toutes</option>
+                        <option value="today" {% if date_filter == 'today' %}selected{% endif %}>Aujourd'hui</option>
+                        <option value="this_week" {% if date_filter == 'this_week' %}selected{% endif %}>Cette semaine</option>
+                        <option value="this_month" {% if date_filter == 'this_month' %}selected{% endif %}>Ce mois</option>
+                    </select>
+                </div>
+
+                <!-- Filtre statut -->
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-2">
+                        Statut
+                    </label>
+                    <select id="status" 
+                            name="status"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Tous</option>
+                        <option value="SCHEDULED" {% if status_filter == 'SCHEDULED' %}selected{% endif %}>Planifiée</option>
+                        <option value="IN_PROGRESS" {% if status_filter == 'IN_PROGRESS' %}selected{% endif %}>En cours</option>
+                        <option value="COMPLETED" {% if status_filter == 'COMPLETED' %}selected{% endif %}>Complétée</option>
+                        <option value="CANCELLED" {% if status_filter == 'CANCELLED' %}selected{% endif %}>Annulée</option>
+                    </select>
+                </div>
+
+                <!-- Filtre enseignant -->
+                <div>
+                    <label for="teacher" class="block text-sm font-medium text-gray-700 mb-2">
+                        Enseignant
+                    </label>
+                    <select id="teacher" 
+                            name="teacher"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Tous</option>
+                        {% for teacher in teachers %}
+                            <option value="{{ teacher.id }}" {% if teacher.id|stringformat:"s" == teacher_filter %}selected{% endif %}>
+                                {{ teacher.user.get_full_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Filtre classe -->
+                <div>
+                    <label for="class" class="block text-sm font-medium text-gray-700 mb-2">
+                        Classe
+                    </label>
+                    <select id="class" 
+                            name="class"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Toutes</option>
+                        {% for class in classes %}
+                            <option value="{{ class.id }}" {% if class.id|stringformat:"s" == class_filter %}selected{% endif %}>
+                                {{ class.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Filtre matière -->
+                <div>
+                    <label for="subject" class="block text-sm font-medium text-gray-700 mb-2">
+                        Matière
+                    </label>
+                    <select id="subject" 
+                            name="subject"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Toutes</option>
+                        {% for subject in subjects %}
+                            <option value="{{ subject.id }}" {% if subject.id|stringformat:"s" == subject_filter %}selected{% endif %}>
+                                {{ subject.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Bouton de filtrage -->
+                <div class="flex items-end">
+                    <button type="submit" 
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition">
+                        <span class="material-icons text-sm align-middle">filter_list</span>
+                        Filtrer
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Liste des sessions -->
+        {% if sessions %}
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Date/Heure
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Matière
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Classe
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Enseignant
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Période
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Statut
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Présences
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for session in sessions %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ session.date|date:"d/m/Y" }}
+                                    </div>
+                                    <div class="text-sm text-gray-500">
+                                        {{ session.timetable.start_time|time:"H:i" }} - {{ session.timetable.end_time|time:"H:i" }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style="background-color: {{ session.timetable.subject.color }};">
+                                            {{ session.timetable.subject.code }}
+                                        </div>
+                                        <div class="ml-3">
+                                            <div class="text-sm font-medium text-gray-900">
+                                                {{ session.timetable.subject.name }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">{{ session.timetable.classroom.name }}</div>
+                                    <div class="text-sm text-gray-500">{{ session.timetable.classroom.level.name }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">
+                                        {{ session.timetable.teacher.user.get_full_name }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">{{ session.period.name }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if session.status == 'COMPLETED' %}
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                            Complétée
+                                        </span>
+                                    {% elif session.status == 'SCHEDULED' %}
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                            Planifiée
+                                        </span>
+                                    {% elif session.status == 'IN_PROGRESS' %}
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                            En cours
+                                        </span>
+                                    {% elif session.status == 'CANCELLED' %}
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                            Annulée
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {% if session.status == 'COMPLETED' %}
+                                        {{ session.attendances.count }} présence(s)
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <a href="#" class="text-blue-600 hover:text-blue-900 mr-3">
+                                        <span class="material-icons text-sm align-middle">visibility</span>
+                                    </a>
+                                    <a href="#" class="text-indigo-600 hover:text-indigo-900 mr-3">
+                                        <span class="material-icons text-sm align-middle">edit</span>
+                                    </a>
+                                    <a href="#" class="text-red-600 hover:text-red-900">
+                                        <span class="material-icons text-sm align-middle">delete</span>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if page_obj.has_other_pages %}
+                <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                    <div class="flex-1 flex justify-between sm:hidden">
+                        {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}&date={{ date_filter }}&status={{ status_filter }}&teacher={{ teacher_filter }}&class={{ class_filter }}&subject={{ subject_filter }}" 
+                               class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Précédent
+                            </a>
+                        {% endif %}
+                        {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}&date={{ date_filter }}&status={{ status_filter }}&teacher={{ teacher_filter }}&class={{ class_filter }}&subject={{ subject_filter }}" 
+                               class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Suivant
+                            </a>
+                        {% endif %}
+                    </div>
+                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm text-gray-700">
+                                Affichage de 
+                                <span class="font-medium">{{ page_obj.start_index }}</span>
+                                à
+                                <span class="font-medium">{{ page_obj.end_index }}</span>
+                                sur
+                                <span class="font-medium">{{ page_obj.paginator.count }}</span>
+                                résultats
+                            </p>
+                        </div>
+                        <div>
+                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                {% if page_obj.has_previous %}
+                                    <a href="?page={{ page_obj.previous_page_number }}&date={{ date_filter }}&status={{ status_filter }}&teacher={{ teacher_filter }}&class={{ class_filter }}&subject={{ subject_filter }}" 
+                                       class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                        <span class="sr-only">Précédent</span>
+                                        <span class="material-icons text-sm">chevron_left</span>
+                                    </a>
+                                {% endif %}
+                                
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                        <span class="relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 text-sm font-medium text-blue-600">
+                                            {{ num }}
+                                        </span>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                        <a href="?page={{ num }}&date={{ date_filter }}&status={{ status_filter }}&teacher={{ teacher_filter }}&class={{ class_filter }}&subject={{ subject_filter }}" 
+                                           class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                            {{ num }}
+                                        </a>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if page_obj.has_next %}
+                                    <a href="?page={{ page_obj.next_page_number }}&date={{ date_filter }}&status={{ status_filter }}&teacher={{ teacher_filter }}&class={{ class_filter }}&subject={{ subject_filter }}" 
+                                       class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                        <span class="sr-only">Suivant</span>
+                                        <span class="material-icons text-sm">chevron_right</span>
+                                    </a>
+                                {% endif %}
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="bg-white rounded-lg shadow-md p-8 text-center">
+                <span class="material-icons text-gray-400" style="font-size: 64px;">event_busy</span>
+                <h3 class="mt-4 text-lg font-medium text-gray-900">Aucune session trouvée</h3>
+                <p class="mt-2 text-sm text-gray-500">
+                    Aucune session ne correspond aux critères de recherche.
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

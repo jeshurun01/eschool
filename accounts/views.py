@@ -862,12 +862,14 @@ def parent_dashboard(request):
     # Ajout des notes récentes
     for child_data in children_data:
         for grade in child_data['recent_grades']:
+            # Convertir created_at en date si c'est un datetime
+            grade_date = grade.created_at.date() if hasattr(grade.created_at, 'date') else grade.created_at
             recent_activities.append({
                 'type': 'grade',
                 'icon': 'academic-cap',
                 'title': f'Nouvelle note - {child_data["student"].user.first_name}',
                 'description': f'{grade.subject.name}: {grade.score}/20',
-                'date': grade.created_at,
+                'date': grade_date,
                 'color': 'green' if grade.score >= 12 else 'yellow' if grade.score >= 10 else 'red',
                 'child': child_data['student']
             })
@@ -879,8 +881,8 @@ def parent_dashboard(request):
                 'type': 'absence',
                 'icon': 'exclamation-triangle',
                 'title': f'Absence - {child_data["student"].user.first_name}',
-                'description': f'Absent le {absence.date.strftime("%d/%m/%Y")}',
-                'date': absence.date,
+                'description': f'Absent le {absence.session.date.strftime("%d/%m/%Y")}',
+                'date': absence.session.date,
                 'color': 'red',
                 'child': child_data['student']
             })
@@ -888,12 +890,14 @@ def parent_dashboard(request):
     # Ajout des paiements récents
     for child_data in children_data:
         for payment in child_data['recent_payments']:
+            # Convertir payment_date en date si c'est un datetime
+            payment_date = payment.payment_date.date() if hasattr(payment.payment_date, 'date') else payment.payment_date
             recent_activities.append({
                 'type': 'payment',
                 'icon': 'credit-card',
                 'title': f'Paiement effectué - {child_data["student"].user.first_name}',
                 'description': f'{payment.amount} FCFA - {payment.invoice.invoice_number}',
-                'date': payment.payment_date,
+                'date': payment_date,
                 'color': 'green',
                 'child': child_data['student']
             })
@@ -1161,6 +1165,7 @@ def student_list(request):
     """Liste des élèves"""
     search_query = request.GET.get('search', '')
     class_filter = request.GET.get('class', '')
+    status_filter = request.GET.get('status', '')
     
     students = Student.objects.select_related('user', 'current_class').all()
     
@@ -1174,23 +1179,47 @@ def student_list(request):
     if class_filter:
         students = students.filter(current_class_id=class_filter)
     
+    if status_filter == 'active':
+        students = students.filter(user__is_active=True)
+    elif status_filter == 'inactive':
+        students = students.filter(user__is_active=False)
+    
     # Ordre pour la pagination
     students = students.order_by('user__last_name', 'user__first_name')
+    
+    # Calculer les statistiques
+    from datetime import datetime, timedelta
+    from django.utils import timezone
+    
+    total_students = Student.objects.count()
+    active_students = Student.objects.filter(user__is_active=True).count()
+    
+    # Import ici pour éviter les imports circulaires
+    from academic.models import ClassRoom
+    classes = ClassRoom.objects.all()
+    total_classes = classes.count()
+    
+    # Élèves inscrits ce mois
+    first_day_of_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    new_students_this_month = Student.objects.filter(
+        enrollment_date__gte=first_day_of_month
+    ).count()
     
     # Pagination
     paginator = Paginator(students, 20)
     page = request.GET.get('page')
     students = paginator.get_page(page)
     
-    # Import ici pour éviter les imports circulaires
-    from academic.models import ClassRoom
-    classes = ClassRoom.objects.all()
-    
     context = {
         'students': students,
         'search_query': search_query,
         'class_filter': class_filter,
+        'status_filter': status_filter,
         'classes': classes,
+        'total_students': total_students,
+        'active_students': active_students,
+        'total_classes': total_classes,
+        'new_students_this_month': new_students_this_month,
     }
     
     return render(request, 'accounts/student_list.html', context)
