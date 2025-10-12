@@ -935,29 +935,30 @@ def parent_dashboard(request):
     # Tri par date décroissante
     recent_activities.sort(key=lambda x: x['date'], reverse=True)
     
-    # Événements à venir (simulés)
-    upcoming_events = [
-        {
-            'title': 'Réunion parents-enseignants',
-            'date': today + timedelta(days=7),
-            'time': '14:00',
-            'type': 'meeting'
-        },
-        {
-            'title': 'Remise des bulletins',
-            'date': today + timedelta(days=14),
-            'time': '10:00',
-            'type': 'academic'
-        },
-        {
-            'title': 'Journée portes ouvertes',
-            'date': today + timedelta(days=21),
-            'time': '09:00',
-            'type': 'event'
-        }
-    ]
+    # Événements à venir - Utiliser les annonces de type EVENT publiées pour les parents
+    from communication.models import Announcement
+    upcoming_events_announcements = Announcement.objects.filter(
+        type='EVENT',
+        audience__in=['ALL', 'PARENTS'],
+        is_published=True,
+        publish_date__lte=timezone.now()
+    ).filter(
+        Q(expiry_date__gte=timezone.now()) | Q(expiry_date__isnull=True)
+    ).order_by('publish_date')[:5]
     
-    # Annonces récentes pour les parents
+    # Formater les événements pour le template
+    upcoming_events = []
+    for event in upcoming_events_announcements:
+        upcoming_events.append({
+            'id': event.id,
+            'title': event.title,
+            'date': event.publish_date.date(),
+            'time': event.publish_date.strftime('%H:%M'),
+            'type': 'event',
+            'description': event.content[:100] if len(event.content) > 100 else event.content,
+        })
+    
+    # Annonces récentes pour les parents (non-événements)
     recent_announcements = Announcement.objects.filter(
         audience__in=['ALL', 'PARENTS'],
         publish_date__lte=today
