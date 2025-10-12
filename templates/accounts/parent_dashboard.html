@@ -257,18 +257,39 @@
                         {% if recent_activities %}
                             <div class="space-y-4">
                                 {% for activity in recent_activities|slice:":8" %}
-                                    <div class="flex items-start space-x-3">
-                                        <div class="flex-shrink-0">
-                                            <div class="w-8 h-8 bg-{{ activity.color }}-100 rounded-full flex items-center justify-center">
-                                                <div class="w-3 h-3 bg-{{ activity.color }}-500 rounded-full"></div>
+                                    {% if activity.type == 'grade' %}
+                                        <!-- Activité note - Cliquable pour voir détails -->
+                                        <div class="flex items-start space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors" 
+                                             onclick="showGradeModal('{{ activity.grade.id }}', '{{ activity.child.user.first_name }}', '{{ activity.grade.subject.name }}', '{{ activity.grade.score }}', '{{ activity.grade.evaluation_type }}', '{{ activity.grade.comment|escapejs }}', '{{ activity.grade.teacher.user.full_name }}', '{{ activity.grade.created_at|date:"d/m/Y à H:i" }}')">
+                                            <div class="flex-shrink-0">
+                                                <div class="w-8 h-8 bg-{{ activity.color }}-100 rounded-full flex items-center justify-center">
+                                                    <span class="material-icons text-{{ activity.color }}-600" style="font-size: 16px;">grade</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium text-gray-900">{{ activity.title }}</p>
+                                                <p class="text-xs text-gray-500">{{ activity.description }}</p>
+                                                <p class="text-xs text-gray-400 mt-1">{{ activity.date|timesince }} ago</p>
+                                            </div>
+                                            <div class="flex-shrink-0">
+                                                <span class="material-icons text-gray-400" style="font-size: 18px;">arrow_forward</span>
                                             </div>
                                         </div>
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-sm font-medium text-gray-900">{{ activity.title }}</p>
-                                            <p class="text-xs text-gray-500">{{ activity.description }}</p>
-                                            <p class="text-xs text-gray-400 mt-1">{{ activity.date|timesince }} ago</p>
+                                    {% else %}
+                                        <!-- Autres activités (non cliquables) -->
+                                        <div class="flex items-start space-x-3">
+                                            <div class="flex-shrink-0">
+                                                <div class="w-8 h-8 bg-{{ activity.color }}-100 rounded-full flex items-center justify-center">
+                                                    <div class="w-3 h-3 bg-{{ activity.color }}-500 rounded-full"></div>
+                                                </div>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium text-gray-900">{{ activity.title }}</p>
+                                                <p class="text-xs text-gray-500">{{ activity.description }}</p>
+                                                <p class="text-xs text-gray-400 mt-1">{{ activity.date|timesince }} ago</p>
+                                            </div>
                                         </div>
-                                    </div>
+                                    {% endif %}
                                 {% endfor %}
                             </div>
                         {% else %}
@@ -448,4 +469,140 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Modal pour les détails de la note -->
+<div id="gradeModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
+        <!-- En-tête -->
+        <div class="flex items-center justify-between pb-3 border-b">
+            <h3 class="text-xl font-semibold text-gray-900 flex items-center">
+                <span class="material-icons text-blue-600 mr-2">grade</span>
+                Détails de la note
+            </h3>
+            <button onclick="closeGradeModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+        
+        <!-- Contenu -->
+        <div class="mt-4 space-y-4">
+            <!-- Élève et Matière -->
+            <div class="bg-blue-50 rounded-lg p-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-xs text-gray-600 mb-1">Élève</p>
+                        <p class="text-sm font-semibold text-gray-900" id="modal-student"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-600 mb-1">Matière</p>
+                        <p class="text-sm font-semibold text-gray-900" id="modal-subject"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Note et Type -->
+            <div class="grid grid-cols-2 gap-4">
+                <div id="modal-score-container" class="rounded-lg p-4 text-center">
+                    <p class="text-xs text-gray-600 mb-1">Note obtenue</p>
+                    <p id="modal-score-text" class="text-3xl font-bold"><span id="modal-score"></span></p>
+                    <p class="text-xs text-gray-500">/ 20</p>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-4">
+                    <p class="text-xs text-gray-600 mb-1">Type d'évaluation</p>
+                    <p class="text-sm font-semibold text-gray-900" id="modal-eval-type"></p>
+                </div>
+            </div>
+            
+            <!-- Commentaire de l'enseignant -->
+            <div class="bg-yellow-50 rounded-lg p-4">
+                <div class="flex items-start">
+                    <span class="material-icons text-yellow-600 mr-2 mt-1" style="font-size: 20px;">comment</span>
+                    <div class="flex-1">
+                        <p class="text-xs text-gray-600 mb-2 font-medium">Commentaire de l'enseignant</p>
+                        <p class="text-sm text-gray-800" id="modal-comment"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Informations supplémentaires -->
+            <div class="grid grid-cols-2 gap-4 pt-2 border-t">
+                <div>
+                    <p class="text-xs text-gray-600 mb-1">Enseignant</p>
+                    <p class="text-sm text-gray-900" id="modal-teacher"></p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-600 mb-1">Date</p>
+                    <p class="text-sm text-gray-900" id="modal-date"></p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pied de page -->
+        <div class="flex justify-end mt-6 pt-4 border-t">
+            <button onclick="closeGradeModal()" 
+                    class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                Fermer
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function showGradeModal(gradeId, student, subject, score, evalType, comment, teacher, date) {
+    // Remplir les données
+    document.getElementById('modal-student').textContent = student;
+    document.getElementById('modal-subject').textContent = subject;
+    document.getElementById('modal-score').textContent = score;
+    document.getElementById('modal-eval-type').textContent = evalType || 'Non spécifié';
+    document.getElementById('modal-comment').textContent = comment || 'Aucun commentaire';
+    document.getElementById('modal-teacher').textContent = teacher;
+    document.getElementById('modal-date').textContent = date;
+    
+    // Appliquer le code couleur selon la note
+    const scoreValue = parseFloat(score);
+    const scoreContainer = document.getElementById('modal-score-container');
+    const scoreText = document.getElementById('modal-score-text');
+    
+    // Retirer toutes les classes de couleur existantes
+    scoreContainer.className = 'rounded-lg p-4 text-center';
+    scoreText.className = 'text-3xl font-bold';
+    
+    // Appliquer la couleur appropriée
+    if (scoreValue >= 12) {
+        // Vert pour les bonnes notes (≥12)
+        scoreContainer.classList.add('bg-green-50');
+        scoreText.classList.add('text-green-600');
+    } else if (scoreValue >= 10) {
+        // Jaune pour les notes moyennes (10-11.99)
+        scoreContainer.classList.add('bg-yellow-50');
+        scoreText.classList.add('text-yellow-600');
+    } else {
+        // Rouge pour les notes insuffisantes (<10)
+        scoreContainer.classList.add('bg-red-50');
+        scoreText.classList.add('text-red-600');
+    }
+    
+    // Afficher la modal
+    document.getElementById('gradeModal').classList.remove('hidden');
+}
+
+function closeGradeModal() {
+    document.getElementById('gradeModal').classList.add('hidden');
+}
+
+// Fermer la modal en cliquant à l'extérieur
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('gradeModal');
+    if (event.target === modal) {
+        closeGradeModal();
+    }
+});
+
+// Fermer avec la touche Escape
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeGradeModal();
+    }
+});
+</script>
 {% endblock %}
