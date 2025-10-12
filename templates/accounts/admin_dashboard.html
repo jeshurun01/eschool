@@ -141,8 +141,9 @@
                         </div>
                     </div>
                     <div class="mt-4">
-                        <a href="{% url 'finance:payment_list' %}" class="text-purple-600 hover:text-purple-700 text-sm font-medium flex items-center">
-                            Rapport finance
+                        <a href="{% url 'finance:daily_financial_report' %}" class="text-purple-600 hover:text-purple-700 text-sm font-medium flex items-center">
+                            <span class="material-icons mr-1 text-sm">bar_chart</span>
+                            Rapport financier journalier
                             <span class="material-icons ml-1 text-sm">arrow_forward</span>
                         </a>
                     </div>
@@ -389,6 +390,10 @@
                             <h4 class="font-medium text-gray-900">Module Finance</h4>
                         </div>
                         <div class="space-y-2">
+                            <a href="{% url 'finance:daily_financial_report' %}" class="block text-sm text-green-600 hover:text-green-700 flex items-center font-medium">
+                                <span class="material-icons mr-1 text-sm">bar_chart</span>
+                                Rapport Financier Journalier
+                            </a>
                             <a href="{% url 'finance:fee_structure_list' %}" class="block text-sm text-green-600 hover:text-green-700 flex items-center">
                                 <span class="material-icons mr-1 text-sm">price_check</span>
                                 Tarifs

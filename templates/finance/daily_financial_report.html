@@ -14,8 +14,9 @@
         <!-- En-tête avec sélecteur de date -->
         <div class="md:flex md:items-center md:justify-between mb-8">
             <div class="flex-1 min-w-0">
-                <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-                    📊 Rapport Financier Journalier
+                <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate flex items-center">
+                    <span class="material-icons mr-2">bar_chart</span>
+                    Rapport Financier Journalier
                 </h2>
                 <p class="mt-1 text-sm text-gray-500">
                     Suivi quotidien des finances de l'établissement
@@ -33,25 +34,29 @@
                 <!-- Bouton Export PDF -->
                 <a href="{% url 'finance:daily_financial_report_export_pdf' selected_date|date:'Y-m-d' %}"
                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                    📄 PDF
+                    <span class="material-icons mr-1 text-sm">picture_as_pdf</span>
+                    PDF
                 </a>
                 
                 <!-- Bouton Export Excel -->
                 <a href="{% url 'finance:daily_financial_report_export_excel' selected_date|date:'Y-m-d' %}"
                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                    📊 Excel
+                    <span class="material-icons mr-1 text-sm">table_chart</span>
+                    Excel
                 </a>
                 
                 <!-- Bouton Régénérer -->
                 <button onclick="regenerateReport()"
                         class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
-                    🔄 Régénérer
+                    <span class="material-icons mr-1 text-sm">refresh</span>
+                    Régénérer
                 </button>
                 {% else %}
                 <!-- Bouton Générer -->
                 <button onclick="generateReport()"
                         class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
-                    ✨ Générer Rapport
+                    <span class="material-icons mr-1 text-sm">auto_awesome</span>
+                    Générer Rapport
                 </button>
                 {% endif %}
             </div>
@@ -66,7 +71,7 @@
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                                <span class="text-2xl">💰</span>
+                                <span class="material-icons text-green-600">attach_money</span>
                             </div>
                         </div>
                         <div class="ml-5 w-0 flex-1">
@@ -90,12 +95,14 @@
                 <div class="bg-gray-50 px-5 py-3">
                     <div class="text-sm">
                         {% if report.payments_diff_previous_day > 0 %}
-                        <span class="text-green-600 font-medium">
-                            ↗️ +{{ report.payments_diff_previous_day|floatformat:0 }} FCFA
+                        <span class="text-green-600 font-medium flex items-center">
+                            <span class="material-icons text-sm mr-1">trending_up</span>
+                            +{{ report.payments_diff_previous_day|floatformat:0 }} FCFA
                         </span>
                         {% else %}
-                        <span class="text-red-600 font-medium">
-                            ↘️ {{ report.payments_diff_previous_day|floatformat:0 }} FCFA
+                        <span class="text-red-600 font-medium flex items-center">
+                            <span class="material-icons text-sm mr-1">trending_down</span>
+                            {{ report.payments_diff_previous_day|floatformat:0 }} FCFA
                         </span>
                         {% endif %}
                         <span class="text-gray-500">vs hier</span>
@@ -110,7 +117,7 @@
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                                <span class="text-2xl">📄</span>
+                                <span class="material-icons text-blue-600">description</span>
                             </div>
                         </div>
                         <div class="ml-5 w-0 flex-1">
@@ -138,7 +145,7 @@
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                                <span class="text-2xl">⏳</span>
+                                <span class="material-icons text-yellow-600">schedule</span>
                             </div>
                         </div>
                         <div class="ml-5 w-0 flex-1">
@@ -174,7 +181,7 @@
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <div class="w-12 h-12 {% if report.invoices_overdue_count > 0 %}bg-red-100{% else %}bg-green-100{% endif %} rounded-full flex items-center justify-center">
-                                <span class="text-2xl">{% if report.invoices_overdue_count > 0 %}⚠️{% else %}✅{% endif %}</span>
+                                <span class="material-icons {% if report.invoices_overdue_count > 0 %}text-red-600{% else %}text-green-600{% endif %}">{% if report.invoices_overdue_count > 0 %}warning{% else %}check_circle{% endif %}</span>
                             </div>
                         </div>
                         <div class="ml-5 w-0 flex-1">
@@ -201,8 +208,9 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <!-- Paiements par méthode -->
             <div class="bg-white shadow rounded-lg p-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">
-                    💳 Paiements par Méthode
+                <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <span class="material-icons mr-2">credit_card</span>
+                    Paiements par Méthode
                 </h3>
                 <div class="h-64">
                     <canvas id="paymentMethodsChart"></canvas>
@@ -211,8 +219,9 @@
 
             <!-- Statut des factures -->
             <div class="bg-white shadow rounded-lg p-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">
-                    📋 Statut des Factures
+                <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <span class="material-icons mr-2">assignment</span>
+                    Statut des Factures
                 </h3>
                 <div class="h-64">
                     <canvas id="invoiceStatusChart"></canvas>
@@ -222,8 +231,9 @@
 
         <!-- Tendance des paiements (7 jours) -->
         <div class="bg-white shadow rounded-lg p-6 mb-8">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">
-                📈 Tendance des Paiements (7 derniers jours)
+            <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <span class="material-icons mr-2">trending_up</span>
+                Tendance des Paiements (7 derniers jours)
             </h3>
             <div class="h-80">
                 <canvas id="paymentsTrendChart"></canvas>
@@ -242,23 +252,38 @@
                 <div class="px-6 py-4">
                     <dl class="space-y-3">
                         <div class="flex justify-between">
-                            <dt class="text-sm text-gray-600">💵 Espèces</dt>
+                            <dt class="text-sm text-gray-600 flex items-center">
+                                <span class="material-icons text-xs mr-1">payments</span>
+                                Espèces
+                            </dt>
                             <dd class="text-sm font-medium text-gray-900">{{ report.payments_cash|floatformat:0 }} FCFA</dd>
                         </div>
                         <div class="flex justify-between">
-                            <dt class="text-sm text-gray-600">📝 Chèques</dt>
+                            <dt class="text-sm text-gray-600 flex items-center">
+                                <span class="material-icons text-xs mr-1">request_quote</span>
+                                Chèques
+                            </dt>
                             <dd class="text-sm font-medium text-gray-900">{{ report.payments_check|floatformat:0 }} FCFA</dd>
                         </div>
                         <div class="flex justify-between">
-                            <dt class="text-sm text-gray-600">🏦 Virements</dt>
+                            <dt class="text-sm text-gray-600 flex items-center">
+                                <span class="material-icons text-xs mr-1">account_balance</span>
+                                Virements
+                            </dt>
                             <dd class="text-sm font-medium text-gray-900">{{ report.payments_transfer|floatformat:0 }} FCFA</dd>
                         </div>
                         <div class="flex justify-between">
-                            <dt class="text-sm text-gray-600">💳 Cartes</dt>
+                            <dt class="text-sm text-gray-600 flex items-center">
+                                <span class="material-icons text-xs mr-1">credit_card</span>
+                                Cartes
+                            </dt>
                             <dd class="text-sm font-medium text-gray-900">{{ report.payments_card|floatformat:0 }} FCFA</dd>
                         </div>
                         <div class="flex justify-between">
-                            <dt class="text-sm text-gray-600">📱 Mobile</dt>
+                            <dt class="text-sm text-gray-600 flex items-center">
+                                <span class="material-icons text-xs mr-1">smartphone</span>
+                                Mobile
+                            </dt>
                             <dd class="text-sm font-medium text-gray-900">{{ report.payments_mobile|floatformat:0 }} FCFA</dd>
                         </div>
                         <div class="pt-3 border-t flex justify-between">
@@ -279,25 +304,37 @@
                 <div class="px-6 py-4">
                     <dl class="space-y-3">
                         <div class="flex justify-between">
-                            <dt class="text-sm text-gray-600">⏳ En attente</dt>
+                            <dt class="text-sm text-gray-600 flex items-center">
+                                <span class="material-icons text-xs mr-1">schedule</span>
+                                En attente
+                            </dt>
                             <dd class="text-sm font-medium text-gray-900">
                                 {{ report.invoices_pending_count }} ({{ report.invoices_pending_total|floatformat:0 }} FCFA)
                             </dd>
                         </div>
                         <div class="flex justify-between">
-                            <dt class="text-sm text-gray-600">✅ Payées</dt>
+                            <dt class="text-sm text-gray-600 flex items-center">
+                                <span class="material-icons text-xs mr-1">check_circle</span>
+                                Payées
+                            </dt>
                             <dd class="text-sm font-medium text-green-600">
                                 {{ report.invoices_paid_count }} ({{ report.invoices_paid_total|floatformat:0 }} FCFA)
                             </dd>
                         </div>
                         <div class="flex justify-between">
-                            <dt class="text-sm text-gray-600">⚠️ En retard</dt>
+                            <dt class="text-sm text-gray-600 flex items-center">
+                                <span class="material-icons text-xs mr-1">warning</span>
+                                En retard
+                            </dt>
                             <dd class="text-sm font-medium text-red-600">
                                 {{ report.invoices_overdue_count }} ({{ report.invoices_overdue_total|floatformat:0 }} FCFA)
                             </dd>
                         </div>
                         <div class="flex justify-between">
-                            <dt class="text-sm text-gray-600">📊 Partielles</dt>
+                            <dt class="text-sm text-gray-600 flex items-center">
+                                <span class="material-icons text-xs mr-1">pie_chart</span>
+                                Partielles
+                            </dt>
                             <dd class="text-sm font-medium text-orange-600">
                                 {{ report.invoices_partial_count }} ({{ report.invoices_partial_total|floatformat:0 }} FCFA)
                             </dd>
@@ -326,7 +363,7 @@
         <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-6">
             <div class="flex">
                 <div class="flex-shrink-0">
-                    <span class="text-xl">📝</span>
+                    <span class="material-icons text-yellow-600">note</span>
                 </div>
                 <div class="ml-3">
                     <h3 class="text-sm font-medium text-yellow-800">Notes</h3>
@@ -349,7 +386,9 @@
         {% else %}
         <!-- Aucun rapport -->
         <div class="bg-white shadow rounded-lg p-12 text-center">
-            <div class="text-6xl mb-4">📊</div>
+            <div class="mb-4">
+                <span class="material-icons" style="font-size: 72px; color: #9CA3AF;">bar_chart</span>
+            </div>
             <h3 class="text-xl font-medium text-gray-900 mb-2">
                 Aucun rapport disponible pour cette date
             </h3>
@@ -359,7 +398,8 @@
             {% if selected_date <= today %}
             <button onclick="generateReport()"
                     class="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700">
-                ✨ Générer le Rapport
+                <span class="material-icons mr-2">auto_awesome</span>
+                Générer le Rapport
             </button>
             {% endif %}
         </div>

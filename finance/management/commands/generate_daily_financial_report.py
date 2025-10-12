@@ -90,7 +90,7 @@ class Command(BaseCommand):
         
         # === PAIEMENTS DU JOUR ===
         payments_query = Payment.objects.filter(
-            payment_date=report_date,
+            payment_date__date=report_date,
             status='COMPLETED'
         )
         
@@ -103,23 +103,23 @@ class Command(BaseCommand):
         report.payments_total = payments_total
         
         # Paiements par méthode
-        payment_methods = payments_query.values('payment_method').annotate(
+        payment_methods = payments_query.values('payment_method__code').annotate(
             total=Sum('amount')
         )
         
         for method_data in payment_methods:
-            method = method_data['payment_method']
+            method_code = method_data['payment_method__code']
             amount = method_data['total'] or Decimal('0.00')
             
-            if method == 'CASH':
+            if method_code == 'CASH':
                 report.payments_cash = amount
-            elif method == 'CHECK':
+            elif method_code == 'CHECK':
                 report.payments_check = amount
-            elif method == 'TRANSFER':
+            elif method_code == 'TRANSFER':
                 report.payments_transfer = amount
-            elif method == 'CARD':
+            elif method_code == 'CARD':
                 report.payments_card = amount
-            elif method == 'MOBILE':
+            elif method_code == 'MOBILE':
                 report.payments_mobile = amount
         
         # === FACTURES CRÉÉES LE JOUR ===

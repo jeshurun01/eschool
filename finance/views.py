@@ -998,7 +998,7 @@ def invoice_generate(request):
 # RAPPORTS FINANCIERS
 # ===========================
 
-@staff_required  # Seuls admin et personnel financier
+@admin_required  # Seuls les administrateurs
 def daily_financial_report(request):
     """
     Affiche le rapport financier journalier avec tous les KPIs
@@ -1110,7 +1110,7 @@ def daily_financial_report(request):
     return render(request, 'finance/daily_financial_report.html', context)
 
 
-@staff_required
+@admin_required  # Seuls les administrateurs
 def daily_financial_report_generate(request):
     """
     Génère (ou régénère) le rapport pour une date donnée via l'interface web
@@ -1158,7 +1158,7 @@ def daily_financial_report_generate(request):
     return redirect('finance:daily_financial_report')
 
 
-@staff_required
+@admin_required  # Seuls les administrateurs
 def daily_financial_report_export_pdf(request, date):
     """
     Exporte le rapport en PDF
@@ -1180,7 +1180,7 @@ def daily_financial_report_export_pdf(request, date):
         return redirect('finance:daily_financial_report')
 
 
-@staff_required
+@admin_required  # Seuls les administrateurs
 def daily_financial_report_export_excel(request, date):
     """
     Exporte le rapport en Excel
