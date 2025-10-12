@@ -149,6 +149,20 @@
    - Export planning/emploi du temps
    ```
 
+3. **Rapports financiers automatisés**
+   ```python
+   # Rapport journalier de la finance :
+   - Résumé quotidien des paiements reçus
+   - État des factures en attente
+   - Encaissements du jour par méthode de paiement
+   - Factures en retard et relances nécessaires
+   - Comparaison avec jour/semaine/mois précédent
+   - Prévisions de trésorerie
+   - Export PDF/Excel automatique
+   - Envoi automatique par email à la direction
+   - Tableaux de bord KPI finance temps réel
+   ```
+
 ### 💬 Communication améliorée
 1. **Notifications temps réel**
    - WebSocket pour messages instantanés

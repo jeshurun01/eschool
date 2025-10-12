@@ -27,7 +27,11 @@ SECRET_KEY = config('SECRET_KEY', default="django-insecure-fmj3$l$%l$@mmh8^z7uxe
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+# En développement, accepter toutes les connexions du réseau local
+if DEBUG:
+    ALLOWED_HOSTS = ['*']  # Accepter toutes les connexions en mode développement
+else:
+    ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
 
 # Application definition
@@ -55,6 +59,8 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
+    'core.apps.CoreConfig',  # Configuration centrale, decorators, middleware, vues
+    'activity_log.apps.ActivityLogConfig',  # Système de suivi d'activité
     'accounts',
     'academic',
     'finance',
@@ -75,8 +81,10 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    # Middleware pour le tracking d'activité
+    "activity_log.middleware.ActivityTrackingMiddleware",
     # RBAC Middleware - À activer après tests
-    # "core.middleware.rbac_middleware.RBACMiddleware",
+    "core.middleware.rbac_middleware.RBACMiddleware",
 ]
 
 ROOT_URLCONF = "core.urls"

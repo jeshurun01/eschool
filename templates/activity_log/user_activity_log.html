@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Historique de {{ target_user.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- En-tête -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold mb-2">Historique d'activité</h1>
+        <p class="text-gray-600">{{ target_user.get_full_name }} ({{ target_user.username }})</p>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-600 mb-1">Total</div>
+            <div class="text-2xl font-bold text-blue-600">{{ stats.total }}</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-600 mb-1">Aujourd'hui</div>
+            <div class="text-2xl font-bold text-green-600">{{ stats.today }}</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-600 mb-1">7 derniers jours</div>
+            <div class="text-2xl font-bold text-purple-600">{{ stats.this_week }}</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-600 mb-1">30 derniers jours</div>
+            <div class="text-2xl font-bold text-orange-600">{{ stats.this_month }}</div>
+        </div>
+    </div>
+
+    <!-- Répartition par type d'action -->
+    {% if action_breakdown %}
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Répartition par type d'action</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {% for action_name, count in action_breakdown.items %}
+            <div class="border rounded p-3">
+                <div class="text-sm text-gray-600">{{ action_name }}</div>
+                <div class="text-xl font-bold">{{ count }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Liste des activités -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="p-6 border-b">
+            <h2 class="text-xl font-semibold">Journal d'activité</h2>
+        </div>
+        
+        {% if page_obj %}
+        <div class="divide-y">
+            {% for log in page_obj %}
+            <div class="p-4 hover:bg-gray-50">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-start space-x-3">
+                        <span class="material-icons text-{{ log.color_class }}-600 mt-1">
+                            {{ log.icon_class }}
+                        </span>
+                        <div>
+                            <div class="font-medium">
+                                {{ log.get_action_type_display }}
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                {{ log.description }}
+                            </div>
+                            {% if log.object_repr %}
+                            <div class="text-xs text-gray-500 mt-1">
+                                Objet: {{ log.object_repr }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-gray-600">
+                            {{ log.timestamp|date:"d/m/Y H:i" }}
+                        </div>
+                        <a href="{% url 'activity_log:detail' log.id %}" 
+                           class="text-xs text-blue-600 hover:text-blue-800">
+                            Détails →
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-8 text-center text-gray-500">
+                Aucune activité trouvée pour cet utilisateur.
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="p-4 border-t bg-gray-50">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-600">
+                    Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+                    ({{ page_obj.paginator.count }} activités au total)
+                </div>
+                <div class="flex space-x-2">
+                    {% if page_obj.has_previous %}
+                    <a href="?page=1" 
+                       class="px-3 py-1 border rounded hover:bg-gray-100">
+                        Première
+                    </a>
+                    <a href="?page={{ page_obj.previous_page_number }}" 
+                       class="px-3 py-1 border rounded hover:bg-gray-100">
+                        Précédente
+                    </a>
+                    {% endif %}
+                    
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" 
+                       class="px-3 py-1 border rounded hover:bg-gray-100">
+                        Suivante
+                    </a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}" 
+                       class="px-3 py-1 border rounded hover:bg-gray-100">
+                        Dernière
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+
+    <!-- Bouton retour -->
+    <div class="mt-6">
+        <a href="{% url 'activity_log:list' %}" 
+           class="inline-flex items-center text-blue-600 hover:text-blue-800">
+            <span class="material-icons mr-1">arrow_back</span>
+            Retour à la liste complète
+        </a>
+    </div>
+</div>
+{% endblock %}

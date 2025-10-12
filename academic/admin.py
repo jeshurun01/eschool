@@ -121,6 +121,16 @@ class GradeAdmin(admin.ModelAdmin):
     list_filter = ('evaluation_type', 'subject', 'date', 'classroom__level')
     search_fields = ('student__user__first_name', 'student__user__last_name', 'evaluation_name')
     date_hierarchy = 'date'
+    
+    def save_model(self, request, obj, form, change):
+        """Passer l'utilisateur au signal pour le tracking d'activité"""
+        obj._user = request.user
+        super().save_model(request, obj, form, change)
+    
+    def delete_model(self, request, obj):
+        """Passer l'utilisateur au signal pour le tracking d'activité"""
+        obj._user = request.user
+        super().delete_model(request, obj)
 
 
 @admin.register(Period)

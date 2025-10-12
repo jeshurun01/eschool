@@ -2,7 +2,22 @@
 
 ## ⚠️ PROBLÈMES DE SÉCURITÉ CORRIGÉS
 
-### 1. Vues sans protection d'authentification (CRITIQUE)
+### 1. 🔴 CRITIQUE - Accès non autorisé aux documents (12 octobre 2025)
+**Problème :** Les élèves pouvaient voir et télécharger les documents de toutes les classes
+
+**Description :**
+- Un élève de 6ème A pouvait accéder aux examens, corrections et cours de 6ème B, 6ème C, etc.
+- La vérification se faisait uniquement sur la matière, pas sur la classe
+- Impact : Violation de confidentialité, fuite de données sensibles
+
+**Vues corrigées :**
+- ✅ `document_list()` → Filtre maintenant sur `classroom=current_classroom` OU `classroom=None`
+- ✅ `document_view()` → Vérifie que le document appartient à la classe de l'élève
+- ✅ `document_subject_list()` → Utilise seulement la classe active (pas l'historique)
+
+**Documentation :** `docs/fixes/DOCUMENT_ACCESS_SECURITY_FIX.md`
+
+### 2. Vues sans protection d'authentification (CRITIQUE)
 **Problème :** Plusieurs vues étaient accessibles sans authentification
 
 **Vues corrigées :**
@@ -14,7 +29,7 @@
 - ✅ `student_bulletin()` → Ajout de `@teacher_or_student_required`
 - ✅ `class_report()` → Ajout de `@teacher_required`
 
-### 2. Contrôle d'accès insuffisant par rôle (ÉLEVÉ)
+### 3. Contrôle d'accès insuffisant par rôle (ÉLEVÉ)
 **Problème :** Certaines vues sensibles n'avaient pas de restrictions par rôle appropriées
 
 **Corrections appliquées :**

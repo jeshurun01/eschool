@@ -97,20 +97,30 @@
                         {% if enrollments %}
                             <div class="space-y-3">
                                 {% for enrollment in enrollments %}
-                                <div class="flex items-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
-                                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                                <a href="{% url 'accounts:student_detail' enrollment.student.id %}" 
+                                   class="flex items-center p-3 bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors group cursor-pointer border border-transparent hover:border-blue-200">
+                                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-4 group-hover:bg-blue-200 transition-colors">
                                         <span class="text-blue-600 font-semibold text-sm">
                                             {{ enrollment.student.user.first_name.0 }}{{ enrollment.student.user.last_name.0 }}
                                         </span>
                                     </div>
                                     <div class="flex-1">
-                                        <h3 class="font-medium text-gray-900">
+                                        <h3 class="font-medium text-gray-900 group-hover:text-blue-700 transition-colors flex items-center">
                                             {{ enrollment.student.user.first_name }} {{ enrollment.student.user.last_name }}
+                                            <span class="material-icons ml-1 text-sm opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
                                         </h3>
-                                        <p class="text-sm text-gray-600">Inscrit le {{ enrollment.enrollment_date|date:"d/m/Y" }}</p>
+                                        <p class="text-sm text-gray-600">
+                                            {% if enrollment.student.matricule %}
+                                                {{ enrollment.student.matricule }} • 
+                                            {% endif %}
+                                            Inscrit le {{ enrollment.enrollment_date|date:"d/m/Y" }}
+                                        </p>
                                     </div>
-                                    <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">Actif</span>
-                                </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">Actif</span>
+                                        <span class="material-icons text-gray-400 group-hover:text-blue-600 transition-colors">chevron_right</span>
+                                    </div>
+                                </a>
                                 {% endfor %}
                             </div>
                         {% else %}
@@ -207,20 +217,28 @@
                         {% if assignments %}
                             <div class="space-y-3">
                                 {% for assignment in assignments %}
-                                <div class="flex items-center p-3 bg-purple-50 rounded-lg">
-                                    <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                                        <span class="text-purple-600 font-semibold text-sm">
-                                            {{ assignment.teacher.user.first_name.0 }}{{ assignment.teacher.user.last_name.0 }}
-                                        </span>
+                                <a href="{% url 'accounts:teacher_detail' assignment.teacher.id %}" 
+                                   class="flex items-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors group cursor-pointer">
+                                    <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3 group-hover:bg-purple-200 transition-colors">
+                                        {% if assignment.teacher.user.avatar %}
+                                            <img src="{{ assignment.teacher.user.avatar.url }}" 
+                                                 alt="{{ assignment.teacher.user.get_full_name }}" 
+                                                 class="w-10 h-10 rounded-full object-cover">
+                                        {% else %}
+                                            <span class="text-purple-600 font-semibold text-sm">
+                                                {{ assignment.teacher.user.first_name.0 }}{{ assignment.teacher.user.last_name.0 }}
+                                            </span>
+                                        {% endif %}
                                     </div>
                                     <div class="flex-1">
-                                        <h3 class="font-medium text-gray-900">
+                                        <h3 class="font-medium text-gray-900 group-hover:text-purple-700 transition-colors flex items-center">
                                             {{ assignment.teacher.user.first_name }} {{ assignment.teacher.user.last_name }}
+                                            <span class="material-icons ml-1 text-sm opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
                                         </h3>
                                         <p class="text-sm text-purple-600 font-medium">{{ assignment.subject.name }}</p>
                                         <p class="text-xs text-gray-500">{{ assignment.hours_per_week }}h/semaine</p>
                                     </div>
-                                </div>
+                                </a>
                                 {% endfor %}
                             </div>
                         {% else %}

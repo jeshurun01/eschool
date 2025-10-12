@@ -31,6 +31,9 @@ urlpatterns = [
     path('finance/', include('finance.urls')),
     path('communication/', include('communication.urls')),
     
+    # Système de suivi d'activité
+    path('activity-logs/', include('activity_log.urls')),
+    
     # API REST
     path('api/', include('core.api_urls')),
 ]

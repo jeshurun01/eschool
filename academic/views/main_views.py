@@ -722,77 +722,74 @@ def timetable_create(request):
 @teacher_or_student_required
 def attendance_list(request):
     """Liste des présences avec filtres - accessible aux enseignants, étudiants et parents"""
-    from django.db.models import Q, Count
+    from django.db.models import Q, Count, Sum
     from datetime import datetime, timedelta
     
-    # Récupérer les présences
-    attendances = Attendance.objects.select_related(
-        'student__user', 'classroom', 'subject', 'teacher__user'
+    # Utiliser DailyAttendanceSummary (nouveau système) au lieu de Attendance (ancien)
+    summaries = DailyAttendanceSummary.objects.select_related(
+        'student__user', 'student__current_class'
     )
 
     # Filtrage RBAC selon l'utilisateur connecté
     user = request.user
     if hasattr(user, 'teacher_profile') and not user.is_superuser:
-        # Enseignant : uniquement ses présences
-        attendances = attendances.filter(teacher=user.teacher_profile)
+        # Enseignant : présences des élèves de ses classes
+        teacher_assignments = TeacherAssignment.objects.filter(
+            teacher=user.teacher_profile,
+            academic_year__is_current=True
+        )
+        classroom_ids = teacher_assignments.values_list('classroom_id', flat=True).distinct()
+        summaries = summaries.filter(student__current_class_id__in=classroom_ids)
     elif hasattr(user, 'student_profile'):
         # Élève : uniquement ses propres présences
-        attendances = attendances.filter(student=user.student_profile)
+        summaries = summaries.filter(student=user.student_profile)
     elif hasattr(user, 'parent'):
         # Parent : uniquement les présences de ses enfants
         children_ids = user.parent.students.values_list('id', flat=True)
-        attendances = attendances.filter(student_id__in=children_ids)
+        summaries = summaries.filter(student_id__in=children_ids)
     elif not user.is_superuser:
         # Autres utilisateurs : aucun accès
-        attendances = attendances.none()
+        summaries = summaries.none()
     
     # Filtres
     classroom_id = request.GET.get('classroom')
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
     status = request.GET.get('status')
-    subject_id = request.GET.get('subject')
     
     # Filtrage par classe
     if classroom_id and classroom_id != 'None':
         try:
-            attendances = attendances.filter(classroom_id=int(classroom_id))
+            summaries = summaries.filter(student__current_class_id=int(classroom_id))
         except (ValueError, TypeError):
             pass
     
     # Filtrage par dates
     if date_from:
         try:
-            attendances = attendances.filter(date__gte=datetime.strptime(date_from, '%Y-%m-%d').date())
+            summaries = summaries.filter(date__gte=datetime.strptime(date_from, '%Y-%m-%d').date())
         except ValueError:
             pass
     
     if date_to:
         try:
-            attendances = attendances.filter(date__lte=datetime.strptime(date_to, '%Y-%m-%d').date())
+            summaries = summaries.filter(date__lte=datetime.strptime(date_to, '%Y-%m-%d').date())
         except ValueError:
             pass
     else:
         # Par défaut, dernière semaine
         one_week_ago = datetime.now().date() - timedelta(days=7)
-        attendances = attendances.filter(date__gte=one_week_ago)
+        summaries = summaries.filter(date__gte=one_week_ago)
     
-    # Filtrage par statut
+    # Filtrage par statut journalier
     if status and status != 'None':
-        attendances = attendances.filter(status=status)
-    
-    # Filtrage par matière
-    if subject_id and subject_id != 'None':
-        try:
-            attendances = attendances.filter(subject_id=int(subject_id))
-        except (ValueError, TypeError):
-            pass
+        summaries = summaries.filter(daily_status=status)
     
     # Ordre pour la pagination
-    attendances = attendances.order_by('-date', 'classroom__name', 'student__user__last_name')
+    summaries = summaries.order_by('-date', 'student__current_class__name', 'student__user__last_name')
     
     # Pagination
-    paginator = Paginator(attendances, 50)
+    paginator = Paginator(summaries, 50)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -801,21 +798,16 @@ def attendance_list(request):
         academic_year__is_current=True
     ).order_by('level__name', 'name')
     
-    subjects = Subject.objects.all().order_by('name')
-    
-    # Filtrage RBAC pour les options de filtre - utiliser la même logique que attendance_take
+    # Filtrage RBAC pour les options de filtre
     if hasattr(user, 'teacher_profile') and not user.is_superuser:
-        # Enseignant : uniquement ses classes et matières assignées
+        # Enseignant : uniquement ses classes assignées
         teacher_assignments = TeacherAssignment.objects.filter(
             teacher=user.teacher_profile,
             academic_year__is_current=True
-        ).select_related('classroom', 'subject')
+        ).select_related('classroom')
         
         classroom_ids = teacher_assignments.values_list('classroom_id', flat=True).distinct()
-        subject_ids = teacher_assignments.values_list('subject_id', flat=True).distinct()
-        
         classrooms = classrooms.filter(id__in=classroom_ids)
-        subjects = subjects.filter(id__in=subject_ids)
     elif hasattr(user, 'student_profile'):
         # Élève : uniquement ses classes
         enrollment_classroom_ids = user.student_profile.enrollments.filter(
@@ -830,32 +822,46 @@ def attendance_list(request):
         ).values_list('classroom_id', flat=True)
         classrooms = classrooms.filter(id__in=children_classroom_ids)
     
-    # Statistiques
-    total_attendances = attendances.count()
-    present_count = attendances.filter(status='PRESENT').count()
-    absent_count = attendances.filter(status='ABSENT').count()
-    late_count = attendances.filter(status='LATE').count()
-    excused_count = attendances.filter(status='EXCUSED').count()
+    # Statistiques basées sur DailyAttendanceSummary
+    stats = summaries.aggregate(
+        total_days=Count('id'),
+        fully_present_days=Count('id', filter=Q(daily_status='FULLY_PRESENT')),
+        partially_present_days=Count('id', filter=Q(daily_status='PARTIALLY_PRESENT')),
+        mostly_absent_days=Count('id', filter=Q(daily_status='MOSTLY_ABSENT')),
+        fully_absent_days=Count('id', filter=Q(daily_status='FULLY_ABSENT')),
+        total_sessions=Sum('total_sessions'),
+        present_sessions=Sum('present_sessions'),
+        absent_sessions=Sum('absent_sessions'),
+        late_sessions=Sum('late_sessions'),
+    )
+    
+    # Calcul du taux de présence
+    if stats['total_sessions'] and stats['total_sessions'] > 0:
+        effective_present = (stats['present_sessions'] or 0) + (stats['late_sessions'] or 0)
+        stats['attendance_rate'] = round(effective_present / stats['total_sessions'] * 100, 1)
+    else:
+        stats['attendance_rate'] = 0
+    
+    # Choix de statut pour DailyAttendanceSummary
+    status_choices = [
+        ('FULLY_PRESENT', 'Entièrement présent'),
+        ('PARTIALLY_PRESENT', 'Partiellement présent'),
+        ('MOSTLY_ABSENT', 'Majoritairement absent'),
+        ('FULLY_ABSENT', 'Entièrement absent'),
+    ]
     
     context = {
-        'attendances': page_obj,
+        'attendances': page_obj,  # Nom maintenu pour compatibilité template
+        'summaries': page_obj,     # Nom plus précis
         'classrooms': classrooms,
-        'subjects': subjects,
-        'status_choices': Attendance.STATUS_CHOICES,
+        'status_choices': status_choices,
         'filters': {
             'classroom': classroom_id,
             'date_from': date_from,
             'date_to': date_to,
             'status': status,
-            'subject': subject_id,
         },
-        'stats': {
-            'total': total_attendances,
-            'present': present_count,
-            'absent': absent_count,
-            'late': late_count,
-            'excused': excused_count,
-        }
+        'stats': stats,
     }
     
     return render(request, 'academic/attendance_list.html', context)
@@ -1649,9 +1655,12 @@ def document_list(request):
                     academic_year__is_current=True
                 ).values_list('subject_id', flat=True)
                 
-                # Documents accessibles : matières de sa classe OU documents publics
+                # Documents accessibles : 
+                # 1. Matières de sa classe ET (classroom=sa_classe OU classroom=None)
+                # 2. OU documents publics généraux (is_public=True ET classroom=None)
                 documents = Document.objects.filter(
-                    Q(subject_id__in=subject_ids) | Q(is_public=True)
+                    Q(subject_id__in=subject_ids) & (Q(classroom=current_classroom) | Q(classroom__isnull=True)) |
+                    Q(is_public=True, classroom__isnull=True)
                 ).select_related('subject', 'classroom', 'teacher__user').order_by('-created_at')
                 
                 # Filtres pour étudiants : matières de sa classe
@@ -1898,8 +1907,15 @@ def document_view(request, document_id):
                 academic_year__is_current=True
             ).values_list('subject_id', flat=True)
             
-            # Document accessible si : matière de sa classe OU public
-            can_access = (document.subject_id in subject_ids) or document.is_public
+            # Document accessible si : 
+            # 1. Matière de sa classe ET (classroom=sa_classe OU classroom=None)
+            # 2. OU document public général (is_public=True ET classroom=None)
+            can_access = (
+                (document.subject_id in subject_ids and 
+                 (document.classroom == current_classroom or document.classroom is None))
+                or 
+                (document.is_public and document.classroom is None)
+            )
     
     else:
         # Autres rôles (ADMIN, etc.) : accès complet
@@ -1944,7 +1960,19 @@ def document_subject_list(request, subject_id):
     
     # Vérifier les permissions
     can_access = False
+    
+    # Récupérer les documents directs de la matière
     documents = Document.objects.filter(subject=subject)
+    
+    # Récupérer aussi les documents partagés via les sessions de cette matière
+    from academic.models import SessionDocument, Session
+    session_document_ids = SessionDocument.objects.filter(
+        session__timetable__subject=subject
+    ).values_list('document_id', flat=True).distinct()
+    
+    # Combiner les deux sources de documents
+    all_document_ids = set(documents.values_list('id', flat=True)) | set(session_document_ids)
+    documents = Document.objects.filter(id__in=all_document_ids)
     
     if hasattr(request.user, 'teacher_profile'):
         # Enseignants : vérifier qu'ils enseignent cette matière
@@ -1958,25 +1986,29 @@ def document_subject_list(request, subject_id):
             documents = documents.select_related('teacher', 'classroom')
         
     elif hasattr(request.user, 'student_profile'):
-        # Étudiants : vérifier qu'ils ont cette matière
-        student_enrollments = request.user.student_profile.enrollments.filter(is_active=True)
-        student_classrooms = student_enrollments.values_list('classroom_id', flat=True)
+        # Étudiants : vérifier qu'ils ont cette matière dans leur classe active
+        student = request.user.student_profile
+        active_enrollment = student.enrollments.filter(is_active=True).first()
         
-        if TeacherAssignment.objects.filter(
-            classroom_id__in=student_classrooms,
-            subject=subject,
-            academic_year__is_current=True
-        ).exists():
-            can_access = True
-            # Voir seulement les documents publics et accessibles
-            documents = documents.filter(
-                is_public=True,
-                access_date__lte=timezone.now()
-            ).filter(
-                models.Q(expiry_date__isnull=True) | models.Q(expiry_date__gt=timezone.now())
-            ).filter(
-                models.Q(classroom__isnull=True) | models.Q(classroom_id__in=student_classrooms)
-            ).select_related('teacher', 'classroom')
+        if active_enrollment:
+            current_classroom = active_enrollment.classroom
+            
+            # Vérifier que la matière est enseignée dans sa classe
+            if TeacherAssignment.objects.filter(
+                classroom=current_classroom,
+                subject=subject,
+                academic_year__is_current=True
+            ).exists():
+                can_access = True
+                # Voir seulement les documents publics et accessibles de sa classe (ou généraux)
+                documents = documents.filter(
+                    is_public=True,
+                    access_date__lte=timezone.now()
+                ).filter(
+                    models.Q(expiry_date__isnull=True) | models.Q(expiry_date__gt=timezone.now())
+                ).filter(
+                    models.Q(classroom__isnull=True) | models.Q(classroom=current_classroom)
+                ).select_related('teacher', 'classroom')
     
     if not can_access:
         messages.error(request, "Vous n'avez pas l'autorisation d'accéder aux documents de cette matière.")

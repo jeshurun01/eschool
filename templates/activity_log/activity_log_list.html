@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Journal des activités - eSchool{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- En-tête -->
+    <div class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Journal des activités</h1>
+                    <p class="text-gray-600 mt-1">Suivi des actions dans l'application</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Statistiques globales -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                        <span class="material-icons">list</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Total</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.total }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-100 text-green-600">
+                        <span class="material-icons">today</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Aujourd'hui</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.today }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                        <span class="material-icons">date_range</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Cette semaine</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.this_week }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-orange-100 text-orange-600">
+                        <span class="material-icons">calendar_month</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Ce mois</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.this_month }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistiques par catégorie -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                <span class="material-icons text-blue-600 mr-2">analytics</span>
+                Activités par catégorie
+            </h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                {% for category, count in category_stats.items %}
+                <div class="text-center p-4 bg-gray-50 rounded-lg">
+                    <p class="text-2xl font-bold text-blue-600">{{ count }}</p>
+                    <p class="text-sm text-gray-600">{{ category }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <form method="get" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Recherche -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Recherche</label>
+                        <input type="text" name="search" value="{{ search_query }}" 
+                               placeholder="Chercher..." 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <!-- Catégorie -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Catégorie</label>
+                        <select name="category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Toutes</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Date début -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Date début</label>
+                        <input type="date" name="date_from" value="{{ date_from }}" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <!-- Date fin -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Date fin</label>
+                        <input type="date" name="date_to" value="{{ date_to }}" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+                        <span class="material-icons text-sm mr-2">search</span>
+                        Filtrer
+                    </button>
+                    <a href="{% url 'activity_log:list' %}" class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition">
+                        <span class="material-icons text-sm mr-2">refresh</span>
+                        Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Liste des activités -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">
+                    Activités récentes ({{ page_obj.paginator.count }})
+                </h3>
+            </div>
+
+            {% if page_obj %}
+                <div class="divide-y divide-gray-200">
+                    {% for log in page_obj %}
+                    <div class="p-6 hover:bg-gray-50 transition">
+                        <div class="flex items-start">
+                            <!-- Icône -->
+                            <div class="flex-shrink-0">
+                                <div class="w-10 h-10 rounded-full {{ log.color_class }} flex items-center justify-center">
+                                    <span class="material-icons text-sm">{{ log.icon_class }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Contenu -->
+                            <div class="ml-4 flex-1">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="font-medium text-gray-900">
+                                            {% if log.user %}
+                                                {{ log.user.get_full_name }}
+                                            {% else %}
+                                                Système
+                                            {% endif %}
+                                        </span>
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full {{ log.color_class }}">
+                                            {{ log.get_action_type_display }}
+                                        </span>
+                                    </div>
+                                    <span class="text-sm text-gray-500">{{ log.timestamp|date:"d/m/Y H:i" }}</span>
+                                </div>
+
+                                <p class="text-gray-700 mb-2">{{ log.description }}</p>
+
+                                <div class="flex items-center text-sm text-gray-500 space-x-4">
+                                    <span class="flex items-center">
+                                        <span class="material-icons text-xs mr-1">category</span>
+                                        {{ log.content_type|default:"N/A" }}
+                                    </span>
+                                    {% if log.ip_address %}
+                                    <span class="flex items-center">
+                                        <span class="material-icons text-xs mr-1">public</span>
+                                        {{ log.ip_address }}
+                                    </span>
+                                    {% endif %}
+                                    <a href="{% url 'activity_log:detail' log.pk %}" 
+                                       class="text-blue-600 hover:text-blue-800 flex items-center">
+                                        <span class="material-icons text-xs mr-1">visibility</span>
+                                        Détails
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination -->
+                {% if page_obj.has_other_pages %}
+                <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                    <div class="text-sm text-gray-700">
+                        Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+                        ({{ page_obj.paginator.count }} résultats)
+                    </div>
+                    <div class="flex space-x-2">
+                        {% if page_obj.has_previous %}
+                        <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" 
+                           class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                            <span class="material-icons text-sm">first_page</span>
+                        </a>
+                        <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" 
+                           class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                            <span class="material-icons text-sm">chevron_left</span>
+                        </a>
+                        {% endif %}
+
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" 
+                           class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                            <span class="material-icons text-sm">chevron_right</span>
+                        </a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" 
+                           class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                            <span class="material-icons text-sm">last_page</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-12">
+                    <span class="material-icons text-gray-400" style="font-size: 64px;">inbox</span>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">Aucune activité</h3>
+                    <p class="mt-1 text-sm text-gray-500">Aucun log ne correspond aux critères de recherche.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Top utilisateurs actifs -->
+        {% if top_users %}
+        <div class="mt-8 bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                <span class="material-icons text-purple-600 mr-2">leaderboard</span>
+                Utilisateurs les plus actifs
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                {% for user in top_users %}
+                <div class="p-4 bg-purple-50 rounded-lg">
+                    <div class="flex items-center mb-2">
+                        <div class="w-8 h-8 bg-purple-200 rounded-full flex items-center justify-center mr-2">
+                            <span class="text-purple-600 font-semibold text-xs">
+                                {{ user.user__first_name|first }}{{ user.user__last_name|first }}
+                            </span>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-medium text-sm text-gray-900">
+                                {{ user.user__first_name }} {{ user.user__last_name }}
+                            </p>
+                            <p class="text-xs text-gray-600">{{ user.user__role }}</p>
+                        </div>
+                    </div>
+                    <p class="text-2xl font-bold text-purple-600">{{ user.activity_count }}</p>
+                    <p class="text-xs text-gray-600">actions</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

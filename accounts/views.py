@@ -13,6 +13,7 @@ from .models import User, Student, Parent, Teacher
 from academic.models import ClassRoom, Subject, Session, SessionAttendance, DailyAttendanceSummary, Enrollment, Level, Grade
 from finance.models import Invoice, Payment, FeeStructure
 from communication.models import Announcement, Message
+from activity_log.models import ActivityLog
 from .forms import (
     UserRegistrationForm, CustomLoginForm, ProfileEditForm,
     StudentProfileForm, TeacherProfileForm, ParentProfileForm,
@@ -259,12 +260,43 @@ def admin_dashboard(request):
         'attendance_trend': [],  # Évolution des présences
     }
     
+    # Statistiques du journal d'activité
+    activity_stats = {
+        'today_count': ActivityLog.objects.filter(timestamp__date=today).count(),
+        'week_count': ActivityLog.objects.filter(timestamp__gte=week_ago).count(),
+        'grade_count': ActivityLog.objects.filter(
+            timestamp__gte=week_ago,
+            action_type__startswith='GRADE'
+        ).count(),
+        'invoice_count': ActivityLog.objects.filter(
+            timestamp__gte=week_ago,
+            action_type__startswith='INVOICE'
+        ).count(),
+        'payment_count': ActivityLog.objects.filter(
+            timestamp__gte=week_ago,
+            action_type__startswith='PAYMENT'
+        ).count(),
+        'login_count': ActivityLog.objects.filter(
+            timestamp__gte=week_ago,
+            action_type='USER_LOGIN'
+        ).count(),
+        'top_users': ActivityLog.objects.filter(
+            timestamp__gte=week_ago,
+            user__isnull=False
+        ).values(
+            'user__first_name', 'user__last_name'
+        ).annotate(
+            count=Count('id')
+        ).order_by('-count')[:5]
+    }
+    
     context = {
         'user': request.user,
         'stats': stats,
         'recent_activity': recent_activity,
         'academic_stats': academic_stats,
         'chart_data': chart_data,
+        'activity_stats': activity_stats,
         'recent_announcements': recent_announcements,
         'today': today,
         'now': now,
@@ -449,7 +481,8 @@ def student_dashboard(request):
     from communication.models import Announcement
     recent_announcements = Announcement.objects.filter(
         audience__in=['ALL', 'STUDENTS'],
-        publish_date__lte=today
+        is_published=True,
+        publish_date__lte=timezone.now()
     ).order_by('-publish_date')[:5]
     
     context['recent_announcements'] = recent_announcements
@@ -2342,6 +2375,7 @@ def student_academic_calendar(request):
     # Récupérer les vraies données depuis la base de données
     from academic.models import Grade, Timetable, AcademicYear, Document, Session, TeacherAssignment
     from datetime import datetime, timedelta
+    from django.utils import timezone
     import calendar
     
     today = date.today()
@@ -2368,6 +2402,10 @@ def student_academic_calendar(request):
         # Plage de dates : 7 jours passés + 30 jours futurs
         start_date = today - timedelta(days=7)
         end_date = today + timedelta(days=30)
+        
+        # Convertir en datetime pour les comparaisons avec DateTimeField
+        start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+        end_datetime = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
         
         # 1. Récupérer les sessions (cours réels) de la classe
         sessions = Session.objects.filter(
@@ -2407,21 +2445,24 @@ def student_academic_calendar(request):
         documents = Document.objects.filter(
             Q(subject_id__in=subject_ids) | Q(is_public=True),
             document_type__in=['EXERCISE', 'EXAM'],
-            access_date__gte=start_date,
-            access_date__lte=end_date
+            access_date__gte=start_datetime,
+            access_date__lte=end_datetime
         ).select_related('subject', 'teacher__user')
         
         for doc in documents:
             event_type = 'exam' if doc.document_type == 'EXAM' else 'assignment'
             importance = 'high' if doc.document_type == 'EXAM' else 'medium'
             
+            # Convertir access_date (datetime) en date
+            event_date = doc.access_date.date() if doc.access_date else doc.created_at.date()
+            
             events.append({
-                'date': doc.access_date if doc.access_date else doc.created_at.date(),
+                'date': event_date,
                 'type': event_type,
                 'title': doc.title,
                 'description': doc.description or f"{'Examen' if doc.document_type == 'EXAM' else 'Devoir'} de {doc.subject.name}",
                 'subject': doc.subject.name,
-                'time': '08:00',
+                'time': doc.access_date.strftime('%H:%M') if doc.access_date else '08:00',
                 'duration': 120 if doc.document_type == 'EXAM' else 60,
                 'importance': importance,
                 'teacher': doc.teacher.user.get_full_name() if doc.teacher else '',

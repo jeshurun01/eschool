@@ -358,7 +358,7 @@ def admin_teachers_overview(request):
     
     # Enseignants avec le plus de documents partagés
     document_sharers = teachers.annotate(
-        shared_documents=Count('user__sessiondocument_set')
+        shared_documents=Count('user__sessiondocument')
     ).order_by('-shared_documents')[:10]
     
     # Statistiques globales

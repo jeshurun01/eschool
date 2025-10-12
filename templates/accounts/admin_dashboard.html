@@ -216,6 +216,87 @@
             </div>
         </div>
 
+        <!-- Troisième ligne - Logs d'activité -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Journal d'activité -->
+            <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                <div class="p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-gradient-to-r from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
+                                <span class="material-icons text-white text-2xl">history</span>
+                            </div>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Journal d'activité</dt>
+                                <dd class="text-2xl font-bold text-gray-900">{{ activity_stats.today_count|default:0 }}</dd>
+                                <dd class="text-xs text-gray-600 font-medium">{{ activity_stats.week_count|default:0 }} cette semaine</dd>
+                            </dl>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <a href="{% url 'activity_log:list' %}" class="text-teal-600 hover:text-teal-700 text-sm font-medium flex items-center">
+                            Consulter les logs
+                            <span class="material-icons ml-1 text-sm">arrow_forward</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activités par type -->
+            <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-100">
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <span class="material-icons text-teal-600 mr-2">analytics</span>
+                        <h3 class="text-sm font-medium text-gray-500">Activités récentes</h3>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-600">Notes</span>
+                            <span class="text-sm font-medium text-gray-900">{{ activity_stats.grade_count|default:0 }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-600">Factures</span>
+                            <span class="text-sm font-medium text-gray-900">{{ activity_stats.invoice_count|default:0 }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-600">Paiements</span>
+                            <span class="text-sm font-medium text-gray-900">{{ activity_stats.payment_count|default:0 }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-600">Connexions</span>
+                            <span class="text-sm font-medium text-gray-900">{{ activity_stats.login_count|default:0 }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Utilisateurs les plus actifs -->
+            <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-gray-100">
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <span class="material-icons text-teal-600 mr-2">emoji_events</span>
+                        <h3 class="text-sm font-medium text-gray-500">Utilisateurs actifs (7j)</h3>
+                    </div>
+                    {% if activity_stats.top_users %}
+                        <div class="space-y-2">
+                            {% for user_stat in activity_stats.top_users|slice:":5" %}
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-gray-600 truncate" title="{{ user_stat.user__first_name }} {{ user_stat.user__last_name }}">
+                                    {{ user_stat.user__first_name }} {{ user_stat.user__last_name|slice:":1" }}.
+                                </span>
+                                <span class="text-sm font-medium text-teal-600">{{ user_stat.count }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-sm text-gray-500">Aucune activité récente</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
         <!-- Navigation rapide améliorée -->
         <div class="bg-white shadow-lg rounded-xl mb-8 border border-gray-100">
             <div class="px-6 py-5">
@@ -253,6 +334,14 @@
                         <div>
                             <div class="font-medium">Nouvelle annonce</div>
                             <div class="text-xs text-gray-500">Informer la communauté</div>
+                        </div>
+                    </a>
+
+                    <a href="{% url 'activity_log:list' %}" class="group inline-flex items-center px-6 py-3 border border-gray-200 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-teal-50 hover:border-teal-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-all duration-200">
+                        <span class="material-icons mr-3 text-teal-600 group-hover:text-teal-700">history</span>
+                        <div>
+                            <div class="font-medium">Journal d'activité</div>
+                            <div class="text-xs text-gray-500">Consulter les logs</div>
                         </div>
                     </a>
                 </div>

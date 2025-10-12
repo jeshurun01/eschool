@@ -44,6 +44,7 @@ class RBACMiddleware(MiddlewareMixin):
             '/academic/',
             '/finance/',
             '/communication/',
+            '/activity-logs/',  # Système de logs d'activité
         ],
         'FINANCE': [
             '/accounts/finance/',

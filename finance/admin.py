@@ -32,6 +32,16 @@ class InvoiceAdmin(admin.ModelAdmin):
     readonly_fields = ('invoice_number', 'subtotal', 'total_amount', 'paid_amount', 'balance')
     inlines = [InvoiceItemInline]
     date_hierarchy = 'issue_date'
+    
+    def save_model(self, request, obj, form, change):
+        """Passer l'utilisateur au signal pour le tracking d'activité"""
+        obj._user = request.user
+        super().save_model(request, obj, form, change)
+    
+    def delete_model(self, request, obj):
+        """Passer l'utilisateur au signal pour le tracking d'activité"""
+        obj._user = request.user
+        super().delete_model(request, obj)
 
 
 @admin.register(PaymentMethod)
@@ -48,6 +58,16 @@ class PaymentAdmin(admin.ModelAdmin):
     search_fields = ('payment_reference', 'transaction_id', 'invoice__invoice_number')
     readonly_fields = ('payment_reference',)
     date_hierarchy = 'payment_date'
+    
+    def save_model(self, request, obj, form, change):
+        """Passer l'utilisateur au signal pour le tracking d'activité"""
+        obj._user = request.user
+        super().save_model(request, obj, form, change)
+    
+    def delete_model(self, request, obj):
+        """Passer l'utilisateur au signal pour le tracking d'activité"""
+        obj._user = request.user
+        super().delete_model(request, obj)
 
 
 @admin.register(Scholarship)
