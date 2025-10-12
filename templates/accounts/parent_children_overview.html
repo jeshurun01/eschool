@@ -46,7 +46,7 @@
                     <div class="ml-4">
                         <p class="text-sm text-gray-600">Enfants inscrits</p>
                         <p class="text-2xl font-bold">{{ total_children }}</p>
-                        <p class="text-sm text-blue-600">Moyenne: {{ average_grade|floatformat:1 }}/20</p>
+                        <p class="text-sm text-blue-600">Moyenne: {{ average_grade_global|floatformat:1 }}/20</p>
                     </div>
                 </div>
             </div>
@@ -58,8 +58,8 @@
                     </div>
                     <div class="ml-4">
                         <p class="text-sm text-gray-600">Taux de présence</p>
-                        <p class="text-2xl font-bold">{{ average_attendance|floatformat:1 }}%</p>
-                        <p class="text-sm text-green-600">{{ total_present_days }} jours</p>
+                        <p class="text-2xl font-bold">{{ average_attendance_global|floatformat:1 }}%</p>
+                        <p class="text-sm text-green-600">Moyenne générale</p>
                     </div>
                 </div>
             </div>
@@ -70,12 +70,12 @@
                         <span class="material-icons {% if total_pending_amount > 0 %}text-red-600{% else %}text-green-600{% endif %}">account_balance_wallet</span>
                     </div>
                     <div class="ml-4">
-                        <p class="text-sm text-gray-600">Factures</p>
+                        <p class="text-sm text-gray-600">Solde à payer</p>
                         <p class="text-2xl font-bold {% if total_pending_amount > 0 %}text-red-600{% else %}text-green-600{% endif %}">
-                            ${{ total_pending_amount|floatformat:0 }}
+                            {{ total_pending_amount|floatformat:0 }} €
                         </p>
                         {% if total_overdue_amount > 0 %}
-                            <p class="text-sm text-red-600">+${{ total_overdue_amount|floatformat:0 }} en retard</p>
+                            <p class="text-sm text-red-600">{{ total_overdue_amount|floatformat:0 }} € en retard</p>
                         {% else %}
                             <p class="text-sm text-green-600">À jour</p>
                         {% endif %}
@@ -155,10 +155,10 @@
                             <div class="flex items-center justify-center mb-2">
                                 <span class="material-icons {% if child_data.total_pending > 0 %}text-red-600{% else %}text-green-600{% endif %} mr-2">account_balance_wallet</span>
                                 <span class="text-2xl font-bold {% if child_data.total_pending > 0 %}text-red-600{% else %}text-green-600{% endif %}">
-                                    ${{ child_data.total_pending|floatformat:0 }}
+                                    {{ child_data.total_pending|floatformat:0 }} €
                                 </span>
                             </div>
-                            <p class="text-sm text-gray-600">Factures</p>
+                            <p class="text-sm text-gray-600">Solde à payer</p>
                         </div>
                     </div>
                 </div>

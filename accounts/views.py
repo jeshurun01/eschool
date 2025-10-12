@@ -458,11 +458,11 @@ def student_dashboard(request):
         is_read=False
     ).count()
     
-    # Informations financières
-    pending_invoices = Invoice.objects.filter(
-        student=student,
-        status__in=['PENDING', 'SENT']
-    ).order_by('-due_date')[:3]
+    # Informations financières - calcul avec balance réelle (inclut les paiements partiels)
+    all_student_invoices = Invoice.objects.filter(student=student).prefetch_related('payments')
+    pending_invoices_list = [inv for inv in all_student_invoices if not inv.is_paid]
+    pending_invoices = sorted(pending_invoices_list, key=lambda x: x.due_date, reverse=True)[:3]
+    total_pending = sum(inv.balance for inv in pending_invoices_list)
     
     recent_payments = Payment.objects.filter(
         invoice__student=student,
@@ -472,9 +472,7 @@ def student_dashboard(request):
     context.update({
         'pending_invoices': pending_invoices,
         'recent_payments': recent_payments,
-        'total_pending_amount': pending_invoices.aggregate(
-            total=Sum('total_amount')
-        )['total'] or 0
+        'total_pending_amount': float(total_pending)
     })
     
     # Annonces récentes pour les étudiants
@@ -778,7 +776,7 @@ def parent_dashboard(request):
         'total_grades': 0,
         'total_average': 0,
         'total_absences': 0,
-        'total_pending_amount': 0,
+        'total_pending_amount': 0.0,
     }
     
     for child in children:
@@ -833,15 +831,14 @@ def parent_dashboard(request):
             session__date__gte=week_ago
         ).select_related('session').order_by('-session__date')[:3]
         
-        # Informations financières de l'enfant
-        pending_invoices = Invoice.objects.filter(
-            student=child,
-            status__in=['PENDING', 'SENT']
-        ).order_by('-due_date')
+        # Informations financières de l'enfant - Calcul correct avec paiements partiels
+        all_child_invoices = Invoice.objects.filter(student=child).prefetch_related('payments')
         
-        total_pending = pending_invoices.aggregate(
-            total=Sum('total_amount')
-        )['total'] or 0
+        # Factures non entièrement payées
+        pending_invoices_list = [inv for inv in all_child_invoices if not inv.is_paid]
+        
+        # Calcul du vrai solde (montant - paiements effectués)
+        total_pending = sum(inv.balance for inv in pending_invoices_list)
         
         recent_payments = Payment.objects.filter(
             invoice__student=child,
@@ -866,8 +863,8 @@ def parent_dashboard(request):
             'average_grade': round(average_grade, 2),
             'attendance_stats': attendance_stats,
             'recent_absences': recent_absences_sessions,
-            'pending_invoices': pending_invoices,
-            'total_pending': total_pending,
+            'pending_invoices': pending_invoices_list,
+            'total_pending': float(total_pending),
             'recent_payments': recent_payments,
             'next_classes': next_classes,
             'grade_trend': 'up' if average_grade >= 12 else 'down',  # Simulation
@@ -879,7 +876,7 @@ def parent_dashboard(request):
         overall_stats['total_grades'] += all_grades.count()
         overall_stats['total_average'] += average_grade
         overall_stats['total_absences'] += attendance_stats['absent']
-        overall_stats['total_pending_amount'] += total_pending
+        overall_stats['total_pending_amount'] += float(total_pending)
     
     # Calcul des moyennes globales
     if total_children > 0:
@@ -2660,18 +2657,21 @@ def parent_children_overview(request):
             effective_present = present_sessions + late_sessions
             attendance_rate = round((effective_present / total_sessions) * 100, 1) if total_sessions > 0 else 0
         
-        # Situation financière
-        pending_invoices = Invoice.objects.filter(
-            student=child,
-            status__in=['DRAFT', 'SENT']
-        )
-        overdue_invoices = Invoice.objects.filter(
-            student=child,
-            status='OVERDUE'
-        )
+        # Situation financière - Calcul correct avec paiements partiels
+        all_child_invoices = Invoice.objects.filter(student=child).prefetch_related('payments')
         
-        total_pending = pending_invoices.aggregate(total=Sum('total_amount'))['total'] or 0
-        total_overdue = overdue_invoices.aggregate(total=Sum('total_amount'))['total'] or 0
+        # Factures non entièrement payées (utilise la propriété is_paid)
+        pending_invoices_list = [inv for inv in all_child_invoices if not inv.is_paid]
+        
+        # Factures en retard (échéance passée ET non payées)
+        overdue_invoices_list = [
+            inv for inv in pending_invoices_list 
+            if inv.due_date and inv.due_date < today
+        ]
+        
+        # Calcul du solde réel (montant - paiements effectués)
+        total_pending = sum(inv.balance for inv in pending_invoices_list)
+        total_overdue = sum(inv.balance for inv in overdue_invoices_list)
         
         # Performance par matière
         subjects_performance = []

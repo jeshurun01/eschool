@@ -776,10 +776,11 @@ def payment_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Statistiques pour le contexte
-    total_payments = Payment.objects.count()
-    completed_payments = Payment.objects.filter(status='COMPLETED').count()
-    pending_payments = Payment.objects.filter(status='PENDING').count()
+    # Statistiques pour le contexte - filtrées selon le rôle de l'utilisateur
+    base_payments = Payment.objects.for_role(request.user)
+    total_payments = base_payments.count()
+    completed_payments = base_payments.filter(status='COMPLETED').count()
+    pending_payments = base_payments.filter(status='PENDING').count()
     
     context = {
         'page_obj': page_obj,

@@ -300,25 +300,26 @@
                             </a>
                         </div>
                         
-                        <h4 class="text-md leading-6 font-medium text-gray-700 mt-6 mb-3">Actions traditionnelles</h4>
+                        <h4 class="text-md leading-6 font-medium text-gray-700 mt-6 mb-3">Accès rapides</h4>
                         <div class="space-y-2">
-                            <a href="{% url 'academic:grade_list' %}" class="w-full inline-flex items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-600 bg-white hover:bg-gray-50">
+                            <a href="{% url 'accounts:parent_children_overview' %}" class="w-full inline-flex items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-600 bg-white hover:bg-gray-50">
                                 <svg class="mr-2 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
-                                Notes (vue classique)
+                                Vue d'ensemble des enfants
                             </a>
-                            <a href="{% url 'academic:attendance_list' %}" class="w-full inline-flex items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-600 bg-white hover:bg-gray-50">
+                            <a href="{% url 'finance:invoice_list' %}" class="w-full inline-flex items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-600 bg-white hover:bg-gray-50">
                                 <svg class="mr-2 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                                    <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
                                 </svg>
-                                Présences (vue classique)
+                                Factures
                             </a>
                             <a href="{% url 'finance:payment_list' %}" class="w-full inline-flex items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-600 bg-white hover:bg-gray-50">
                                 <svg class="mr-2 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/>
+                                    <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"/>
                                 </svg>
-                                Paiements (vue classique)
+                                Paiements
                             </a>
                         </div>
                     </div>
@@ -362,7 +363,7 @@
                         
                         <div class="space-y-4">
                             {% for announcement in recent_announcements %}
-                            <div class="border border-gray-200 rounded-lg p-4 hover:bg-purple-50 transition-colors duration-200">
+                            <a href="{% url 'communication:announcement_detail' announcement.id %}" class="block border border-gray-200 rounded-lg p-4 hover:bg-purple-50 hover:border-purple-300 transition-all duration-200 cursor-pointer">
                                 <div class="flex items-start">
                                     <div class="flex-shrink-0">
                                         <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -384,13 +385,19 @@
                                             {% endif %}
                                         </div>
                                         <p class="text-gray-600 text-sm mb-2">{{ announcement.content|truncatewords:20 }}</p>
-                                        <div class="text-xs text-gray-500 flex items-center">
-                                            <span class="material-icons mr-1" style="font-size: 12px;">schedule</span>
-                                            {{ announcement.publish_date|date:"d/m/Y" }}
+                                        <div class="text-xs text-gray-500 flex items-center justify-between">
+                                            <div class="flex items-center">
+                                                <span class="material-icons mr-1" style="font-size: 12px;">schedule</span>
+                                                {{ announcement.publish_date|date:"d/m/Y" }}
+                                            </div>
+                                            <span class="text-purple-600 font-medium flex items-center">
+                                                Voir détails
+                                                <span class="material-icons ml-1" style="font-size: 14px;">arrow_forward</span>
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </a>
                             {% endfor %}
                         </div>
                     </div>
