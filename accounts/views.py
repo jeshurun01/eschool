@@ -901,7 +901,8 @@ def parent_dashboard(request):
                 'description': f'{grade.subject.name}: {grade.score}/20',
                 'date': grade_date,
                 'color': 'green' if grade.score >= 12 else 'yellow' if grade.score >= 10 else 'red',
-                'child': child_data['student']
+                'child': child_data['student'],
+                'grade': grade  # Ajouter l'objet grade complet pour accéder aux détails
             })
     
     # Ajout des absences récentes

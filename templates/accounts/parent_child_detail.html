@@ -428,6 +428,15 @@ function showTab(tabName) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Vérifier si un onglet est spécifié dans l'URL (ex: ?tab=finance)
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    
+    // Si un paramètre tab est présent, afficher cet onglet
+    if (tabParam && ['academic', 'attendance', 'finance', 'communication'].includes(tabParam)) {
+        showTab(tabParam);
+    }
+    
     // Animation des barres de progression
     const progressBars = document.querySelectorAll('[data-width]');
     progressBars.forEach(bar => {
