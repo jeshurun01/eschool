@@ -1056,16 +1056,16 @@ def daily_financial_report(request):
                     '#ec4899',  # Rose pour mobile
                 ]
             },
-            # Données pour le graphique des factures par statut
+            # Données pour le graphique des factures par statut (état global à cette date)
             'invoice_status': {
-                'labels': ['En attente', 'Payées', 'En retard', 'Partielles'],
+                'labels': ['Payées (toutes)', 'Partielles', 'En attente', 'Envoyées'],
                 'data': [
-                    report.invoices_pending_count,
-                    report.invoices_paid_count,
-                    report.invoices_overdue_count,
-                    report.invoices_partial_count,
+                    Invoice.objects.filter(status='PAID').count(),
+                    Invoice.objects.filter(status='PARTIAL').count(),
+                    Invoice.objects.filter(status='PENDING').count(),
+                    Invoice.objects.filter(status='SENT').count(),
                 ],
-                'colors': ['#fbbf24', '#10b981', '#ef4444', '#f97316']
+                'colors': ['#10b981', '#f97316', '#fbbf24', '#3b82f6']
             },
             # Données pour l'historique des paiements (7 derniers jours)
             'payments_trend': {

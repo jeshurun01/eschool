@@ -145,10 +145,11 @@ class Command(BaseCommand):
         )['total'] or Decimal('0.00')
         
         # === FACTURES PAYÉES (payées ce jour-là) ===
+        # On cherche les factures qui ont reçu un paiement ce jour qui les a marquées comme PAID
         invoices_paid_today = Invoice.objects.filter(
             status='PAID',
             # On considère les factures qui ont reçu un paiement ce jour
-            payments__payment_date=report_date,
+            payments__payment_date__date=report_date,
             payments__status='COMPLETED'
         ).distinct()
         
