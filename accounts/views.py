@@ -1281,8 +1281,12 @@ def student_detail(request, student_id):
     """Détail d'un élève"""
     student = get_object_or_404(Student, id=student_id)
     
+    # Récupérer les parents/tuteurs de l'élève
+    parents = student.parents.select_related('user').all()
+    
     context = {
         'student': student,
+        'parents': parents,
     }
     return render(request, 'accounts/student_detail.html', context)
 
@@ -2761,6 +2765,63 @@ def parent_child_detail(request, child_id):
     
     average_grade = Grade.objects.filter(student=child).aggregate(avg=Avg('score'))['avg'] or 0
     
+    # Statistiques académiques détaillées
+    all_grades = Grade.objects.filter(student=child)
+    grades_by_subject = all_grades.values('subject__name').annotate(
+        avg_score=Avg('score'),
+        count=Count('id')
+    ).order_by('-avg_score')
+    
+    # Rang en classe (approximatif)
+    if child.current_class:
+        students_in_class = Student.objects.filter(current_class=child.current_class)
+        class_size = students_in_class.count()
+        
+        # Calculer les moyennes de tous les élèves de la classe
+        student_averages = []
+        for student in students_in_class:
+            avg = Grade.objects.filter(student=student).aggregate(avg=Avg('score'))['avg']
+            if avg:
+                student_averages.append({'student_id': student.pk, 'average': float(avg)})
+        
+        # Trier et trouver le rang
+        student_averages.sort(key=lambda x: x['average'], reverse=True)
+        class_rank = next((i + 1 for i, s in enumerate(student_averages) if s['student_id'] == child.pk), None)
+    else:
+        class_size = 0
+        class_rank = None
+    
+    # Tendance des notes (comparer les 5 dernières avec les 5 précédentes)
+    recent_5 = list(all_grades.order_by('-created_at')[:5])
+    previous_5 = list(all_grades.order_by('-created_at')[5:10])
+    
+    if recent_5 and previous_5:
+        recent_avg = float(sum(g.score for g in recent_5) / len(recent_5))
+        previous_avg = float(sum(g.score for g in previous_5) / len(previous_5))
+        
+        if recent_avg > previous_avg + 1:
+            trend = 'up'
+            trend_description = f'Les notes progressent (+{recent_avg - previous_avg:.1f} points)'
+        elif recent_avg < previous_avg - 1:
+            trend = 'down'
+            trend_description = f'Les notes diminuent ({recent_avg - previous_avg:.1f} points)'
+        else:
+            trend = 'stable'
+            trend_description = 'Les notes restent stables'
+    else:
+        trend = 'stable'
+        trend_description = 'Pas assez de données pour évaluer la tendance'
+    
+    academic_stats = {
+        'average_grade': round(average_grade, 2) if average_grade else 0,
+        'class_rank': class_rank,
+        'class_size': class_size,
+        'subject_count': grades_by_subject.count(),
+        'trend': trend,
+        'trend_description': trend_description,
+        'grades_by_subject': grades_by_subject,
+    }
+    
     # Données de présence (nouveau système)
     child_summaries = DailyAttendanceSummary.objects.filter(
         student=child,
@@ -2810,30 +2871,46 @@ def parent_child_detail(request, child_id):
     
     total_pending = pending_invoices.aggregate(total=Sum('total_amount'))['total'] or 0
     
-    # Prochains événements (simulation)
-    upcoming_events = [
-        {
-            'type': 'exam',
-            'title': 'Examen de Mathématiques',
-            'date': today + timedelta(days=3),
-            'time': '08:00',
-            'importance': 'high'
-        },
-        {
-            'type': 'assignment',
-            'title': 'Devoir de Français',
-            'date': today + timedelta(days=7),
-            'time': '14:00',
-            'importance': 'medium'
-        }
-    ]
+    # Prochains événements - Documents à venir (devoirs, examens, etc.)
+    from academic.models import Document
+    
+    upcoming_events = []
+    
+    # Récupérer les documents à venir pour la classe de l'élève
+    if child.current_class:
+        upcoming_docs = Document.objects.filter(
+            classroom=child.current_class,
+            access_date__gte=today,
+            is_public=True
+        ).select_related('subject', 'teacher').order_by('access_date')[:10]
+        
+        for doc in upcoming_docs:
+            event_type = 'exam' if doc.document_type == 'EXAM' or 'examen' in doc.title.lower() else 'assignment'
+            
+            # Déterminer l'importance selon le type de document
+            if doc.document_type == 'EXAM':
+                importance = 'high'
+            elif doc.document_type in ['EXERCISE', 'CORRECTION']:
+                importance = 'medium'
+            else:
+                importance = 'low'
+            
+            upcoming_events.append({
+                'type': event_type,
+                'title': doc.title,
+                'subject': doc.subject.name if doc.subject else 'Général',
+                'date': doc.access_date,
+                'time': doc.access_date.strftime('%H:%M') if doc.access_date else '',
+                'importance': importance,
+                'document_id': doc.pk,
+            })
     
     context = {
         'parent': parent,
         'child': child,
         'section': section,
         'recent_grades': recent_grades,
-        'average_grade': round(average_grade, 2),
+        'academic_stats': academic_stats,
         'recent_attendances': recent_summaries,
         'attendance_stats': attendance_stats,
         'attendance_rate': attendance_rate,

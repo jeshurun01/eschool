@@ -3,6 +3,19 @@
 
 {% block title %}Journal des activités - eSchool{% endblock %}
 
+{% block extra_css %}
+<style>
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="min-h-screen bg-gray-50">
     <!-- En-tête -->
@@ -148,50 +161,50 @@
             {% if page_obj %}
                 <div class="divide-y divide-gray-200">
                     {% for log in page_obj %}
-                    <div class="p-6 hover:bg-gray-50 transition">
+                    <div class="px-4 py-3 hover:bg-gray-50 transition">
                         <div class="flex items-start">
                             <!-- Icône -->
                             <div class="flex-shrink-0">
-                                <div class="w-10 h-10 rounded-full {{ log.color_class }} flex items-center justify-center">
-                                    <span class="material-icons text-sm">{{ log.icon_class }}</span>
+                                <div class="w-8 h-8 rounded-full {{ log.color_class }} flex items-center justify-center">
+                                    <span class="material-icons text-xs">{{ log.icon_class }}</span>
                                 </div>
                             </div>
 
                             <!-- Contenu -->
-                            <div class="ml-4 flex-1">
-                                <div class="flex items-center justify-between mb-2">
-                                    <div class="flex items-center space-x-3">
-                                        <span class="font-medium text-gray-900">
+                            <div class="ml-3 flex-1 min-w-0">
+                                <div class="flex items-center justify-between mb-1">
+                                    <div class="flex items-center space-x-2 flex-wrap">
+                                        <span class="font-medium text-sm text-gray-900">
                                             {% if log.user %}
                                                 {{ log.user.get_full_name }}
                                             {% else %}
                                                 Système
                                             {% endif %}
                                         </span>
-                                        <span class="px-2 py-1 text-xs font-medium rounded-full {{ log.color_class }}">
+                                        <span class="px-2 py-0.5 text-xs font-medium rounded-full {{ log.color_class }}">
                                             {{ log.get_action_type_display }}
                                         </span>
                                     </div>
-                                    <span class="text-sm text-gray-500">{{ log.timestamp|date:"d/m/Y H:i" }}</span>
+                                    <span class="text-xs text-gray-500 whitespace-nowrap ml-2">{{ log.timestamp|date:"d/m H:i" }}</span>
                                 </div>
 
-                                <p class="text-gray-700 mb-2">{{ log.description }}</p>
+                                <p class="text-sm text-gray-700 mb-1 line-clamp-2">{{ log.description }}</p>
 
-                                <div class="flex items-center text-sm text-gray-500 space-x-4">
+                                <div class="flex items-center text-xs text-gray-500 space-x-3">
                                     <span class="flex items-center">
-                                        <span class="material-icons text-xs mr-1">category</span>
-                                        {{ log.content_type|default:"N/A" }}
+                                        <span class="material-icons" style="font-size: 12px;">category</span>
+                                        <span class="ml-1">{{ log.content_type|default:"N/A" }}</span>
                                     </span>
                                     {% if log.ip_address %}
                                     <span class="flex items-center">
-                                        <span class="material-icons text-xs mr-1">public</span>
-                                        {{ log.ip_address }}
+                                        <span class="material-icons" style="font-size: 12px;">public</span>
+                                        <span class="ml-1">{{ log.ip_address }}</span>
                                     </span>
                                     {% endif %}
                                     <a href="{% url 'activity_log:detail' log.pk %}" 
                                        class="text-blue-600 hover:text-blue-800 flex items-center">
-                                        <span class="material-icons text-xs mr-1">visibility</span>
-                                        Détails
+                                        <span class="material-icons" style="font-size: 12px;">visibility</span>
+                                        <span class="ml-1">Détails</span>
                                     </a>
                                 </div>
                             </div>
