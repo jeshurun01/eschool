@@ -47,6 +47,12 @@ urlpatterns = [
     path('reports/expenses/', views.expense_report, name='expense_report'),
     path('reports/list/', views.report_list, name='report_list'),
     
+    # Rapports financiers journaliers
+    path('reports/daily/', views.daily_financial_report, name='daily_financial_report'),
+    path('reports/daily/generate/', views.daily_financial_report_generate, name='daily_financial_report_generate'),
+    path('reports/daily/<str:date>/pdf/', views.daily_financial_report_export_pdf, name='daily_financial_report_export_pdf'),
+    path('reports/daily/<str:date>/excel/', views.daily_financial_report_export_excel, name='daily_financial_report_export_excel'),
+    
     # URLs pour les dashboards
     path('invoices/generate/', views.invoice_generate, name='invoice_generate'),
 ]

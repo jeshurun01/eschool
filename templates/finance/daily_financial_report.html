@@ -1,0 +1,575 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rapport Financier Journalier{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js pour les graphiques -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- En-tête avec sélecteur de date -->
+        <div class="md:flex md:items-center md:justify-between mb-8">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                    📊 Rapport Financier Journalier
+                </h2>
+                <p class="mt-1 text-sm text-gray-500">
+                    Suivi quotidien des finances de l'établissement
+                </p>
+            </div>
+            <div class="mt-4 flex md:mt-0 md:ml-4 space-x-3">
+                <!-- Sélecteur de date -->
+                <input type="date" 
+                       id="dateSelector" 
+                       value="{{ selected_date|date:'Y-m-d' }}"
+                       max="{{ today|date:'Y-m-d' }}"
+                       class="px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                
+                {% if report %}
+                <!-- Bouton Export PDF -->
+                <a href="{% url 'finance:daily_financial_report_export_pdf' selected_date|date:'Y-m-d' %}"
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    📄 PDF
+                </a>
+                
+                <!-- Bouton Export Excel -->
+                <a href="{% url 'finance:daily_financial_report_export_excel' selected_date|date:'Y-m-d' %}"
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    📊 Excel
+                </a>
+                
+                <!-- Bouton Régénérer -->
+                <button onclick="regenerateReport()"
+                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                    🔄 Régénérer
+                </button>
+                {% else %}
+                <!-- Bouton Générer -->
+                <button onclick="generateReport()"
+                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
+                    ✨ Générer Rapport
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if report %}
+        <!-- KPIs Principaux -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Encaissé -->
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">💰</span>
+                            </div>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">
+                                    Total Encaissé
+                                </dt>
+                                <dd class="flex items-baseline">
+                                    <div class="text-2xl font-semibold text-gray-900">
+                                        {{ report.payments_total|floatformat:0 }} FCFA
+                                    </div>
+                                </dd>
+                                <dd class="text-xs text-gray-500 mt-1">
+                                    {{ report.payments_count }} paiement(s)
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+                {% if report.payments_diff_previous_day != 0 %}
+                <div class="bg-gray-50 px-5 py-3">
+                    <div class="text-sm">
+                        {% if report.payments_diff_previous_day > 0 %}
+                        <span class="text-green-600 font-medium">
+                            ↗️ +{{ report.payments_diff_previous_day|floatformat:0 }} FCFA
+                        </span>
+                        {% else %}
+                        <span class="text-red-600 font-medium">
+                            ↘️ {{ report.payments_diff_previous_day|floatformat:0 }} FCFA
+                        </span>
+                        {% endif %}
+                        <span class="text-gray-500">vs hier</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Factures Créées -->
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">📄</span>
+                            </div>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">
+                                    Factures Créées
+                                </dt>
+                                <dd class="flex items-baseline">
+                                    <div class="text-2xl font-semibold text-gray-900">
+                                        {{ report.invoices_created_count }}
+                                    </div>
+                                </dd>
+                                <dd class="text-xs text-gray-500 mt-1">
+                                    {{ report.invoices_created_total|floatformat:0 }} FCFA
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Créances -->
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">⏳</span>
+                            </div>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">
+                                    Créances Totales
+                                </dt>
+                                <dd class="flex items-baseline">
+                                    <div class="text-2xl font-semibold text-gray-900">
+                                        {{ report.total_receivables|floatformat:0 }}
+                                    </div>
+                                </dd>
+                                <dd class="text-xs text-gray-500 mt-1">
+                                    FCFA à recevoir
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-5 py-3">
+                    <div class="text-sm">
+                        <span class="text-blue-600 font-medium">
+                            {{ report.collection_rate|floatformat:1 }}%
+                        </span>
+                        <span class="text-gray-500">taux de recouvrement</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Factures en Retard -->
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 {% if report.invoices_overdue_count > 0 %}bg-red-100{% else %}bg-green-100{% endif %} rounded-full flex items-center justify-center">
+                                <span class="text-2xl">{% if report.invoices_overdue_count > 0 %}⚠️{% else %}✅{% endif %}</span>
+                            </div>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">
+                                    En Retard
+                                </dt>
+                                <dd class="flex items-baseline">
+                                    <div class="text-2xl font-semibold {% if report.invoices_overdue_count > 0 %}text-red-600{% else %}text-green-600{% endif %}">
+                                        {{ report.invoices_overdue_count }}
+                                    </div>
+                                </dd>
+                                <dd class="text-xs text-gray-500 mt-1">
+                                    {{ report.invoices_overdue_total|floatformat:0 }} FCFA
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graphiques -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Paiements par méthode -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">
+                    💳 Paiements par Méthode
+                </h3>
+                <div class="h-64">
+                    <canvas id="paymentMethodsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Statut des factures -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">
+                    📋 Statut des Factures
+                </h3>
+                <div class="h-64">
+                    <canvas id="invoiceStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tendance des paiements (7 jours) -->
+        <div class="bg-white shadow rounded-lg p-6 mb-8">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">
+                📈 Tendance des Paiements (7 derniers jours)
+            </h3>
+            <div class="h-80">
+                <canvas id="paymentsTrendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Détails du rapport -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Détails des paiements -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">
+                        Détails des Paiements
+                    </h3>
+                </div>
+                <div class="px-6 py-4">
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600">💵 Espèces</dt>
+                            <dd class="text-sm font-medium text-gray-900">{{ report.payments_cash|floatformat:0 }} FCFA</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600">📝 Chèques</dt>
+                            <dd class="text-sm font-medium text-gray-900">{{ report.payments_check|floatformat:0 }} FCFA</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600">🏦 Virements</dt>
+                            <dd class="text-sm font-medium text-gray-900">{{ report.payments_transfer|floatformat:0 }} FCFA</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600">💳 Cartes</dt>
+                            <dd class="text-sm font-medium text-gray-900">{{ report.payments_card|floatformat:0 }} FCFA</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600">📱 Mobile</dt>
+                            <dd class="text-sm font-medium text-gray-900">{{ report.payments_mobile|floatformat:0 }} FCFA</dd>
+                        </div>
+                        <div class="pt-3 border-t flex justify-between">
+                            <dt class="text-sm font-semibold text-gray-900">Total</dt>
+                            <dd class="text-sm font-bold text-blue-600">{{ report.payments_total|floatformat:0 }} FCFA</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Détails des factures -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">
+                        Détails des Factures
+                    </h3>
+                </div>
+                <div class="px-6 py-4">
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600">⏳ En attente</dt>
+                            <dd class="text-sm font-medium text-gray-900">
+                                {{ report.invoices_pending_count }} ({{ report.invoices_pending_total|floatformat:0 }} FCFA)
+                            </dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600">✅ Payées</dt>
+                            <dd class="text-sm font-medium text-green-600">
+                                {{ report.invoices_paid_count }} ({{ report.invoices_paid_total|floatformat:0 }} FCFA)
+                            </dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600">⚠️ En retard</dt>
+                            <dd class="text-sm font-medium text-red-600">
+                                {{ report.invoices_overdue_count }} ({{ report.invoices_overdue_total|floatformat:0 }} FCFA)
+                            </dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-gray-600">📊 Partielles</dt>
+                            <dd class="text-sm font-medium text-orange-600">
+                                {{ report.invoices_partial_count }} ({{ report.invoices_partial_total|floatformat:0 }} FCFA)
+                            </dd>
+                        </div>
+                        <div class="pt-3 border-t">
+                            <div class="flex justify-between mb-2">
+                                <dt class="text-sm text-gray-600">Balance nette</dt>
+                                <dd class="text-sm font-bold {% if report.net_balance > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                                    {{ report.net_balance|floatformat:0 }} FCFA
+                                </dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-sm text-gray-600">Moyenne mensuelle</dt>
+                                <dd class="text-sm font-medium text-gray-900">
+                                    {{ report.monthly_average_payments|floatformat:0 }} FCFA/jour
+                                </dd>
+                            </div>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        {% if report.notes %}
+        <!-- Notes -->
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <span class="text-xl">📝</span>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">Notes</h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <p>{{ report.notes }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Métadonnées -->
+        <div class="mt-6 text-sm text-gray-500 text-center">
+            Rapport généré le {{ report.generated_at|date:"d/m/Y à H:i" }}
+            {% if report.generated_by %}
+            par {{ report.generated_by.get_full_name }}
+            {% endif %}
+        </div>
+
+        {% else %}
+        <!-- Aucun rapport -->
+        <div class="bg-white shadow rounded-lg p-12 text-center">
+            <div class="text-6xl mb-4">📊</div>
+            <h3 class="text-xl font-medium text-gray-900 mb-2">
+                Aucun rapport disponible pour cette date
+            </h3>
+            <p class="text-gray-500 mb-6">
+                Cliquez sur "Générer Rapport" pour créer le rapport du {{ selected_date|date:"d/m/Y" }}
+            </p>
+            {% if selected_date <= today %}
+            <button onclick="generateReport()"
+                    class="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700">
+                ✨ Générer le Rapport
+            </button>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Historique des rapports -->
+        {% if recent_reports %}
+        <div class="mt-8 bg-white shadow rounded-lg overflow-hidden">
+            <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">
+                    📅 Rapports Récents
+                </h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Paiements</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Factures</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">En retard</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for r in recent_reports %}
+                        <tr class="{% if r.report_date == selected_date %}bg-blue-50{% endif %}">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ r.report_date|date:"d/m/Y" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <div class="font-medium text-gray-900">{{ r.payments_total|floatformat:0 }} FCFA</div>
+                                <div class="text-gray-500">{{ r.payments_count }} paiement(s)</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ r.invoices_created_count }} créées
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                {% if r.invoices_overdue_count > 0 %}
+                                <span class="text-red-600 font-medium">{{ r.invoices_overdue_count }}</span>
+                                {% else %}
+                                <span class="text-green-600">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <a href="?date={{ r.report_date|date:'Y-m-d' }}" 
+                                   class="text-blue-600 hover:text-blue-900">
+                                    Voir →
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Changement de date
+document.getElementById('dateSelector').addEventListener('change', function() {
+    window.location.href = '?date=' + this.value;
+});
+
+// Générer rapport
+function generateReport() {
+    const date = document.getElementById('dateSelector').value;
+    if (confirm('Générer le rapport pour le ' + date + ' ?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{% url "finance:daily_financial_report_generate" %}';
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = '{{ csrf_token }}';
+        form.appendChild(csrfInput);
+        
+        const dateInput = document.createElement('input');
+        dateInput.type = 'hidden';
+        dateInput.name = 'date';
+        dateInput.value = date;
+        form.appendChild(dateInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Régénérer rapport
+function regenerateReport() {
+    const date = document.getElementById('dateSelector').value;
+    if (confirm('Régénérer le rapport pour le ' + date + ' ? Les données existantes seront écrasées.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{% url "finance:daily_financial_report_generate" %}';
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = '{{ csrf_token }}';
+        form.appendChild(csrfInput);
+        
+        const dateInput = document.createElement('input');
+        dateInput.type = 'hidden';
+        dateInput.name = 'date';
+        dateInput.value = date;
+        form.appendChild(dateInput);
+        
+        const forceInput = document.createElement('input');
+        forceInput.type = 'hidden';
+        forceInput.name = 'force';
+        forceInput.value = 'true';
+        form.appendChild(forceInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+{% if chart_data %}
+// Données des graphiques
+const chartData = {{ chart_data|safe }};
+
+// Graphique des paiements par méthode
+if (chartData.payment_methods.data.length > 0) {
+    const ctx1 = document.getElementById('paymentMethodsChart').getContext('2d');
+    new Chart(ctx1, {
+        type: 'doughnut',
+        data: {
+            labels: chartData.payment_methods.labels,
+            datasets: [{
+                data: chartData.payment_methods.data,
+                backgroundColor: chartData.payment_methods.colors,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
+}
+
+// Graphique du statut des factures
+const ctx2 = document.getElementById('invoiceStatusChart').getContext('2d');
+new Chart(ctx2, {
+    type: 'bar',
+    data: {
+        labels: chartData.invoice_status.labels,
+        datasets: [{
+            label: 'Nombre de factures',
+            data: chartData.invoice_status.data,
+            backgroundColor: chartData.invoice_status.colors,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+// Graphique de tendance
+const ctx3 = document.getElementById('paymentsTrendChart').getContext('2d');
+new Chart(ctx3, {
+    type: 'line',
+    data: {
+        labels: chartData.payments_trend.labels,
+        datasets: [{
+            label: 'Paiements reçus (FCFA)',
+            data: chartData.payments_trend.data,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        },
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top'
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+
+{% endblock %}

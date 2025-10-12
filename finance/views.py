@@ -992,3 +992,211 @@ def invoice_generate(request):
     }
     
     return render(request, 'finance/invoice_generate.html', context)
+
+
+# ===========================
+# RAPPORTS FINANCIERS
+# ===========================
+
+@staff_required  # Seuls admin et personnel financier
+def daily_financial_report(request):
+    """
+    Affiche le rapport financier journalier avec tous les KPIs
+    Permet de filtrer par date et de visualiser les tendances
+    """
+    from .models import DailyFinancialReport
+    from django.http import JsonResponse
+    import json
+    
+    # Date sélectionnée (par défaut: aujourd'hui)
+    selected_date_str = request.GET.get('date')
+    if selected_date_str:
+        try:
+            from datetime import datetime
+            selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            selected_date = timezone.now().date()
+    else:
+        selected_date = timezone.now().date()
+    
+    # Récupérer le rapport pour la date sélectionnée
+    report = DailyFinancialReport.objects.filter(report_date=selected_date).first()
+    
+    # Si le rapport n'existe pas, proposer de le générer
+    if not report:
+        # Vérifier si c'est une date future (on ne peut pas générer)
+        if selected_date > timezone.now().date():
+            messages.warning(
+                request, 
+                'Impossible de générer un rapport pour une date future.'
+            )
+        else:
+            messages.info(
+                request, 
+                f'Aucun rapport trouvé pour le {selected_date.strftime("%d/%m/%Y")}. '
+                f'Utilisez la commande: python manage.py generate_daily_financial_report --date {selected_date}'
+            )
+    
+    # Récupérer les derniers rapports pour l'historique
+    recent_reports = DailyFinancialReport.objects.all().order_by('-report_date')[:30]
+    
+    # Préparer les données pour les graphiques
+    chart_data = None
+    if report:
+        chart_data = {
+            # Données pour le graphique des paiements par méthode
+            'payment_methods': {
+                'labels': [],
+                'data': [],
+                'colors': [
+                    '#10b981',  # Vert pour espèces
+                    '#3b82f6',  # Bleu pour chèques
+                    '#8b5cf6',  # Violet pour virements
+                    '#f59e0b',  # Orange pour cartes
+                    '#ec4899',  # Rose pour mobile
+                ]
+            },
+            # Données pour le graphique des factures par statut
+            'invoice_status': {
+                'labels': ['En attente', 'Payées', 'En retard', 'Partielles'],
+                'data': [
+                    report.invoices_pending_count,
+                    report.invoices_paid_count,
+                    report.invoices_overdue_count,
+                    report.invoices_partial_count,
+                ],
+                'colors': ['#fbbf24', '#10b981', '#ef4444', '#f97316']
+            },
+            # Données pour l'historique des paiements (7 derniers jours)
+            'payments_trend': {
+                'labels': [],
+                'data': []
+            }
+        }
+        
+        # Remplir les données de paiements par méthode
+        payment_dist = report.payment_methods_distribution
+        for method, data in payment_dist.items():
+            if data['amount'] > 0:
+                chart_data['payment_methods']['labels'].append(method)
+                chart_data['payment_methods']['data'].append(data['amount'])
+        
+        # Historique des 7 derniers jours
+        for i in range(6, -1, -1):
+            date = selected_date - timedelta(days=i)
+            day_report = DailyFinancialReport.objects.filter(report_date=date).first()
+            chart_data['payments_trend']['labels'].append(date.strftime('%d/%m'))
+            chart_data['payments_trend']['data'].append(
+                float(day_report.payments_total) if day_report else 0
+            )
+    
+    # Statistiques globales (tous les rapports)
+    all_reports = DailyFinancialReport.objects.all()
+    global_stats = {
+        'total_reports': all_reports.count(),
+        'total_payments': sum(r.payments_total for r in all_reports),
+        'average_daily': (sum(r.payments_total for r in all_reports) / all_reports.count()) if all_reports.count() > 0 else 0,
+    }
+    
+    context = {
+        'report': report,
+        'selected_date': selected_date,
+        'recent_reports': recent_reports,
+        'chart_data': json.dumps(chart_data) if chart_data else None,
+        'global_stats': global_stats,
+        'today': timezone.now().date(),
+    }
+    
+    return render(request, 'finance/daily_financial_report.html', context)
+
+
+@staff_required
+def daily_financial_report_generate(request):
+    """
+    Génère (ou régénère) le rapport pour une date donnée via l'interface web
+    """
+    if request.method == 'POST':
+        date_str = request.POST.get('date')
+        force = request.POST.get('force') == 'true'
+        
+        try:
+            from datetime import datetime
+            from django.core.management import call_command
+            from io import StringIO
+            
+            report_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            
+            # Vérifier si c'est une date future
+            if report_date > timezone.now().date():
+                messages.error(request, 'Impossible de générer un rapport pour une date future.')
+                return redirect('finance:daily_financial_report')
+            
+            # Capturer la sortie de la commande
+            out = StringIO()
+            
+            # Appeler la commande de génération
+            call_command(
+                'generate_daily_financial_report',
+                date=date_str,
+                force=force,
+                stdout=out
+            )
+            
+            messages.success(
+                request, 
+                f'Rapport généré avec succès pour le {report_date.strftime("%d/%m/%Y")}.'
+            )
+            
+            # Rediriger vers le rapport généré
+            return redirect(f"{request.path.replace('/generate/', '/')}?date={date_str}")
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la génération: {str(e)}')
+            return redirect('finance:daily_financial_report')
+    
+    # GET: rediriger vers la vue principale
+    return redirect('finance:daily_financial_report')
+
+
+@staff_required
+def daily_financial_report_export_pdf(request, date):
+    """
+    Exporte le rapport en PDF
+    TODO: Implémenter avec WeasyPrint
+    """
+    from .models import DailyFinancialReport
+    from datetime import datetime
+    
+    try:
+        report_date = datetime.strptime(date, '%Y-%m-%d').date()
+        report = get_object_or_404(DailyFinancialReport, report_date=report_date)
+        
+        # Pour l'instant, retourner un message
+        messages.info(request, 'Export PDF en cours de développement.')
+        return redirect('finance:daily_financial_report')
+        
+    except Exception as e:
+        messages.error(request, f'Erreur: {str(e)}')
+        return redirect('finance:daily_financial_report')
+
+
+@staff_required
+def daily_financial_report_export_excel(request, date):
+    """
+    Exporte le rapport en Excel
+    TODO: Implémenter avec openpyxl
+    """
+    from .models import DailyFinancialReport
+    from datetime import datetime
+    
+    try:
+        report_date = datetime.strptime(date, '%Y-%m-%d').date()
+        report = get_object_or_404(DailyFinancialReport, report_date=report_date)
+        
+        # Pour l'instant, retourner un message
+        messages.info(request, 'Export Excel en cours de développement.')
+        return redirect('finance:daily_financial_report')
+        
+    except Exception as e:
+        messages.error(request, f'Erreur: {str(e)}')
+        return redirect('finance:daily_financial_report')
