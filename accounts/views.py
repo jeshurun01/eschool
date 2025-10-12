@@ -2859,17 +2859,61 @@ def parent_child_detail(request, child_id):
     recent_summaries = child_summaries[:15]
     
     # Données financières
-    pending_invoices = Invoice.objects.filter(
-        student=child,
-        status__in=['DRAFT', 'SENT']
-    ).order_by('-due_date')
+    month_start = today.replace(day=1)
     
+    # Toutes les factures de l'élève
+    all_invoices = Invoice.objects.filter(student=child).prefetch_related('payments')
+    
+    # Factures en attente (non entièrement payées)
+    pending_invoices = [inv for inv in all_invoices if not inv.is_paid]
+    
+    # Factures payées récemment
     paid_invoices = Invoice.objects.filter(
         student=child,
         status='PAID'
     ).order_by('-issue_date')[:5]
     
-    total_pending = pending_invoices.aggregate(total=Sum('total_amount'))['total'] or 0
+    # Toutes les factures récentes (pour l'affichage)
+    recent_invoices = Invoice.objects.filter(
+        student=child
+    ).order_by('-issue_date')[:10]
+    
+    # Calcul du solde total à payer (somme de tous les soldes restants)
+    total_balance = sum(inv.balance for inv in pending_invoices)
+    
+    # Montant total des factures en attente (montant original, sans déduire les paiements)
+    total_pending = sum(inv.total_amount for inv in pending_invoices)
+    
+    # Paiements ce mois - via le modèle Payment
+    from finance.models import Payment
+    paid_this_month = Payment.objects.filter(
+        invoice__student=child,
+        status='COMPLETED',
+        payment_date__gte=month_start
+    ).aggregate(
+        total=Sum('amount'),
+        count=Count('id')
+    )
+    
+    # Prochaine échéance (facture avec solde restant et date d'échéance la plus proche)
+    next_invoice = None
+    if pending_invoices:
+        # Trier par date d'échéance
+        sorted_pending = sorted(
+            [inv for inv in pending_invoices if hasattr(inv, 'due_date')],
+            key=lambda x: x.due_date
+        )
+        next_invoice = sorted_pending[0] if sorted_pending else None
+    
+    financial_stats = {
+        'total_balance': float(total_balance),  # Solde restant à payer
+        'pending_amount': float(total_pending),  # Montant total des factures en attente
+        'pending_invoices': len(pending_invoices),
+        'paid_this_month': paid_this_month['total'] or 0,
+        'payments_this_month': paid_this_month['count'] or 0,
+        'next_due_date': next_invoice.due_date if next_invoice else None,
+        'next_due_amount': float(next_invoice.balance) if next_invoice else 0,  # Solde restant, pas total
+    }
     
     # Prochains événements - Documents à venir (devoirs, examens, etc.)
     from academic.models import Document
@@ -2905,6 +2949,12 @@ def parent_child_detail(request, child_id):
                 'document_id': doc.pk,
             })
     
+    # Messages récents de communication
+    from communication.models import Message
+    recent_messages = Message.objects.filter(
+        recipient=request.user
+    ).select_related('sender').order_by('-sent_date')[:5]
+    
     context = {
         'parent': parent,
         'child': child,
@@ -2917,7 +2967,10 @@ def parent_child_detail(request, child_id):
         'pending_invoices': pending_invoices,
         'paid_invoices': paid_invoices,
         'total_pending': total_pending,
+        'recent_invoices': recent_invoices,
+        'financial_stats': financial_stats,
         'upcoming_events': upcoming_events,
+        'recent_messages': recent_messages,
     }
     
     return render(request, 'accounts/parent_child_detail.html', context)
