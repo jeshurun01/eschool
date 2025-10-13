@@ -32,9 +32,25 @@
                             <span class="material-icons mr-3 text-4xl">summarize</span>
                             Bulletin par Périodes
                         </h1>
-                        <p class="mt-2 text-indigo-100">{{ student.user.get_full_name }} • {{ student.current_class.name }} • {{ current_year.name }}</p>
+                        <p class="mt-2 text-indigo-100">{{ student.user.get_full_name }} • {{ student.current_class.name }}{% if current_year %} • {{ current_year.name }}{% endif %}</p>
                     </div>
                     <div class="flex items-center space-x-4">
+                        {% if all_years %}
+                        <!-- Sélecteur d'année -->
+                        <div class="bg-white/10 rounded-lg px-4 py-2">
+                            <label class="text-sm text-indigo-200 block mb-1">Année académique</label>
+                            <select onchange="window.location.href='?year=' + this.value" 
+                                    class="bg-white text-gray-900 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                                {% for year in all_years %}
+                                <option value="{{ year.id }}" {% if current_year and year.id == current_year.id %}selected{% endif %}>
+                                    {{ year.name }}{% if year.is_current %} (Actuelle){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+                        
+                        {% if has_any_data %}
                         <div class="text-right bg-white/10 rounded-lg px-6 py-4">
                             <div class="text-4xl font-bold">{{ annual_average }}/20</div>
                             <div class="text-sm text-indigo-200">Moyenne Annuelle</div>
@@ -44,6 +60,8 @@
                             <span class="material-icons mr-2">print</span>
                             Imprimer
                         </button>
+                        {% endif %}
+                        
                         <a href="{% url 'accounts:student_grades_detail' %}" 
                            class="inline-flex items-center px-6 py-3 bg-indigo-700 text-white rounded-lg hover:bg-indigo-800 transition-colors font-medium">
                             <span class="material-icons mr-2">arrow_back</span>
@@ -56,13 +74,33 @@
     </div>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {% if not report_data %}
-        <!-- Aucune donnée -->
+        {% if no_data or not has_any_data %}
+        <!-- Aucune donnée pour cette année -->
         <div class="bg-white rounded-lg shadow-sm p-12 text-center">
             <span class="material-icons text-gray-400 text-6xl mb-4">assignment</span>
-            <h3 class="text-xl font-medium text-gray-900 mb-2">Aucune note disponible</h3>
-            <p class="text-gray-500">Les notes seront affichées ici une fois qu'elles seront saisies par vos enseignants.</p>
+            <h3 class="text-xl font-medium text-gray-900 mb-2">Aucune note disponible{% if current_year %} pour {{ current_year.name }}{% endif %}</h3>
+            <p class="text-gray-500 mb-4">Les notes seront affichées ici une fois qu'elles seront saisies par vos enseignants.</p>
+            {% if all_years.count > 1 %}
+            <p class="text-sm text-gray-600">💡 Vous pouvez sélectionner une autre année académique ci-dessus.</p>
+            {% endif %}
+            <div class="mt-6">
+                <a href="{% url 'accounts:student_grades_detail' %}" 
+                   class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium">
+                    <span class="material-icons mr-2">arrow_back</span>
+                    Voir les notes détaillées
+                </a>
+            </div>
         </div>
+        
+        {% elif not report_data %}
+        <!-- Aucune période configurée -->
+        <div class="bg-yellow-50 rounded-lg border-2 border-yellow-200 p-8 text-center">
+            <span class="material-icons text-yellow-600 text-6xl mb-4">warning</span>
+            <h3 class="text-xl font-medium text-yellow-900 mb-2">Configuration incomplète</h3>
+            <p class="text-yellow-700 mb-4">Aucune période d'évaluation n'a été configurée pour cette année académique.</p>
+            <p class="text-sm text-yellow-600">Contactez l'administration pour qu'elle configure les périodes (trimestres, semestres, etc.).</p>
+        </div>
+        
         {% else %}
         
         <!-- Vue d'ensemble des périodes -->

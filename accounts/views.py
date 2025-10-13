@@ -2157,16 +2157,72 @@ def student_report_card(request):
         return redirect('accounts:dashboard')
     
     from academic.models import Period, AcademicYear
-    from django.db.models import Avg, Sum, Count
+    from django.db.models import Avg, Sum, Count, Min, Max
+    from datetime import datetime
     
-    # Récupérer l'année académique courante
-    current_year = AcademicYear.objects.filter(is_current=True).first()
-    if not current_year:
-        messages.warning(request, 'Aucune année académique active.')
-        return redirect('accounts:student_grades_detail')
+    # Récupérer l'année sélectionnée ou l'année courante
+    selected_year_id = request.GET.get('year')
+    
+    if selected_year_id:
+        current_year = AcademicYear.objects.filter(id=selected_year_id).first()
+    else:
+        current_year = AcademicYear.objects.filter(is_current=True).first()
+    
+    # Si aucune année académique, chercher toutes les années avec des notes
+    all_years = AcademicYear.objects.all().order_by('-start_date')
+    
+    # Si vraiment aucune année académique, créer une vue basée sur les notes
+    if not current_year and not all_years.exists():
+        # Grouper les notes par mois
+        all_grades = Grade.objects.filter(student=student).order_by('date')
+        
+        if not all_grades.exists():
+            messages.info(request, 'Vous n\'avez pas encore de notes.')
+            return redirect('accounts:student_grades_detail')
+        
+        # Créer des pseudo-périodes par trimestre basées sur les dates des notes
+        date_range = all_grades.aggregate(
+            min_date=Min('date'),
+            max_date=Max('date')
+        )
+        
+        context = {
+            'student': student,
+            'current_year': None,
+            'all_years': [],
+            'report_data': [],
+            'annual_average': 0,
+            'no_periods': True,
+            'date_range': date_range,
+        }
+        return render(request, 'accounts/student_report_card.html', context)
+    
+    if not current_year and all_years.exists():
+        current_year = all_years.first()
     
     # Récupérer toutes les périodes de l'année courante
     periods = Period.objects.filter(academic_year=current_year).order_by('start_date')
+    
+    # Si aucune période définie, créer des périodes virtuelles basées sur les trimestres
+    if not periods.exists():
+        # Grouper par trimestre (approximatif)
+        all_grades = Grade.objects.filter(
+            student=student,
+            date__gte=current_year.start_date,
+            date__lte=current_year.end_date
+        ) if current_year else Grade.objects.filter(student=student)
+        
+        if not all_grades.exists():
+            messages.warning(request, f'Aucune note trouvée pour l\'année {current_year.name}.')
+            context = {
+                'student': student,
+                'current_year': current_year,
+                'all_years': all_years,
+                'report_data': [],
+                'annual_average': 0,
+                'no_data': True,
+            }
+            return render(request, 'accounts/student_report_card.html', context)
     
     # Structure des données : périodes -> matières -> notes
     report_data = []
@@ -2210,17 +2266,17 @@ def student_report_card(request):
                 'grades': grades_list,
                 'average': round(average, 2),
                 'total_grades': len(grades_list),
-                'coefficient': subject.coefficient if hasattr(subject, 'coefficient') else 1,
+                'coefficient': subject.coefficient,
             }
         
         # Calculer la moyenne générale de la période
         if subjects_data:
             period_total_weighted = sum(
-                data['average'] * data['coefficient'] 
+                data['average'] * float(data['coefficient']) 
                 for data in subjects_data.values()
             )
             period_total_coef = sum(
-                data['coefficient'] 
+                float(data['coefficient']) 
                 for data in subjects_data.values()
             )
             period_average = (period_total_weighted / period_total_coef) if period_total_coef > 0 else 0
@@ -2233,6 +2289,7 @@ def student_report_card(request):
             'period_average': round(period_average, 2),
             'total_subjects': len(subjects_data),
             'total_evaluations': sum(data['total_grades'] for data in subjects_data.values()),
+            'has_data': len(subjects_data) > 0,
         })
     
     # Moyenne annuelle globale
@@ -2242,11 +2299,16 @@ def student_report_card(request):
     else:
         annual_average = 0
     
+    # Vérifier si au moins une période a des données
+    has_any_data = any(p['has_data'] for p in report_data)
+    
     context = {
         'student': student,
         'current_year': current_year,
+        'all_years': all_years,
         'report_data': report_data,
         'annual_average': round(annual_average, 2),
+        'has_any_data': has_any_data,
     }
     
     return render(request, 'accounts/student_report_card.html', context)
