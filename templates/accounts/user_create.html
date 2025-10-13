@@ -101,6 +101,20 @@
                     <div class="space-y-4">
                         <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">Configuration du compte</h3>
                         
+                        <!-- Info sur le mot de passe automatique -->
+                        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+                            <div class="flex items-start">
+                                <span class="material-icons text-blue-500 mr-3">info</span>
+                                <div>
+                                    <h4 class="text-sm font-medium text-blue-900 mb-1">Mot de passe automatique</h4>
+                                    <p class="text-sm text-blue-700">
+                                        Un mot de passe sécurisé sera généré automatiquement et envoyé par email à l'utilisateur. 
+                                        L'utilisateur pourra le changer lors de sa première connexion.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div>
                             <label for="{{ form.role.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
                                 Rôle *
@@ -113,82 +127,24 @@
                                     {% endfor %}
                                 </div>
                             {% endif %}
+                            <p class="mt-1 text-xs text-gray-500">
+                                Sélectionnez le rôle de l'utilisateur dans le système
+                            </p>
                         </div>
 
-                        <div>
-                            <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
-                                Mot de passe *
+                        <div class="flex items-start space-x-2 pt-4">
+                            {{ form.is_active }}
+                            <label for="{{ form.is_active.id_for_label }}" class="text-sm text-gray-700">
+                                <span class="font-medium">Compte actif</span>
+                                <p class="text-xs text-gray-500 mt-1">Si décoché, l'utilisateur ne pourra pas se connecter</p>
                             </label>
-                            {{ form.password1 }}
-                            {% if form.password1.errors %}
-                                <div class="mt-1 text-sm text-red-600">
-                                    {% for error in form.password1.errors %}
-                                        <p>{{ error }}</p>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
                         </div>
 
-                        <div>
-                            <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
-                                Confirmer le mot de passe *
-                            </label>
-                            {{ form.password2 }}
-                            {% if form.password2.errors %}
-                                <div class="mt-1 text-sm text-red-600">
-                                    {% for error in form.password2.errors %}
-                                        <p>{{ error }}</p>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <div>
-                            <label for="{{ form.gender.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
-                                Genre
-                            </label>
-                            {{ form.gender }}
-                            {% if form.gender.errors %}
-                                <div class="mt-1 text-sm text-red-600">
-                                    {% for error in form.gender.errors %}
-                                        <p>{{ error }}</p>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <div>
-                            <label for="{{ form.avatar.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
-                                Photo de profil
-                            </label>
-                            {{ form.avatar }}
-                            {% if form.avatar.errors %}
-                                <div class="mt-1 text-sm text-red-600">
-                                    {% for error in form.avatar.errors %}
-                                        <p>{{ error }}</p>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <div>
-                            <label for="{{ form.address.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
-                                Adresse
-                            </label>
-                            {{ form.address }}
-                            {% if form.address.errors %}
-                                <div class="mt-1 text-sm text-red-600">
-                                    {% for error in form.address.errors %}
-                                        <p>{{ error }}</p>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="flex items-center">
+                        <div class="flex items-start space-x-2">
                             {{ form.is_staff }}
-                            <label for="{{ form.is_staff.id_for_label }}" class="ml-2 text-sm text-gray-700">
-                                Accès administrateur
+                            <label for="{{ form.is_staff.id_for_label }}" class="text-sm text-gray-700">
+                                <span class="font-medium">Accès administrateur</span>
+                                <p class="text-xs text-gray-500 mt-1">Donne accès à l'interface d'administration Django</p>
                             </label>
                         </div>
                     </div>

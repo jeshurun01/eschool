@@ -216,24 +216,29 @@ class ParentProfileForm(forms.ModelForm):
         }
 
 
-class AdminUserCreateForm(UserCreationForm):
-    """Formulaire pour la création d'utilisateurs par l'administrateur"""
+class AdminUserCreateForm(forms.ModelForm):
+    """Formulaire pour la création d'utilisateurs par l'administrateur
+    Le mot de passe est généré automatiquement et envoyé à l'utilisateur."""
     
     class Meta:
         model = User
         fields = ('email', 'first_name', 'last_name', 'phone', 'role', 'is_active', 'is_staff')
         widgets = {
             'email': forms.EmailInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'exemple@email.com'
             }),
             'first_name': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'Prénom'
             }),
             'last_name': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'Nom'
             }),
             'phone': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': '+221 XX XXX XX XX'
             }),
             'role': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
@@ -245,6 +250,12 @@ class AdminUserCreateForm(UserCreationForm):
                 'class': 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
             })
         }
+    
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise ValidationError("Un utilisateur avec cet email existe déjà.")
+        return email
 
 
 class PasswordChangeForm(forms.Form):

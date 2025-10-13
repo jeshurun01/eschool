@@ -279,6 +279,10 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@eschool.local')
 
+# Site Configuration
+SITE_NAME = config('SITE_NAME', default='eSchool')
+SITE_URL = config('SITE_URL', default='http://localhost:8000')
+
 # Logging
 LOGGING = {
     'version': 1,

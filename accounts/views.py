@@ -8,7 +8,11 @@ from django.db.models import Q, Count, Sum, Avg
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
 from django.utils import timezone
+from django.core.mail import send_mail
+from django.conf import settings
 from datetime import date, timedelta
+import secrets
+import string
 from .models import User, Student, Parent, Teacher
 from academic.models import ClassRoom, Subject, Session, SessionAttendance, DailyAttendanceSummary, Enrollment, Level, Grade
 from finance.models import Invoice, Payment, FeeStructure
@@ -19,6 +23,83 @@ from .forms import (
     StudentProfileForm, TeacherProfileForm, ParentProfileForm,
     AdminUserCreateForm, PasswordChangeForm, StudentCreationForm
 )
+
+
+# Fonctions utilitaires pour générer des mots de passe
+def generate_secure_password(length=12):
+    """Génère un mot de passe sécurisé aléatoire
+    
+    Args:
+        length: Longueur du mot de passe (par défaut 12)
+        
+    Returns:
+        str: Mot de passe sécurisé contenant majuscules, minuscules, chiffres et caractères spéciaux
+    """
+    # Définir les caractères utilisables
+    lowercase = string.ascii_lowercase
+    uppercase = string.ascii_uppercase
+    digits = string.digits
+    special = '@#$%&*!'
+    
+    # S'assurer qu'il y a au moins un caractère de chaque type
+    password = [
+        secrets.choice(lowercase),
+        secrets.choice(uppercase),
+        secrets.choice(digits),
+        secrets.choice(special),
+    ]
+    
+    # Compléter avec des caractères aléatoires
+    all_chars = lowercase + uppercase + digits + special
+    password += [secrets.choice(all_chars) for _ in range(length - 4)]
+    
+    # Mélanger les caractères
+    password_list = list(password)
+    secrets.SystemRandom().shuffle(password_list)
+    
+    return ''.join(password_list)
+
+
+def send_password_email(user, password):
+    """Envoie le mot de passe initial à l'utilisateur par email
+    
+    Args:
+        user: Instance de l'utilisateur
+        password: Mot de passe en clair
+        
+    Returns:
+        bool: True si l'email a été envoyé, False sinon
+    """
+    subject = f'Bienvenue sur {settings.SITE_NAME} - Vos identifiants de connexion'
+    message = f"""
+Bonjour {user.get_full_name()},
+
+Votre compte a été créé avec succès sur {settings.SITE_NAME}.
+
+Voici vos identifiants de connexion :
+- Email : {user.email}
+- Mot de passe temporaire : {password}
+
+⚠️ IMPORTANT : Pour des raisons de sécurité, veuillez changer ce mot de passe lors de votre première connexion.
+
+Pour vous connecter, rendez-vous sur : {settings.SITE_URL if hasattr(settings, 'SITE_URL') else 'votre portail'}
+
+Cordialement,
+L'équipe {settings.SITE_NAME}
+    """
+    
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+        return True
+    except Exception as e:
+        print(f"Erreur lors de l'envoi de l'email : {e}")
+        return False
 
 
 # Fonctions utilitaires pour les permissions
@@ -1067,11 +1148,17 @@ def user_list(request):
 
 @user_passes_test(is_admin)
 def user_create(request):
-    """Créer un nouvel utilisateur"""
+    """Créer un nouvel utilisateur avec mot de passe généré automatiquement"""
     if request.method == 'POST':
         form = AdminUserCreateForm(request.POST)
         if form.is_valid():
-            user = form.save()
+            # Générer un mot de passe sécurisé
+            temp_password = generate_secure_password()
+            
+            # Créer l'utilisateur sans le sauvegarder encore
+            user = form.save(commit=False)
+            user.set_password(temp_password)
+            user.save()
             
             # Créer le profil spécifique selon le rôle
             if user.role == 'STUDENT':
@@ -1081,7 +1168,23 @@ def user_create(request):
             elif user.role == 'PARENT':
                 Parent.objects.create(user=user)
             
-            messages.success(request, f'Utilisateur {user.full_name} créé avec succès.')
+            # Envoyer le mot de passe par email
+            email_sent = send_password_email(user, temp_password)
+            
+            if email_sent:
+                messages.success(
+                    request, 
+                    f'Utilisateur {user.full_name} créé avec succès. '
+                    f'Un email contenant les identifiants a été envoyé à {user.email}.'
+                )
+            else:
+                messages.warning(
+                    request,
+                    f'Utilisateur {user.full_name} créé avec succès. '
+                    f'IMPORTANT : Mot de passe temporaire : {temp_password} '
+                    f'(L\'email n\'a pas pu être envoyé. Veuillez noter ce mot de passe et le communiquer à l\'utilisateur.)'
+                )
+            
             return redirect('accounts:user_detail', user_id=user.pk)
     else:
         form = AdminUserCreateForm()
@@ -1390,15 +1493,19 @@ def parent_list(request):
 @login_required
 @admin_required
 def parent_create(request):
-    """Créer un nouveau parent"""
+    """Créer un nouveau parent avec mot de passe généré automatiquement"""
     if request.method == 'POST':
         user_form = AdminUserCreateForm(request.POST)
         parent_form = ParentProfileForm(request.POST)
         
         if user_form.is_valid() and parent_form.is_valid():
+            # Générer un mot de passe sécurisé
+            temp_password = generate_secure_password()
+            
             # Créer l'utilisateur
             user = user_form.save(commit=False)
             user.role = 'PARENT'
+            user.set_password(temp_password)
             user.save()
             
             # Créer le profil parent
@@ -1406,7 +1513,23 @@ def parent_create(request):
             parent.user = user
             parent.save()
             
-            messages.success(request, f'Parent {user.get_full_name()} créé avec succès.')
+            # Envoyer le mot de passe par email
+            email_sent = send_password_email(user, temp_password)
+            
+            if email_sent:
+                messages.success(
+                    request, 
+                    f'Parent {user.get_full_name()} créé avec succès. '
+                    f'Un email contenant les identifiants a été envoyé à {user.email}.'
+                )
+            else:
+                messages.warning(
+                    request,
+                    f'Parent {user.get_full_name()} créé avec succès. '
+                    f'IMPORTANT : Mot de passe temporaire : {temp_password} '
+                    f'(L\'email n\'a pas pu être envoyé. Veuillez noter ce mot de passe et le communiquer à l\'utilisateur.)'
+                )
+            
             return redirect('accounts:parent_detail', parent_id=parent.id)
         else:
             # Afficher les erreurs de débogage
@@ -2227,6 +2350,12 @@ def student_report_card(request):
     # Structure des données : périodes -> matières -> notes
     report_data = []
     
+    # Récupérer toutes les matières de la classe de l'étudiant
+    from academic.models import TeacherAssignment
+    all_class_subjects = Subject.objects.filter(
+        teacherassignment__classroom=student.current_class
+    ).distinct()
+    
     for period in periods:
         # Notes de l'étudiant pour cette période
         period_grades = Grade.objects.filter(
@@ -2237,9 +2366,9 @@ def student_report_card(request):
         
         # Regrouper par matière
         subjects_data = {}
-        subjects = Subject.objects.filter(grades__in=period_grades).distinct()
+        subjects_with_grades = Subject.objects.filter(grades__in=period_grades).distinct()
         
-        for subject in subjects:
+        for subject in subjects_with_grades:
             subject_grades = period_grades.filter(subject=subject)
             
             # Calculer la moyenne de la matière pour cette période
@@ -2269,6 +2398,17 @@ def student_report_card(request):
                 'coefficient': subject.coefficient,
             }
         
+        # Identifier les matières sans notes pour cette période
+        subjects_without_grades = []
+        for subject in all_class_subjects:
+            if subject not in subjects_with_grades:
+                subjects_without_grades.append({
+                    'subject': subject,
+                    'name': subject.name,
+                    'code': subject.code,
+                    'coefficient': subject.coefficient,
+                })
+        
         # Calculer la moyenne générale de la période
         if subjects_data:
             period_total_weighted = sum(
@@ -2286,8 +2426,10 @@ def student_report_card(request):
         report_data.append({
             'period': period,
             'subjects': subjects_data,
+            'subjects_without_grades': subjects_without_grades,
             'period_average': round(period_average, 2),
             'total_subjects': len(subjects_data),
+            'total_subjects_without_grades': len(subjects_without_grades),
             'total_evaluations': sum(data['total_grades'] for data in subjects_data.values()),
             'has_data': len(subjects_data) > 0,
         })
