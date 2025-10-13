@@ -2236,7 +2236,11 @@ def student_report_card(request):
         })
     
     # Moyenne annuelle globale
-    annual_average = sum(p['period_average'] for p in report_data if p['period_average'] > 0) / len([p for p in report_data if p['period_average'] > 0]) if report_data else 0
+    periods_with_grades = [p for p in report_data if p['period_average'] > 0]
+    if periods_with_grades:
+        annual_average = sum(p['period_average'] for p in periods_with_grades) / len(periods_with_grades)
+    else:
+        annual_average = 0
     
     context = {
         'student': student,
