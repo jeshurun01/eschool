@@ -109,12 +109,9 @@
                                     <h4 class="text-sm font-medium text-blue-900 mb-1">Mot de passe automatique</h4>
                                     <p class="text-sm text-blue-700">
                                         Un mot de passe sécurisé sera généré automatiquement.
-                                        {% if request.user.is_authenticated and request|get_setting:'DEBUG' %}
-                                        <br><strong>Mode développement :</strong> Le mot de passe sera affiché après la création.
-                                        {% else %}
-                                        <br>Le mot de passe sera envoyé par email à l'utilisateur.
-                                        {% endif %}
-                                        L'utilisateur pourra le changer lors de sa première connexion.
+                                        <br><strong>En développement :</strong> Le mot de passe sera affiché après la création pour que vous puissiez le communiquer à l'utilisateur.
+                                        <br><strong>En production :</strong> Le mot de passe sera envoyé automatiquement par email à l'utilisateur.
+                                        <br>L'utilisateur pourra le changer lors de sa première connexion.
                                     </p>
                                 </div>
                             </div>
