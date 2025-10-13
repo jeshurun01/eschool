@@ -1168,22 +1168,32 @@ def user_create(request):
             elif user.role == 'PARENT':
                 Parent.objects.create(user=user)
             
-            # Envoyer le mot de passe par email
-            email_sent = send_password_email(user, temp_password)
-            
-            if email_sent:
+            # En mode développement, afficher toujours le mot de passe
+            # En production, tenter d'envoyer par email
+            if settings.DEBUG:
                 messages.success(
-                    request, 
-                    f'Utilisateur {user.full_name} créé avec succès. '
-                    f'Un email contenant les identifiants a été envoyé à {user.email}.'
-                )
-            else:
-                messages.warning(
                     request,
                     f'Utilisateur {user.full_name} créé avec succès. '
-                    f'IMPORTANT : Mot de passe temporaire : {temp_password} '
-                    f'(L\'email n\'a pas pu être envoyé. Veuillez noter ce mot de passe et le communiquer à l\'utilisateur.)'
+                    f'Mot de passe temporaire : <strong>{temp_password}</strong> '
+                    f'(Veuillez communiquer ces identifiants à l\'utilisateur)'
                 )
+            else:
+                # En production, envoyer le mot de passe par email
+                email_sent = send_password_email(user, temp_password)
+                
+                if email_sent:
+                    messages.success(
+                        request, 
+                        f'Utilisateur {user.full_name} créé avec succès. '
+                        f'Un email contenant les identifiants a été envoyé à {user.email}.'
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        f'Utilisateur {user.full_name} créé avec succès. '
+                        f'IMPORTANT : Mot de passe temporaire : <strong>{temp_password}</strong> '
+                        f'(L\'email n\'a pas pu être envoyé. Veuillez noter ce mot de passe et le communiquer à l\'utilisateur.)'
+                    )
             
             return redirect('accounts:user_detail', user_id=user.pk)
     else:
@@ -1513,22 +1523,32 @@ def parent_create(request):
             parent.user = user
             parent.save()
             
-            # Envoyer le mot de passe par email
-            email_sent = send_password_email(user, temp_password)
-            
-            if email_sent:
+            # En mode développement, afficher toujours le mot de passe
+            # En production, tenter d'envoyer par email
+            if settings.DEBUG:
                 messages.success(
-                    request, 
-                    f'Parent {user.get_full_name()} créé avec succès. '
-                    f'Un email contenant les identifiants a été envoyé à {user.email}.'
-                )
-            else:
-                messages.warning(
                     request,
                     f'Parent {user.get_full_name()} créé avec succès. '
-                    f'IMPORTANT : Mot de passe temporaire : {temp_password} '
-                    f'(L\'email n\'a pas pu être envoyé. Veuillez noter ce mot de passe et le communiquer à l\'utilisateur.)'
+                    f'Mot de passe temporaire : <strong>{temp_password}</strong> '
+                    f'(Veuillez communiquer ces identifiants à l\'utilisateur)'
                 )
+            else:
+                # En production, envoyer le mot de passe par email
+                email_sent = send_password_email(user, temp_password)
+                
+                if email_sent:
+                    messages.success(
+                        request, 
+                        f'Parent {user.get_full_name()} créé avec succès. '
+                        f'Un email contenant les identifiants a été envoyé à {user.email}.'
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        f'Parent {user.get_full_name()} créé avec succès. '
+                        f'IMPORTANT : Mot de passe temporaire : <strong>{temp_password}</strong> '
+                        f'(L\'email n\'a pas pu être envoyé. Veuillez noter ce mot de passe et le communiquer à l\'utilisateur.)'
+                    )
             
             return redirect('accounts:parent_detail', parent_id=parent.id)
         else:

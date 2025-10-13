@@ -18,15 +18,19 @@ Lorsqu'un administrateur crée un nouveau compte utilisateur :
    - Au moins un chiffre
    - Au moins un caractère spécial (@#$%&*!)
 
-3. **Envoi par email** : Le mot de passe généré est envoyé automatiquement à l'adresse email de l'utilisateur avec :
-   - Ses identifiants de connexion
-   - Le mot de passe temporaire
-   - Instructions pour le changer à la première connexion
-   - Lien vers le portail
+3. **Affichage du mot de passe** :
+   - **En mode développement (DEBUG=True)** : Le mot de passe est affiché directement dans un message de succès pour que l'administrateur puisse le communiquer à l'utilisateur. Idéal pour le développement avec des emails non réels.
+   - **En mode production (DEBUG=False)** : Le mot de passe est envoyé automatiquement par email avec :
+     - Ses identifiants de connexion
+     - Le mot de passe temporaire
+     - Instructions pour le changer à la première connexion
+     - Lien vers le portail
 
-4. **Notification à l'admin** : L'administrateur reçoit une confirmation :
-   - Si l'email est envoyé avec succès : message de confirmation
-   - Si l'email échoue : affichage du mot de passe temporaire à communiquer manuellement
+4. **Notification à l'admin** :
+   - **Mode développement** : Message avec le mot de passe affiché en clair
+   - **Mode production** : 
+     - Si l'email est envoyé avec succès : message de confirmation
+     - Si l'email échoue : affichage du mot de passe temporaire à communiquer manuellement
 
 ### 2. Première connexion de l'utilisateur
 
@@ -81,25 +85,41 @@ DEFAULT_FROM_EMAIL=noreply@votre-ecole.com
 
 ### Configuration SMTP
 
-#### Gmail
+#### Mode Développement (Recommandé pour local)
+
+En développement, le système affiche directement le mot de passe généré :
+
+```env
+DEBUG=True
+# Pas besoin de configurer EMAIL_* en développement
+```
+
+Le mot de passe sera affiché dans un message après la création de l'utilisateur.
+
+#### Mode Production
+
+En production, configurez l'envoi d'emails :
+
+##### Gmail
 
 1. Activer l'authentification à deux facteurs
 2. Générer un mot de passe d'application
 3. Utiliser ce mot de passe dans `EMAIL_HOST_PASSWORD`
 
-#### SendGrid, Mailgun, etc.
-
-Consultez la documentation de votre fournisseur pour obtenir les paramètres SMTP.
-
-#### Mode développement
-
-En développement, utilisez le backend console :
-
 ```env
-EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+DEBUG=False
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=votre-email@gmail.com
+EMAIL_HOST_PASSWORD=votre-mot-de-passe-app
+DEFAULT_FROM_EMAIL=noreply@votre-ecole.com
 ```
 
-Les emails seront affichés dans la console au lieu d'être envoyés.
+##### SendGrid, Mailgun, etc.
+
+Consultez la documentation de votre fournisseur pour obtenir les paramètres SMTP.
 
 ## Utilisation
 
@@ -117,8 +137,20 @@ Les emails seront affichés dans la console au lieu d'être envoyés.
 4. Le système :
    - Génère un mot de passe
    - Crée le compte
-   - Envoie l'email
-   - Affiche une confirmation
+   - **En développement** : Affiche le mot de passe dans un message
+   - **En production** : Envoie l'email et affiche une confirmation
+
+#### En mode développement
+
+Après la création, vous verrez un message comme :
+
+```
+✓ Utilisateur Jean Dupont créé avec succès.
+Mot de passe temporaire : Abc123@xyz
+(Veuillez communiquer ces identifiants à l'utilisateur)
+```
+
+**Action requise** : Notez le mot de passe et communiquez-le à l'utilisateur de manière sécurisée.
 
 #### Si l'email échoue
 
