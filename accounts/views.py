@@ -2143,6 +2143,111 @@ def student_grades_detail(request):
     return render(request, 'accounts/student_grades_detail.html', context)
 
 
+@login_required
+def student_report_card(request):
+    """Bulletin de notes regroupé par périodes"""
+    if request.user.role != 'STUDENT':
+        messages.error(request, 'Accès non autorisé.')
+        return redirect('accounts:dashboard')
+    
+    try:
+        student = request.user.student_profile
+    except Student.DoesNotExist:
+        messages.error(request, 'Profil étudiant non trouvé.')
+        return redirect('accounts:dashboard')
+    
+    from academic.models import Period, AcademicYear
+    from django.db.models import Avg, Sum, Count
+    
+    # Récupérer l'année académique courante
+    current_year = AcademicYear.objects.filter(is_current=True).first()
+    if not current_year:
+        messages.warning(request, 'Aucune année académique active.')
+        return redirect('accounts:student_grades_detail')
+    
+    # Récupérer toutes les périodes de l'année courante
+    periods = Period.objects.filter(academic_year=current_year).order_by('start_date')
+    
+    # Structure des données : périodes -> matières -> notes
+    report_data = []
+    
+    for period in periods:
+        # Notes de l'étudiant pour cette période
+        period_grades = Grade.objects.filter(
+            student=student,
+            date__gte=period.start_date,
+            date__lte=period.end_date
+        )
+        
+        # Regrouper par matière
+        subjects_data = {}
+        subjects = Subject.objects.filter(grades__in=period_grades).distinct()
+        
+        for subject in subjects:
+            subject_grades = period_grades.filter(subject=subject)
+            
+            # Calculer la moyenne de la matière pour cette période
+            grades_list = []
+            total_weighted = 0
+            total_coef = 0
+            
+            for grade in subject_grades:
+                grades_list.append({
+                    'name': grade.evaluation_name,
+                    'type': grade.get_evaluation_type_display(),
+                    'score': grade.score,
+                    'max_score': grade.max_score,
+                    'coefficient': grade.coefficient,
+                    'date': grade.date,
+                })
+                total_weighted += float(grade.score * grade.coefficient)
+                total_coef += float(grade.coefficient)
+            
+            average = (total_weighted / total_coef) if total_coef > 0 else 0
+            
+            subjects_data[subject.name] = {
+                'subject': subject,
+                'grades': grades_list,
+                'average': round(average, 2),
+                'total_grades': len(grades_list),
+                'coefficient': subject.coefficient if hasattr(subject, 'coefficient') else 1,
+            }
+        
+        # Calculer la moyenne générale de la période
+        if subjects_data:
+            period_total_weighted = sum(
+                data['average'] * data['coefficient'] 
+                for data in subjects_data.values()
+            )
+            period_total_coef = sum(
+                data['coefficient'] 
+                for data in subjects_data.values()
+            )
+            period_average = (period_total_weighted / period_total_coef) if period_total_coef > 0 else 0
+        else:
+            period_average = 0
+        
+        report_data.append({
+            'period': period,
+            'subjects': subjects_data,
+            'period_average': round(period_average, 2),
+            'total_subjects': len(subjects_data),
+            'total_evaluations': sum(data['total_grades'] for data in subjects_data.values()),
+        })
+    
+    # Moyenne annuelle globale
+    annual_average = sum(p['period_average'] for p in report_data if p['period_average'] > 0) / len([p for p in report_data if p['period_average'] > 0]) if report_data else 0
+    
+    context = {
+        'student': student,
+        'current_year': current_year,
+        'report_data': report_data,
+        'annual_average': round(annual_average, 2),
+    }
+    
+    return render(request, 'accounts/student_report_card.html', context)
+
+
 @login_required  
 def student_attendance_detail(request):
     """Vue détaillée des présences pour l'élève"""

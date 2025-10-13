@@ -58,6 +58,7 @@ urlpatterns = [
     
     # === NOUVELLES VUES SPÉCIALISÉES ÉLÈVE ===
     path('student/grades/', views.student_grades_detail, name='student_grades_detail'),
+    path('student/report-card/', views.student_report_card, name='student_report_card'),
     path('student/attendance/', views.student_attendance_detail, name='student_attendance_detail'),
     path('student/finance/', views.student_finance_detail, name='student_finance_detail'),
     path('student/calendar/', views.student_academic_calendar, name='student_academic_calendar'),

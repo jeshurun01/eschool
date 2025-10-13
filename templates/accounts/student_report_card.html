@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bulletin par Périodes - eSchool{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        .no-print { display: none; }
+        body { background: white; }
+    }
+    
+    .period-card {
+        page-break-inside: avoid;
+    }
+    
+    .grade-excellent { background-color: #d1fae5; color: #065f46; }
+    .grade-good { background-color: #fed7aa; color: #92400e; }
+    .grade-average { background-color: #fecaca; color: #991b1b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="py-8">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold flex items-center">
+                            <span class="material-icons mr-3 text-4xl">summarize</span>
+                            Bulletin par Périodes
+                        </h1>
+                        <p class="mt-2 text-indigo-100">{{ student.user.get_full_name }} • {{ student.current_class.name }} • {{ current_year.name }}</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-right bg-white/10 rounded-lg px-6 py-4">
+                            <div class="text-4xl font-bold">{{ annual_average }}/20</div>
+                            <div class="text-sm text-indigo-200">Moyenne Annuelle</div>
+                        </div>
+                        <button onclick="window.print()" 
+                                class="inline-flex items-center px-6 py-3 bg-white text-indigo-600 rounded-lg shadow-lg hover:bg-indigo-50 transition-colors font-medium">
+                            <span class="material-icons mr-2">print</span>
+                            Imprimer
+                        </button>
+                        <a href="{% url 'accounts:student_grades_detail' %}" 
+                           class="inline-flex items-center px-6 py-3 bg-indigo-700 text-white rounded-lg hover:bg-indigo-800 transition-colors font-medium">
+                            <span class="material-icons mr-2">arrow_back</span>
+                            Retour
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% if not report_data %}
+        <!-- Aucune donnée -->
+        <div class="bg-white rounded-lg shadow-sm p-12 text-center">
+            <span class="material-icons text-gray-400 text-6xl mb-4">assignment</span>
+            <h3 class="text-xl font-medium text-gray-900 mb-2">Aucune note disponible</h3>
+            <p class="text-gray-500">Les notes seront affichées ici une fois qu'elles seront saisies par vos enseignants.</p>
+        </div>
+        {% else %}
+        
+        <!-- Vue d'ensemble des périodes -->
+        <div class="grid grid-cols-1 md:grid-cols-{{ report_data|length }} gap-4 mb-8 no-print">
+            {% for period_info in report_data %}
+            <div class="bg-white rounded-lg shadow-sm p-6 text-center border-2 {% if period_info.period.is_current %}border-indigo-500{% else %}border-transparent{% endif %}">
+                <div class="text-sm font-medium text-gray-500 mb-2">{{ period_info.period.name }}</div>
+                <div class="text-3xl font-bold {% if period_info.period_average >= 12 %}text-green-600{% elif period_info.period_average >= 10 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                    {{ period_info.period_average }}/20
+                </div>
+                <div class="text-xs text-gray-500 mt-2">{{ period_info.total_subjects }} matières</div>
+                {% if period_info.period.is_current %}
+                <div class="mt-2">
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                        En cours
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Détails par période -->
+        {% for period_info in report_data %}
+        <div class="period-card bg-white rounded-lg shadow-lg mb-8 overflow-hidden">
+            <!-- En-tête de période -->
+            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold">{{ period_info.period.name }}</h2>
+                        <p class="text-indigo-100">{{ period_info.period.start_date|date:"d/m/Y" }} - {{ period_info.period.end_date|date:"d/m/Y" }}</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-4xl font-bold">{{ period_info.period_average }}/20</div>
+                        <div class="text-sm text-indigo-200">Moyenne de période</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistiques -->
+            <div class="grid grid-cols-3 gap-4 p-6 bg-gray-50 border-b">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-indigo-600">{{ period_info.total_subjects }}</div>
+                    <div class="text-sm text-gray-600">Matières</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-purple-600">{{ period_info.total_evaluations }}</div>
+                    <div class="text-sm text-gray-600">Évaluations</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold {% if period_info.period_average >= 12 %}text-green-600{% elif period_info.period_average >= 10 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                        {{ period_info.period_average|floatformat:1 }}%
+                    </div>
+                    <div class="text-sm text-gray-600">Pourcentage</div>
+                </div>
+            </div>
+
+            {% if period_info.subjects %}
+            <!-- Tableau des matières -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Matière
+                            </th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Nombre d'éval.
+                            </th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Coefficient
+                            </th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Moyenne
+                            </th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Appréciation
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for subject_name, subject_data in period_info.subjects.items %}
+                        <tr class="hover:bg-gray-50 cursor-pointer" onclick="toggleDetails('{{ period_info.period.id }}_{{ subject_data.subject.id }}')">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <span class="material-icons text-indigo-600 mr-2">menu_book</span>
+                                    <div class="font-medium text-gray-900">{{ subject_name }}</div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                                {{ subject_data.total_grades }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                                {{ subject_data.coefficient }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <span class="text-lg font-bold {% if subject_data.average >= 12 %}text-green-600{% elif subject_data.average >= 10 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                                    {{ subject_data.average }}/20
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {% if subject_data.average >= 16 %}grade-excellent{% elif subject_data.average >= 12 %}grade-good{% else %}grade-average{% endif %}">
+                                    {% if subject_data.average >= 16 %}Excellent{% elif subject_data.average >= 14 %}Très Bien{% elif subject_data.average >= 12 %}Bien{% elif subject_data.average >= 10 %}Assez Bien{% else %}Insuffisant{% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        <!-- Détails des notes (masqué par défaut) -->
+                        <tr id="details_{{ period_info.period.id }}_{{ subject_data.subject.id }}" class="hidden bg-gray-50">
+                            <td colspan="5" class="px-6 py-4">
+                                <div class="space-y-2">
+                                    <h4 class="font-medium text-gray-900 mb-3">Détail des évaluations :</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {% for grade in subject_data.grades %}
+                                        <div class="bg-white border rounded-lg p-3">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-xs font-medium text-gray-500">{{ grade.type }}</span>
+                                                <span class="text-xs text-gray-400">{{ grade.date|date:"d/m" }}</span>
+                                            </div>
+                                            <div class="font-medium text-gray-900">{{ grade.name }}</div>
+                                            <div class="mt-2 flex items-center justify-between">
+                                                <span class="text-lg font-bold {% if grade.score >= 12 %}text-green-600{% elif grade.score >= 10 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                                                    {{ grade.score }}/{{ grade.max_score }}
+                                                </span>
+                                                <span class="text-xs text-gray-500">Coef: {{ grade.coefficient }}</span>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-8 text-center text-gray-500">
+                <span class="material-icons text-4xl mb-2">assignment_late</span>
+                <p>Aucune note pour cette période</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function toggleDetails(id) {
+    const element = document.getElementById('details_' + id);
+    if (element) {
+        element.classList.toggle('hidden');
+    }
+}
+</script>
+{% endblock %}
