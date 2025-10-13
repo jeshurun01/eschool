@@ -10,6 +10,7 @@ from django.views.decorators.csrf import csrf_protect
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
+from django.utils.safestring import mark_safe
 from datetime import date, timedelta
 import secrets
 import string
@@ -1173,9 +1174,12 @@ def user_create(request):
             if settings.DEBUG:
                 messages.success(
                     request,
-                    f'Utilisateur {user.full_name} créé avec succès. '
-                    f'Mot de passe temporaire : <strong>{temp_password}</strong> '
-                    f'(Veuillez communiquer ces identifiants à l\'utilisateur)'
+                    mark_safe(
+                        f'Utilisateur <strong>{user.full_name}</strong> créé avec succès.<br>'
+                        f'📧 Email : <strong>{user.email}</strong><br>'
+                        f'🔑 Mot de passe temporaire : <code class="bg-gray-100 px-2 py-1 rounded text-red-600 font-mono">{temp_password}</code><br>'
+                        f'<em class="text-sm">Veuillez communiquer ces identifiants à l\'utilisateur.</em>'
+                    )
                 )
             else:
                 # En production, envoyer le mot de passe par email
@@ -1190,9 +1194,11 @@ def user_create(request):
                 else:
                     messages.warning(
                         request,
-                        f'Utilisateur {user.full_name} créé avec succès. '
-                        f'IMPORTANT : Mot de passe temporaire : <strong>{temp_password}</strong> '
-                        f'(L\'email n\'a pas pu être envoyé. Veuillez noter ce mot de passe et le communiquer à l\'utilisateur.)'
+                        mark_safe(
+                            f'Utilisateur <strong>{user.full_name}</strong> créé avec succès.<br>'
+                            f'⚠️ IMPORTANT : Mot de passe temporaire : <code class="bg-gray-100 px-2 py-1 rounded text-red-600 font-mono">{temp_password}</code><br>'
+                            f'<em class="text-sm">(L\'email n\'a pas pu être envoyé. Veuillez noter ce mot de passe et le communiquer à l\'utilisateur.)</em>'
+                        )
                     )
             
             return redirect('accounts:user_detail', user_id=user.pk)
@@ -1528,9 +1534,12 @@ def parent_create(request):
             if settings.DEBUG:
                 messages.success(
                     request,
-                    f'Parent {user.get_full_name()} créé avec succès. '
-                    f'Mot de passe temporaire : <strong>{temp_password}</strong> '
-                    f'(Veuillez communiquer ces identifiants à l\'utilisateur)'
+                    mark_safe(
+                        f'Parent <strong>{user.get_full_name()}</strong> créé avec succès.<br>'
+                        f'📧 Email : <strong>{user.email}</strong><br>'
+                        f'🔑 Mot de passe temporaire : <code class="bg-gray-100 px-2 py-1 rounded text-red-600 font-mono">{temp_password}</code><br>'
+                        f'<em class="text-sm">Veuillez communiquer ces identifiants à l\'utilisateur.</em>'
+                    )
                 )
             else:
                 # En production, envoyer le mot de passe par email
@@ -1545,9 +1554,11 @@ def parent_create(request):
                 else:
                     messages.warning(
                         request,
-                        f'Parent {user.get_full_name()} créé avec succès. '
-                        f'IMPORTANT : Mot de passe temporaire : <strong>{temp_password}</strong> '
-                        f'(L\'email n\'a pas pu être envoyé. Veuillez noter ce mot de passe et le communiquer à l\'utilisateur.)'
+                        mark_safe(
+                            f'Parent <strong>{user.get_full_name()}</strong> créé avec succès.<br>'
+                            f'⚠️ IMPORTANT : Mot de passe temporaire : <code class="bg-gray-100 px-2 py-1 rounded text-red-600 font-mono">{temp_password}</code><br>'
+                            f'<em class="text-sm">(L\'email n\'a pas pu être envoyé. Veuillez noter ce mot de passe et le communiquer à l\'utilisateur.)</em>'
+                        )
                     )
             
             return redirect('accounts:parent_detail', parent_id=parent.id)
