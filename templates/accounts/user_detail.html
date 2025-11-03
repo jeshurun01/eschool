@@ -249,27 +249,41 @@
                 <div class="bg-white rounded-lg shadow-lg p-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Actions rapides</h3>
                     <div class="space-y-3">
-                        <button onclick="toggleUserStatus({{ user_obj.id }}, {{ user_obj.is_active|yesno:'false,true' }})"
-                                class="w-full px-4 py-2 rounded-lg transition-colors
-                                {% if user_obj.is_active %}bg-red-100 hover:bg-red-200 text-red-700{% else %}bg-green-100 hover:bg-green-200 text-green-700{% endif %}">
-                            <i class="fas fa-{% if user_obj.is_active %}ban{% else %}check{% endif %} mr-2"></i>
-                            {% if user_obj.is_active %}Désactiver{% else %}Activer{% endif %}
-                        </button>
+                        <!-- Activer/Désactiver -->
+                        <form method="post" action="{% url 'accounts:user_toggle_active' user_obj.id %}" class="w-full">
+                            {% csrf_token %}
+                            <button type="submit" 
+                                    onclick="return confirm('Êtes-vous sûr de vouloir {% if user_obj.is_active %}désactiver{% else %}activer{% endif %} cet utilisateur ?')"
+                                    class="w-full px-4 py-2 rounded-lg transition-colors
+                                    {% if user_obj.is_active %}bg-red-100 hover:bg-red-200 text-red-700{% else %}bg-green-100 hover:bg-green-200 text-green-700{% endif %}">
+                                <i class="fas fa-{% if user_obj.is_active %}ban{% else %}check{% endif %} mr-2"></i>
+                                {% if user_obj.is_active %}Désactiver{% else %}Activer{% endif %} le compte
+                            </button>
+                        </form>
                         
-                        {% if not user_obj.email_verified %}
-                        <button class="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg transition-colors">
-                            <i class="fas fa-envelope mr-2"></i>Renvoyer l'email de vérification
-                        </button>
-                        {% endif %}
+                        <!-- Réinitialiser mot de passe -->
+                        <form method="post" action="{% url 'accounts:reset_password' user_obj.id %}" class="w-full">
+                            {% csrf_token %}
+                            <button type="submit" 
+                                    onclick="return confirm('Êtes-vous sûr de vouloir réinitialiser le mot de passe de {{ user_obj.full_name }} ?')"
+                                    class="w-full bg-orange-100 hover:bg-orange-200 text-orange-700 px-4 py-2 rounded-lg transition-colors">
+                                <i class="fas fa-key mr-2"></i>Réinitialiser le mot de passe
+                            </button>
+                        </form>
                         
+                        <!-- Modifier profil -->
                         <a href="{% url 'accounts:user_edit' user_obj.id %}" 
                            class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-center transition-colors">
                             <i class="fas fa-edit mr-2"></i>Modifier le profil
                         </a>
                         
-                        <button class="w-full bg-orange-100 hover:bg-orange-200 text-orange-700 px-4 py-2 rounded-lg transition-colors">
-                            <i class="fas fa-key mr-2"></i>Réinitialiser le mot de passe
+                        {% if not user_obj.email_verified %}
+                        <!-- Renvoyer email vérification -->
+                        <button class="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg transition-colors"
+                                onclick="alert('Fonctionnalité à venir : Renvoi d\'email de vérification')">
+                            <i class="fas fa-envelope mr-2"></i>Renvoyer email de vérification
                         </button>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -315,33 +329,4 @@
         </div>
     </div>
 </div>
-
-<script>
-function toggleUserStatus(userId, activate) {
-    const action = activate ? 'activer' : 'désactiver';
-    
-    if (confirm(`Êtes-vous sûr de vouloir ${action} cet utilisateur ?`)) {
-        fetch(`/accounts/admin/users/${userId}/toggle-status/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 'activate': activate })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Erreur lors de la modification du statut');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Erreur lors de la modification du statut');
-        });
-    }
-}
-</script>
 {% endblock %}

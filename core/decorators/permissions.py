@@ -255,3 +255,22 @@ def parent_or_student_required(view_func):
         
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+def finance_or_family_required(view_func):
+    """
+    Décorateur pour les vues financières accessibles aux gestionnaires financiers,
+    parents, étudiants ET administrateurs
+    """
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('account_login')
+        
+        allowed_roles = ['PARENT', 'STUDENT', 'FINANCE', 'ADMIN', 'SUPER_ADMIN']
+        if request.user.role not in allowed_roles:
+            raise PermissionDenied(
+                "Accès réservé au personnel financier, parents, étudiants et administrateurs"
+            )
+        
+        return view_func(request, *args, **kwargs)
+    return wrapper

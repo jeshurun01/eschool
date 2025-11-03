@@ -5,33 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}eSchool - Système de gestion scolaire{% endblock %}</title>
     
-    <!-- Tailwind CSS - Configuration optimisée -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        // Configuration Tailwind optimisée pour éviter les warnings
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#eff6ff',
-                            500: '#3b82f6', 
-                            600: '#2563eb',
-                            700: '#1d4ed8'
-                        },
-                        indigo: {
-                            600: '#4f46e5',
-                            700: '#4338ca'
-                        }
-                    }
-                }
-            },
-            content: {
-                // Pas de purge automatique en développement
-                enabled: false
-            }
-        }
-    </script>
+    <!-- Tailwind CSS - Compiled version -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/output.css' %}">
     
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
@@ -49,7 +25,7 @@
 <body class="h-full">
     <div class="min-h-full">
         <!-- Navigation -->
-        <nav class="{% if user.role == 'STUDENT' %}bg-blue-600{% elif user.role == 'PARENT' %}bg-green-600{% elif user.role == 'TEACHER' %}bg-purple-600{% else %}bg-indigo-600{% endif %}" x-data="{ mobileMenuOpen: false }">
+        <nav class="{% if user.role == 'STUDENT' %}bg-blue-600{% elif user.role == 'PARENT' %}bg-green-600{% elif user.role == 'TEACHER' %}bg-purple-600{% elif user.role == 'FINANCE' %}bg-teal-600{% else %}bg-indigo-600{% endif %}" x-data="{ mobileMenuOpen: false }">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="flex h-16 items-center justify-between">
                     <div class="flex items-center">
@@ -61,6 +37,8 @@
                                     <span class="material-icons mr-2">family_restroom</span> eSchool
                                 {% elif user.role == 'TEACHER' %}
                                     <span class="material-icons mr-2">business</span> eSchool
+                                {% elif user.role == 'FINANCE' %}
+                                    <span class="material-icons mr-2">account_balance</span> eSchool
                                 {% else %}
                                     <span class="material-icons mr-2">admin_panel_settings</span> eSchool
                                 {% endif %}
@@ -69,10 +47,11 @@
                         <div class="hidden md:block">
                             <div class="ml-10 flex items-baseline space-x-4">
                                 {% if user.is_authenticated %}
-                                    <a href="{% url 'accounts:dashboard' %}" class="text-gray-300 hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                    <a href="{% url 'accounts:dashboard' %}" class="text-gray-300 hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% elif user.role == 'FINANCE' %}bg-teal-700{% else %}bg-indigo-700{% endif %} hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
                                         {% if user.role == 'STUDENT' %}<span class="material-icons mr-1 text-sm">dashboard</span> Mon tableau de bord
                                         {% elif user.role == 'PARENT' %}<span class="material-icons mr-1 text-sm">child_care</span> Mes enfants
                                         {% elif user.role == 'TEACHER' %}<span class="material-icons mr-1 text-sm">menu_book</span> Accueil
+                                        {% elif user.role == 'FINANCE' %}<span class="material-icons mr-1 text-sm">dashboard</span> Tableau de bord
                                         {% else %}<span class="material-icons mr-1 text-sm">settings</span> Administration{% endif %}
                                     </a>
                                     
@@ -89,6 +68,11 @@
                                         <a href="{% url 'academic:attendance_list' %}" class="text-gray-300 hover:bg-purple-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">check_circle</span> Présences</a>
                                         <a href="{% url 'academic:grade_list' %}" class="text-gray-300 hover:bg-purple-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">assessment</span> Notes</a>
                                         <a href="{% url 'academic:classroom_list' %}" class="text-gray-300 hover:bg-purple-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">meeting_room</span> Classes</a>
+                                    {% elif user.role == 'FINANCE' %}
+                                        <a href="{% url 'finance:invoice_list' %}" class="text-gray-300 hover:bg-teal-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">receipt_long</span> Factures</a>
+                                        <a href="{% url 'finance:payment_list' %}" class="text-gray-300 hover:bg-teal-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">payments</span> Paiements</a>
+                                        <a href="{% url 'finance:pending_payments' %}" class="text-gray-300 hover:bg-teal-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">pending</span> En attente</a>
+                                        <a href="{% url 'finance:daily_financial_report' %}" class="text-gray-300 hover:bg-teal-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">analytics</span> Rapports</a>
                                     {% elif user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
                                         <a href="{% url 'academic:classroom_list' %}" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">meeting_room</span> Classes</a>
                                         
@@ -126,9 +110,9 @@
                                     
                                     <!-- Liens communs -->
                                     {% if user.role != 'STUDENT' %}
-                                        <a href="{% url 'communication:announcement_list' %}" class="text-gray-300 hover:{% if user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">campaign</span> Annonces</a>
+                                        <a href="{% url 'communication:announcement_list' %}" class="text-gray-300 hover:{% if user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% elif user.role == 'FINANCE' %}bg-teal-700{% else %}bg-indigo-700{% endif %} hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">campaign</span> Annonces</a>
                                     {% endif %}
-                                    <a href="{% url 'communication:message_list' %}" class="text-gray-300 hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">mail</span> Messages</a>
+                                    <a href="{% url 'communication:message_list' %}" class="text-gray-300 hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% elif user.role == 'FINANCE' %}bg-teal-700{% else %}bg-indigo-700{% endif %} hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"><span class="material-icons mr-1 text-sm">mail</span> Messages</a>
                                 {% endif %}
                             </div>
                         </div>
@@ -139,16 +123,17 @@
                             {% if user.is_authenticated %}
                                 <!-- Badge de rôle -->
                                 <div class="mr-3">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if user.role == 'STUDENT' %}bg-blue-100 text-blue-800{% elif user.role == 'PARENT' %}bg-green-100 text-green-800{% elif user.role == 'TEACHER' %}bg-purple-100 text-purple-800{% else %}bg-indigo-100 text-indigo-800{% endif %}">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if user.role == 'STUDENT' %}bg-blue-100 text-blue-800{% elif user.role == 'PARENT' %}bg-green-100 text-green-800{% elif user.role == 'TEACHER' %}bg-purple-100 text-purple-800{% elif user.role == 'FINANCE' %}bg-teal-100 text-teal-800{% else %}bg-indigo-100 text-indigo-800{% endif %}">
                                         {% if user.role == 'STUDENT' %}<span class="material-icons mr-1" style="font-size: 12px;">school</span> Élève
                                         {% elif user.role == 'PARENT' %}<span class="material-icons mr-1" style="font-size: 12px;">family_restroom</span> Parent
                                         {% elif user.role == 'TEACHER' %}<span class="material-icons mr-1" style="font-size: 12px;">person</span> Enseignant
+                                        {% elif user.role == 'FINANCE' %}<span class="material-icons mr-1" style="font-size: 12px;">account_balance</span> Finance
                                         {% else %}<span class="material-icons mr-1" style="font-size: 12px;">admin_panel_settings</span> {{ user.get_role_display }}{% endif %}
                                     </span>
                                 </div>
 
                                 <!-- Notifications -->
-                                <button type="button" class="relative rounded-full {% if user.role == 'STUDENT' %}bg-blue-600{% elif user.role == 'PARENT' %}bg-green-600{% elif user.role == 'TEACHER' %}bg-purple-600{% else %}bg-indigo-600{% endif %} p-1 text-white hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-{% if user.role == 'STUDENT' %}blue{% elif user.role == 'PARENT' %}green{% elif user.role == 'TEACHER' %}purple{% else %}indigo{% endif %}-600">
+                                <button type="button" class="relative rounded-full {% if user.role == 'STUDENT' %}bg-blue-600{% elif user.role == 'PARENT' %}bg-green-600{% elif user.role == 'TEACHER' %}bg-purple-600{% elif user.role == 'FINANCE' %}bg-teal-600{% else %}bg-indigo-600{% endif %} p-1 text-white hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-{% if user.role == 'STUDENT' %}blue{% elif user.role == 'PARENT' %}green{% elif user.role == 'TEACHER' %}purple{% elif user.role == 'FINANCE' %}teal{% else %}indigo{% endif %}-600">
                                     <span class="sr-only">Voir les notifications</span>
                                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
@@ -159,7 +144,7 @@
 
                                 <!-- Profile dropdown -->
                                 <div class="relative ml-3" x-data="{ open: false }" @click.outside="open = false">
-                                    <button @click="open = !open" type="button" class="relative flex max-w-xs items-center rounded-full {% if user.role == 'STUDENT' %}bg-blue-600{% elif user.role == 'PARENT' %}bg-green-600{% elif user.role == 'TEACHER' %}bg-purple-600{% else %}bg-indigo-600{% endif %} text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-{% if user.role == 'STUDENT' %}blue{% elif user.role == 'PARENT' %}green{% elif user.role == 'TEACHER' %}purple{% else %}indigo{% endif %}-600">
+                                    <button @click="open = !open" type="button" class="relative flex max-w-xs items-center rounded-full {% if user.role == 'STUDENT' %}bg-blue-600{% elif user.role == 'PARENT' %}bg-green-600{% elif user.role == 'TEACHER' %}bg-purple-600{% elif user.role == 'FINANCE' %}bg-teal-600{% else %}bg-indigo-600{% endif %} text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-{% if user.role == 'STUDENT' %}blue{% elif user.role == 'PARENT' %}green{% elif user.role == 'TEACHER' %}purple{% elif user.role == 'FINANCE' %}teal{% else %}indigo{% endif %}-600">
                                         <span class="sr-only">Ouvrir le menu utilisateur</span>
                                         {% if user.avatar %}
                                             <img class="h-8 w-8 rounded-full object-cover" src="{{ user.avatar.url }}" alt="">
@@ -230,12 +215,12 @@
 
                     <!-- Mobile menu button -->
                     <div class="md:hidden">
-                        <button type="button" @click="mobileMenuOpen = !mobileMenuOpen" class="relative inline-flex items-center justify-center rounded-md {% if user.role == 'STUDENT' %}bg-blue-600{% elif user.role == 'PARENT' %}bg-green-600{% elif user.role == 'TEACHER' %}bg-purple-600{% else %}bg-indigo-600{% endif %} p-2 text-white hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-{% if user.role == 'STUDENT' %}blue{% elif user.role == 'PARENT' %}green{% elif user.role == 'TEACHER' %}purple{% else %}indigo{% endif %}-600">
+                        <button type="button" @click="mobileMenuOpen = !mobileMenuOpen" class="relative inline-flex items-center justify-center rounded-md {% if user.role == 'STUDENT' %}bg-blue-600{% elif user.role == 'PARENT' %}bg-green-600{% elif user.role == 'TEACHER' %}bg-purple-600{% elif user.role == 'FINANCE' %}bg-teal-600{% else %}bg-indigo-600{% endif %} p-2 text-white hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% elif user.role == 'FINANCE' %}bg-teal-700{% else %}bg-indigo-700{% endif %} hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-{% if user.role == 'STUDENT' %}blue{% elif user.role == 'PARENT' %}green{% elif user.role == 'TEACHER' %}purple{% elif user.role == 'FINANCE' %}teal{% else %}indigo{% endif %}-600">
                             <span class="sr-only">Ouvrir le menu principal</span>
-                            <svg x-show="!mobileMenuOpen" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <svg x-show="!mobileMenuOpen" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="display: block;">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                             </svg>
-                            <svg x-show="mobileMenuOpen" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <svg x-show="mobileMenuOpen" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="display: none;">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
@@ -244,12 +229,13 @@
             </div>
 
             <!-- Menu mobile adaptatif -->
-            <div x-show="mobileMenuOpen" x-transition class="md:hidden {% if user.role == 'STUDENT' %}bg-blue-600{% elif user.role == 'PARENT' %}bg-green-600{% elif user.role == 'TEACHER' %}bg-purple-600{% else %}bg-indigo-600{% endif %} px-2 pt-2 pb-3 space-y-1 sm:px-3">
+            <div x-show="mobileMenuOpen" x-transition class="md:hidden {% if user.role == 'STUDENT' %}bg-blue-600{% elif user.role == 'PARENT' %}bg-green-600{% elif user.role == 'TEACHER' %}bg-purple-600{% elif user.role == 'FINANCE' %}bg-teal-600{% else %}bg-indigo-600{% endif %} px-2 pt-2 pb-3 space-y-1 sm:px-3" style="display: none;">
                 {% if user.is_authenticated %}
-                <a href="{% url 'accounts:dashboard' %}" class="text-white hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium flex items-center">
+                <a href="{% url 'accounts:dashboard' %}" class="text-white hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% elif user.role == 'FINANCE' %}bg-teal-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium flex items-center">
                     {% if user.role == 'STUDENT' %}<span class="material-icons mr-2">dashboard</span> Mon tableau de bord
                     {% elif user.role == 'PARENT' %}<span class="material-icons mr-2">child_care</span> Mes enfants
                     {% elif user.role == 'TEACHER' %}<span class="material-icons mr-2">menu_book</span> Mes classes
+                    {% elif user.role == 'FINANCE' %}<span class="material-icons mr-2">dashboard</span> Tableau de bord
                     {% else %}<span class="material-icons mr-2">settings</span> Administration{% endif %}
                 </a>                    {% if user.role == 'STUDENT' %}
                         <a href="{% url 'accounts:student_grades_detail' %}" class="text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">grade</span> Mes notes</a>
@@ -264,6 +250,11 @@
                         <a href="{% url 'academic:attendance_list' %}" class="text-white hover:bg-purple-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">check_circle</span> Présences</a>
                         <a href="{% url 'academic:grade_list' %}" class="text-white hover:bg-purple-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">assessment</span> Notes</a>
                         <a href="{% url 'academic:classroom_list' %}" class="text-white hover:bg-purple-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">meeting_room</span> Classes</a>
+                    {% elif user.role == 'FINANCE' %}
+                        <a href="{% url 'finance:invoice_list' %}" class="text-white hover:bg-teal-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">receipt_long</span> Factures</a>
+                        <a href="{% url 'finance:payment_list' %}" class="text-white hover:bg-teal-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">payments</span> Paiements</a>
+                        <a href="{% url 'finance:pending_payments' %}" class="text-white hover:bg-teal-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">pending</span> En attente</a>
+                        <a href="{% url 'finance:daily_financial_report' %}" class="text-white hover:bg-teal-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">analytics</span> Rapports</a>
                     {% elif user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}
                         <a href="{% url 'academic:classroom_list' %}" class="text-white hover:bg-indigo-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">meeting_room</span> Classes</a>
                         
@@ -296,12 +287,12 @@
                     
                     <!-- Liens communs -->
                     {% if user.role != 'STUDENT' %}
-                        <a href="{% url 'communication:announcement_list' %}" class="text-white hover:{% if user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">campaign</span> Annonces</a>
+                        <a href="{% url 'communication:announcement_list' %}" class="text-white hover:{% if user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% elif user.role == 'FINANCE' %}bg-teal-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">campaign</span> Annonces</a>
                     {% endif %}
-                    <a href="{% url 'communication:message_list' %}" class="text-white hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">mail</span> Messages</a>
+                    <a href="{% url 'communication:message_list' %}" class="text-white hover:{% if user.role == 'STUDENT' %}bg-blue-700{% elif user.role == 'PARENT' %}bg-green-700{% elif user.role == 'TEACHER' %}bg-purple-700{% elif user.role == 'FINANCE' %}bg-teal-700{% else %}bg-indigo-700{% endif %} block px-3 py-2 rounded-md text-base font-medium flex items-center"><span class="material-icons mr-2 text-sm">mail</span> Messages</a>
                     
                     <!-- Séparateur -->
-                    <div class="border-t {% if user.role == 'STUDENT' %}border-blue-500{% elif user.role == 'PARENT' %}border-green-500{% elif user.role == 'TEACHER' %}border-purple-500{% else %}border-indigo-500{% endif %} my-2"></div>
+                    <div class="border-t {% if user.role == 'STUDENT' %}border-blue-500{% elif user.role == 'PARENT' %}border-green-500{% elif user.role == 'TEACHER' %}border-purple-500{% elif user.role == 'FINANCE' %}border-teal-500{% else %}border-indigo-500{% endif %} my-2"></div>
                     
                     <!-- Profil mobile -->
                     <div class="px-3 py-2">

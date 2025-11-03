@@ -190,8 +190,13 @@
                                     <!-- Statistiques de l'enfant -->
                                     <div class="grid grid-cols-3 gap-4">
                                         <div class="text-center">
-                                            <p class="text-lg font-semibold text-gray-900">{{ child_data.attendance_stats.attendance_rate }}%</p>
-                                            <p class="text-xs text-gray-500">Présence</p>
+                                            {% if child_data.attendance_stats.attendance_rate is None %}
+                                                <p class="text-lg font-semibold text-gray-400">N/A</p>
+                                                <p class="text-xs text-gray-400">Non inscrit</p>
+                                            {% else %}
+                                                <p class="text-lg font-semibold text-gray-900">{{ child_data.attendance_stats.attendance_rate }}%</p>
+                                                <p class="text-xs text-gray-500">Présence</p>
+                                            {% endif %}
                                         </div>
                                         <div class="text-center">
                                             <p class="text-lg font-semibold text-gray-900">{{ child_data.recent_grades|length }}</p>

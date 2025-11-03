@@ -5,20 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}eSchool - Système de gestion scolaire{% endblock %}</title>
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#eff6ff',
-                            500: '#3b82f6', 
-                            600: '#2563eb',
-                            700: '#1d4ed8'
-                        }
-                    }
+    <!-- Tailwind CSS - Compiled version -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/output.css' %}">
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
                 }
             }
         }

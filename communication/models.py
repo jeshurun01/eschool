@@ -39,6 +39,15 @@ class Announcement(models.Model):
     type = models.CharField(max_length=15, choices=TYPE_CHOICES, default='GENERAL', verbose_name='Type')
     audience = models.CharField(max_length=15, choices=AUDIENCE_CHOICES, default='ALL', verbose_name='Public cible')
     
+    # Ciblage par rôles (stocké comme chaîne séparée par des virgules)
+    target_roles = models.CharField(
+        max_length=200, 
+        blank=True, 
+        null=True,
+        verbose_name='Rôles ciblés',
+        help_text='Liste des rôles séparés par des virgules (ex: STUDENT,PARENT,TEACHER)'
+    )
+    
     # Ciblage spécifique
     target_classes = models.ManyToManyField('academic.ClassRoom', blank=True, verbose_name='Classes ciblées')
     target_levels = models.ManyToManyField('academic.Level', blank=True, verbose_name='Niveaux ciblés')
@@ -72,6 +81,68 @@ class Announcement(models.Model):
         if self.is_published and not self.publish_date:
             self.publish_date = timezone.now()
         super().save(*args, **kwargs)
+    
+    @property
+    def target_roles_list(self):
+        """Retourne la liste des rôles ciblés"""
+        if self.target_roles:
+            return [role.strip() for role in self.target_roles.split(',') if role.strip()]
+        return []
+    
+    def set_target_roles(self, roles_list):
+        """Définit les rôles ciblés à partir d'une liste"""
+        if roles_list:
+            self.target_roles = ','.join(roles_list)
+        else:
+            self.target_roles = ''
+    
+    def is_visible_to_user(self, user):
+        """Vérifie si l'annonce est visible pour un utilisateur donné"""
+        if not self.is_active:
+            return False
+        
+        # Si audience est ALL et pas de rôles spécifiques, visible pour tous
+        if self.audience == 'ALL' and not self.target_roles:
+            return True
+        
+        # Vérifier les rôles ciblés
+        if self.target_roles:
+            user_role = user.role
+            target_roles_list = self.target_roles_list
+            if user_role not in target_roles_list:
+                return False
+        
+        # Vérifier l'audience spécifique
+        if self.audience == 'STUDENTS' and user.role != 'STUDENT':
+            return False
+        elif self.audience == 'PARENTS' and user.role != 'PARENT':
+            return False
+        elif self.audience == 'TEACHERS' and user.role != 'TEACHER':
+            return False
+        elif self.audience == 'STAFF' and user.role != 'ADMIN':
+            return False
+        
+        # Vérifier les classes ciblées
+        if self.audience == 'CLASS' and self.target_classes.exists():
+            if user.role == 'STUDENT':
+                if not hasattr(user, 'student_profile') or user.student_profile.current_class not in self.target_classes.all():
+                    return False
+            elif user.role == 'TEACHER':
+                # Les enseignants voient les annonces de leurs classes
+                if hasattr(user, 'teacher_profile'):
+                    teacher_classes = user.teacher_profile.assigned_classes.all()
+                    if not self.target_classes.filter(id__in=teacher_classes.values_list('id', flat=True)).exists():
+                        return False
+        
+        # Vérifier les niveaux ciblés
+        if self.audience == 'LEVEL' and self.target_levels.exists():
+            if user.role == 'STUDENT':
+                if not hasattr(user, 'student_profile') or not user.student_profile.current_class:
+                    return False
+                if user.student_profile.current_class.level not in self.target_levels.all():
+                    return False
+        
+        return True
 
     @property
     def is_active(self):

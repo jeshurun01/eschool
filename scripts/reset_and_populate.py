@@ -79,6 +79,7 @@ try:
             (Subject, "Matières"),
             (Level, "Niveaux"),
             (AcademicYear, "Années scolaires"),
+            (Period, "Périodes"),
             
             # Accounts
             (Student, "Élèves"),
@@ -87,10 +88,15 @@ try:
         ]
         
         for model, name in models_to_delete:
-            count = model.objects.count()
-            if count > 0:
-                model.objects.all().delete()
-                print(f"   ✅ {name}: {count} enregistrement(s) supprimé(s)")
+            try:
+                count = model.objects.count()
+                if count > 0:
+                    model.objects.all().delete()
+                    print(f"   ✅ {name}: {count} enregistrement(s) supprimé(s)")
+            except Exception as e:
+                # Ignorer les erreurs de tables inexistantes
+                print(f"   ⚠️  {name}: table non trouvée, ignoré")
+                continue
         
         # Supprimer les utilisateurs (sauf superuser)
         user_count = User.objects.filter(is_superuser=False).count()
@@ -115,9 +121,9 @@ print("-" * 80)
 
 try:
     academic_year = AcademicYear.objects.create(
-        name="2024-2025",
-        start_date=date(2024, 9, 1),
-        end_date=date(2025, 6, 30),
+        name="2025-2026",
+        start_date=date(2025, 9, 1),
+        end_date=date(2026, 6, 30),
         is_current=True
     )
     print(f"   ✅ Année scolaire créée: {academic_year.name}")
@@ -128,10 +134,38 @@ except Exception as e:
     sys.exit(1)
 
 # ============================================================================
+# ÉTAPE 2B : CRÉATION DES UTILISATEURS ADMINISTRATIFS
+# ============================================================================
+
+print("👔 ÉTAPE 2B/8 : Création des utilisateurs administratifs...")
+print("-" * 80)
+
+try:
+    # Créer un gestionnaire financier
+    finance_user = User.objects.create_user(
+        email='finance@eschool.cd',
+        password='password123',
+        first_name='Marie',
+        last_name='Finances',
+        role='FINANCE',
+        gender='F',
+        is_active=True,
+        is_staff=True,
+        date_of_birth=date(1985, 5, 15)
+    )
+    print(f"   ✅ Gestionnaire financier créé: {finance_user.get_full_name()} ({finance_user.email})")
+    print(f"      Mot de passe: password123")
+    print()
+
+except Exception as e:
+    print(f"❌ Erreur: {str(e)}")
+    sys.exit(1)
+
+# ============================================================================
 # ÉTAPE 3 : CRÉATION DES NIVEAUX ET MATIÈRES
 # ============================================================================
 
-print("📚 ÉTAPE 3/8 : Création des niveaux et matières...")
+print("📚 ÉTAPE 3/9 : Création des niveaux et matières...")
 print("-" * 80)
 
 # Niveaux
@@ -200,7 +234,7 @@ print()
 # ÉTAPE 4 : CRÉATION DES UTILISATEURS
 # ============================================================================
 
-print("👥 ÉTAPE 4/8 : Création des utilisateurs...")
+print("👥 ÉTAPE 4/9 : Création des utilisateurs...")
 print("-" * 80)
 
 # Enseignants
@@ -422,7 +456,7 @@ print()
 # ÉTAPE 5 : CRÉATION DES CLASSES ET INSCRIPTIONS
 # ============================================================================
 
-print("🏫 ÉTAPE 5/8 : Création des classes et inscriptions...")
+print("🏫 ÉTAPE 5/9 : Création des classes et inscriptions...")
 print("-" * 80)
 
 # Créer une classe par niveau avec des élèves
@@ -469,7 +503,7 @@ print()
 # ÉTAPE 6 : ATTRIBUTION DES ENSEIGNANTS AUX CLASSES
 # ============================================================================
 
-print("👨‍🏫 ÉTAPE 6/8 : Attribution des enseignants aux classes...")
+print("👨‍🏫 ÉTAPE 6/9 : Attribution des enseignants aux classes...")
 print("-" * 80)
 
 # Mapper les enseignants à leurs matières
@@ -508,18 +542,43 @@ print(f"\n   Total: {assignments_created} attributions créées\n")
 # ÉTAPE 7 : CRÉATION DES DONNÉES ACADÉMIQUES
 # ============================================================================
 
-print("📊 ÉTAPE 7/8 : Création des emplois du temps, sessions, devoirs, notes et présences...")
+print("📊 ÉTAPE 7/9 : Création des emplois du temps, sessions, devoirs, notes et présences...")
 print("-" * 80)
 
-# Créer une période académique
-period = Period.objects.create(
-    name="1er Trimestre",
-    academic_year=academic_year,
-    start_date=date(2024, 9, 1),
-    end_date=date(2024, 12, 20),
-    is_current=True
-)
-print(f"   ✅ Période créée: {period.name}")
+# Créer les 3 périodes académiques (trimestres)
+periods_data = [
+    {
+        'name': '1er Trimestre',
+        'start_date': date(2025, 9, 1),
+        'end_date': date(2025, 12, 20),
+        'is_current': True,
+    },
+    {
+        'name': '2ème Trimestre',
+        'start_date': date(2026, 1, 5),
+        'end_date': date(2026, 3, 27),
+        'is_current': False,
+    },
+    {
+        'name': '3ème Trimestre',
+        'start_date': date(2026, 4, 6),
+        'end_date': date(2026, 6, 30),
+        'is_current': False,
+    },
+]
+
+periods = []
+for period_data in periods_data:
+    period = Period.objects.create(
+        academic_year=academic_year,
+        **period_data
+    )
+    periods.append(period)
+    print(f"   ✅ Période créée: {period.name} ({period.start_date} → {period.end_date})")
+
+# Utiliser le 1er trimestre pour les notes
+period = periods[0]
+print(f"\n   Notes et sessions seront créées pour le {period.name}\n")
 
 # Créer des emplois du temps pour chaque classe
 timetables_created = 0
@@ -726,7 +785,7 @@ print()
 # ÉTAPE 8 : CRÉATION DES DONNÉES FINANCIÈRES
 # ============================================================================
 
-print("💰 ÉTAPE 8/8 : Création des données financières...")
+print("💰 ÉTAPE 8/9 : Création des données financières...")
 print("-" * 80)
 
 # Types de frais
@@ -818,10 +877,10 @@ for student, level_name in students:
         # Créer la facture
         invoice = Invoice.objects.create(
             student=student,
-            issue_date=date(2024, 9, 1),
-            due_date=date(2024, 10, 31),
+            issue_date=date(2025, 9, 1),
+            due_date=date(2025, 10, 31),
             status='PARTIAL' if random.random() < 0.3 else 'PAID',
-            notes="Facture de scolarité 2024-2025"
+            notes="Facture de scolarité 2025-2026"
         )
         
         # Créer un article de facture
@@ -872,11 +931,11 @@ print(f"   ✅ {payments_count} paiements enregistrés")
 print()
 
 # ============================================================================
-# RÉSUMÉ FINAL
+# ÉTAPE 9 : RÉCAPITULATIF
 # ============================================================================
 
 print("=" * 80)
-print("✅ CRÉATION DES DONNÉES DE TEST TERMINÉE AVEC SUCCÈS!")
+print("✅ ÉTAPE 9/9 : CRÉATION DES DONNÉES DE TEST TERMINÉE AVEC SUCCÈS!")
 print("=" * 80)
 print()
 print("📊 STATISTIQUES FINALES:")

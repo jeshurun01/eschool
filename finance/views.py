@@ -11,7 +11,8 @@ from decimal import Decimal, InvalidOperation
 # Import RBAC
 from core.decorators.permissions import (
     staff_required, parent_required, student_required, 
-    admin_required, parent_or_student_required
+    admin_required, parent_or_student_required, finance_required,
+    finance_or_family_required
 )
 
 from .models import Payment, Invoice, PaymentMethod, FeeType, FeeStructure, InvoiceItem
@@ -153,7 +154,7 @@ def fee_structure_create(request, fee_type_id=None):
     
     return render(request, 'finance/fee_structure_create.html', context)
 
-@parent_or_student_required  # Parents et élèves peuvent voir leurs factures
+@finance_or_family_required  # Personnel financier, parents, élèves et admins
 def invoice_list(request):
     """Liste des factures avec filtres et pagination"""
     # Gestion de la modification en lot
@@ -284,8 +285,7 @@ def invoice_list(request):
     
     return render(request, 'finance/invoice_list.html', context)
 
-@staff_required  # Seul le personnel financier peut créer des factures
-@admin_required
+@finance_required  # Personnel financier et admin peuvent créer des factures
 def invoice_create(request):
     """Créer une nouvelle facture"""
     if request.method == 'POST':
@@ -369,8 +369,7 @@ def invoice_create(request):
     
     return render(request, 'finance/invoice_create.html', context)
 
-@parent_or_student_required
-@login_required
+@finance_or_family_required
 def invoice_detail(request, invoice_id):
     """Détails d'une facture avec RBAC"""
     # Récupérer la facture avec filtrage RBAC
@@ -396,8 +395,7 @@ def invoice_detail(request, invoice_id):
     return render(request, 'finance/invoice_detail.html', context)
 
 
-@parent_or_student_required
-@login_required
+@finance_or_family_required
 def invoice_pay(request, invoice_id):
     """Traiter le paiement d'une facture"""
     # Récupérer la facture avec filtrage RBAC
@@ -475,8 +473,7 @@ def invoice_pay(request, invoice_id):
     return render(request, 'finance/invoice_pay.html', context)
 
 
-@admin_required
-@login_required
+@finance_required  # Personnel financier et admin peuvent confirmer les paiements
 def payment_confirm(request, payment_id):
     """Confirmer ou rejeter un paiement (admin seulement)"""
     payment = get_object_or_404(Payment, id=payment_id)
@@ -524,8 +521,7 @@ def payment_confirm(request, payment_id):
     return render(request, 'finance/payment_confirm.html', context)
 
 
-@admin_required
-@login_required  
+@finance_required  # Personnel financier et admin peuvent gérer les paiements
 def pending_payments(request):
     """Liste des paiements en attente de confirmation (admin seulement)"""
     pending_payments = Payment.objects.filter(status='PENDING').select_related(
@@ -540,7 +536,7 @@ def pending_payments(request):
     return render(request, 'finance/pending_payments.html', context)
 
 
-@admin_required
+@finance_required  # Personnel financier et admin peuvent modifier les factures
 def invoice_edit(request, invoice_id):
     """Modifier une facture avec RBAC"""
     # Récupérer la facture avec filtrage RBAC
@@ -747,11 +743,11 @@ def invoice_edit(request, invoice_id):
     
     return render(request, 'finance/invoice_edit.html', context)
 
-@parent_or_student_required
+@finance_or_family_required
 def invoice_pdf(request, invoice_id):
     return HttpResponse(f"PDF de la facture {invoice_id} - En cours de développement")
 
-@parent_or_student_required  # Parents et élèves peuvent voir leurs paiements
+@finance_or_family_required  # Personnel financier, parents et élèves
 def payment_list(request):
     """Liste des paiements avec filtres et pagination"""
     # Utiliser le manager RBAC pour filtrer selon le rôle
@@ -797,7 +793,7 @@ def payment_list(request):
 def payment_create(request):
     return HttpResponse("Créer un paiement - En cours de développement")
 
-@parent_or_student_required  # Parents et élèves peuvent voir leurs paiements
+@finance_or_family_required  # Personnel financier, parents et élèves
 def payment_detail(request, payment_id):
     """Détails d'un paiement"""
     # Utiliser le manager RBAC pour s'assurer que l'utilisateur peut voir ce paiement
@@ -851,7 +847,7 @@ def expense_report(request):
 def report_list(request):
     return HttpResponse("Liste des rapports - En cours de développement")
 
-@admin_required
+@finance_required  # Personnel financier et admin peuvent générer des factures
 def invoice_generate(request):
     """Générer des factures automatiquement"""
     from django.db.models import Q
@@ -998,7 +994,7 @@ def invoice_generate(request):
 # RAPPORTS FINANCIERS
 # ===========================
 
-@admin_required  # Seuls les administrateurs
+@finance_required  # Personnel financier et admin peuvent consulter les rapports
 def daily_financial_report(request):
     """
     Affiche le rapport financier journalier avec tous les KPIs
@@ -1110,7 +1106,7 @@ def daily_financial_report(request):
     return render(request, 'finance/daily_financial_report.html', context)
 
 
-@admin_required  # Seuls les administrateurs
+@finance_required  # Personnel financier et admin peuvent générer les rapports
 def daily_financial_report_generate(request):
     """
     Génère (ou régénère) le rapport pour une date donnée via l'interface web
@@ -1158,7 +1154,7 @@ def daily_financial_report_generate(request):
     return redirect('finance:daily_financial_report')
 
 
-@admin_required  # Seuls les administrateurs
+@finance_required  # Personnel financier et admin peuvent exporter en PDF
 def daily_financial_report_export_pdf(request, date):
     """
     Exporte le rapport en PDF
@@ -1180,7 +1176,7 @@ def daily_financial_report_export_pdf(request, date):
         return redirect('finance:daily_financial_report')
 
 
-@admin_required  # Seuls les administrateurs
+@finance_required  # Personnel financier et admin peuvent exporter en Excel
 def daily_financial_report_export_excel(request, date):
     """
     Exporte le rapport en Excel

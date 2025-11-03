@@ -13,6 +13,7 @@ from .models import (
     Announcement, AnnouncementRead, Message, GroupMessage, 
     GroupMessageRead, Resource, ResourceAccess, Notification
 )
+from .forms import AnnouncementForm
 from accounts.models import User
 from academic.models import ClassRoom, Level
 
@@ -86,32 +87,33 @@ def announcement_list(request):
 def announcement_create(request):
     """Créer une nouvelle annonce"""
     if request.method == 'POST':
-        title = request.POST.get('title')
-        content = request.POST.get('content')
-        type_choice = request.POST.get('type', 'GENERAL')
-        audience = request.POST.get('audience', 'ALL')
-        priority = int(request.POST.get('priority', 1))
-        is_pinned = request.POST.get('is_pinned') == 'on'
-        
-        if title and content:
-            announcement = Announcement.objects.create(
-                title=title,
-                content=content,
-                type=type_choice,
-                audience=audience,
-                priority=priority,
-                is_pinned=is_pinned,
-                author=request.user,
-                is_published=True,
-                publish_date=timezone.now()
-            )
+        form = AnnouncementForm(request.POST)
+        if form.is_valid():
+            announcement = form.save(commit=False)
+            announcement.author = request.user
+            announcement.is_published = True
+            announcement.publish_date = timezone.now()
+            announcement.save()
             
-            messages.success(request, 'Annonce créée avec succès!')
+            # Sauvegarder les rôles ciblés
+            target_roles = form.cleaned_data.get('target_roles', [])
+            if target_roles:
+                announcement.set_target_roles(target_roles)
+                announcement.save()
+            
+            # Sauvegarder les relations ManyToMany
+            form.save_m2m()
+            
+            messages.success(request, f'✅ Annonce "{announcement.title}" créée avec succès!')
             return redirect('communication:announcement_list')
         else:
-            messages.error(request, 'Titre et contenu sont obligatoires.')
+            # Afficher les erreurs si le formulaire n'est pas valide
+            messages.error(request, '❌ Erreur dans le formulaire. Veuillez vérifier les champs.')
+    else:
+        form = AnnouncementForm()
     
     context = {
+        'form': form,
         'announcement_types': Announcement.TYPE_CHOICES,
         'audience_choices': Announcement.AUDIENCE_CHOICES,
     }

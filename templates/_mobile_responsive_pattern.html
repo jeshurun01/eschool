@@ -1,0 +1,46 @@
+<!-- 
+  MOBILE RESPONSIVE PATTERN FOR LIST VIEWS
+  
+  This is a reference pattern for making list views mobile-friendly.
+  
+  Key principles:
+  1. Use cards on mobile (block md:hidden)
+  2. Use tables on desktop (hidden md:block)
+  3. 2-column grid for statistics on mobile (grid-cols-2 md:grid-cols-4)
+  4. Stack filters vertically on mobile (space-y-4 sm:space-y-0 sm:grid)
+  5. Full-width buttons on mobile (w-full sm:w-auto)
+  6. Smaller padding on mobile (p-4 sm:p-6)
+  7. Responsive text sizes (text-sm sm:text-base)
+  8. Touch-friendly action buttons (min 44x44px tap targets)
+  
+  Example structure:
+  
+  <!-- Header -->
+  <div class="px-4 sm:px-6 lg:px-8">
+    <h1 class="text-2xl sm:text-3xl">Title</h1>
+  </div>
+  
+  <!-- Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+    <div class="p-4 sm:p-5">...</div>
+  </div>
+  
+  <!-- Filters -->
+  <div class="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-4 sm:gap-4">
+    <div class="sm:col-span-2">...</div>
+  </div>
+  
+  <!-- List - Mobile Cards -->
+  <div class="block md:hidden">
+    <div class="divide-y divide-gray-200">
+      <div class="p-4 hover:bg-gray-50">
+        <!-- Card content -->
+      </div>
+    </div>
+  </div>
+  
+  <!-- List - Desktop Table -->
+  <div class="hidden md:block">
+    <table class="min-w-full">...</table>
+  </div>
+-->

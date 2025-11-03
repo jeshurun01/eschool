@@ -181,8 +181,8 @@ def dashboard(request):
         'user': request.user,
     }
     
-    # Dashboard administrateur
-    if request.user.role in ['ADMIN', 'SUPER_ADMIN'] or request.user.is_staff:
+    # Dashboard administrateur et gestionnaire financier
+    if request.user.role in ['ADMIN', 'SUPER_ADMIN', 'FINANCE'] or request.user.is_staff:
         return admin_dashboard(request)
     
     # Dashboard élève
@@ -871,6 +871,12 @@ def parent_dashboard(request):
         all_grades = Grade.objects.filter(student=child)
         average_grade = all_grades.aggregate(avg=Avg('score'))['avg'] or 0
         
+        # Vérifier si l'élève est inscrit (a une classe ou une inscription active)
+        is_enrolled = child.current_class is not None or Enrollment.objects.filter(
+            student=child,
+            is_active=True
+        ).exists()
+        
         # Présences de l'enfant cette semaine (nouveau système)
         week_summaries = DailyAttendanceSummary.objects.filter(
             student=child,
@@ -894,16 +900,18 @@ def parent_dashboard(request):
             attendance_stats['total'] = sum(attendance_stats.values())
             attendance_stats['attendance_rate'] = int(
                 (attendance_stats['present'] / attendance_stats['total'] * 100) 
-                if attendance_stats['total'] > 0 else 100
+                if attendance_stats['total'] > 0 else 0
             )
         else:
+            # Si l'élève n'est pas inscrit, afficher N/A au lieu de 100%
             attendance_stats = {
                 'present': 0,
                 'absent': 0,
                 'late': 0,
                 'excused': 0,
                 'total': 0,
-                'attendance_rate': 100
+                'attendance_rate': None if not is_enrolled else 0,
+                'is_enrolled': is_enrolled
             }
         
         # Absences récentes (nouveau système - sessions individuelles avec absence)
