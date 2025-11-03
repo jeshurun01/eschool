@@ -29,3 +29,7 @@ gunicorn>=21.2.0
 
 # Utilities
 requests>=2.32.5
+
+# Data Import/Export
+pandas>=2.0.0
+openpyxl>=3.1.0
