@@ -27,11 +27,16 @@ SECRET_KEY = config('SECRET_KEY', default="django-insecure-fmj3$l$%l$@mmh8^z7uxe
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
+# Render.com deployment support
+RENDER_EXTERNAL_HOSTNAME = config('RENDER_EXTERNAL_HOSTNAME', default='')
+
 # En développement, accepter toutes les connexions du réseau local
 if DEBUG:
     ALLOWED_HOSTS = ['*']  # Accepter toutes les connexions en mode développement
 else:
     ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+    if RENDER_EXTERNAL_HOSTNAME:
+        ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 
 # Application definition
@@ -110,7 +115,20 @@ WSGI_APPLICATION = "core.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-if config('USE_POSTGRESQL', default=False, cast=bool):
+# Use DATABASE_URL for Render.com or other cloud platforms
+DATABASE_URL = config('DATABASE_URL', default='')
+
+if DATABASE_URL:
+    # Parse DATABASE_URL for production (PostgreSQL on Render)
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+elif config('USE_POSTGRESQL', default=False, cast=bool):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -182,6 +200,9 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+
+# WhiteNoise configuration for serving static files in production
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
 MEDIA_URL = "/media/"
