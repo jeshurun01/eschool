@@ -205,7 +205,7 @@ class ActivityLog(models.Model):
 
 def log_activity(user, action_type, description, content_type=None, object_id=None, 
                  object_repr=None, old_values=None, new_values=None, 
-                 request=None):
+                 request=None, timestamp=None):
     """
     Fonction utilitaire pour créer un log d'activité
     
@@ -231,6 +231,13 @@ def log_activity(user, action_type, description, content_type=None, object_id=No
         'old_values': old_values,
         'new_values': new_values,
     }
+    
+    # S'assurer que le timestamp est timezone-aware
+    if timestamp:
+        from django.utils.timezone import is_aware, make_aware
+        if not is_aware(timestamp):
+            timestamp = make_aware(timestamp)
+        log_data['timestamp'] = timestamp
     
     # Ajouter les infos de la requête si disponible
     if request:
