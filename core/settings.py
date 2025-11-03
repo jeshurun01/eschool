@@ -305,6 +305,12 @@ SITE_NAME = config('SITE_NAME', default='eSchool')
 SITE_URL = config('SITE_URL', default='http://localhost:8000')
 
 # Logging
+import os
+
+# Ensure logs directory exists
+LOGS_DIR = BASE_DIR / 'logs'
+os.makedirs(LOGS_DIR, exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -319,12 +325,6 @@ LOGGING = {
         },
     },
     'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'django.log',
-            'formatter': 'verbose',
-        },
         'console': {
             'level': 'DEBUG' if DEBUG else 'INFO',
             'class': 'logging.StreamHandler',
@@ -332,10 +332,20 @@ LOGGING = {
         },
     },
     'root': {
-        'handlers': ['console', 'file'],
+        'handlers': ['console'],
         'level': 'INFO',
     },
 }
+
+# Add file logging only if not in production environment (Render)
+if not config('RENDER_EXTERNAL_HOSTNAME', default=''):
+    LOGGING['handlers']['file'] = {
+        'level': 'INFO',
+        'class': 'logging.FileHandler',
+        'filename': LOGS_DIR / 'django.log',
+        'formatter': 'verbose',
+    }
+    LOGGING['root']['handlers'].append('file')
 
 # Security Settings
 if not DEBUG:

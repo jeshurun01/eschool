@@ -4,6 +4,12 @@ set -o errexit
 
 echo "🔨 Starting build process..."
 
+# Create necessary directories
+echo "📁 Creating directories..."
+mkdir -p logs
+mkdir -p media/avatars
+mkdir -p media/documents
+
 # Install Python dependencies
 echo "📦 Installing Python dependencies..."
 pip install -r requirements.txt
