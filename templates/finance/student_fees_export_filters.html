@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Export CSV - Frais Étudiants{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex items-center mb-4">
+                <a href="{% url 'finance:invoice_list' %}" 
+                   class="flex items-center text-blue-600 hover:text-blue-800 transition-colors mr-4">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    <span class="text-sm font-medium">Retour aux factures</span>
+                </a>
+            </div>
+            
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Export CSV - Frais Étudiants</h1>
+                <p class="mt-2 text-gray-600">Sélectionnez les filtres pour personnaliser votre export</p>
+            </div>
+        </div>
+
+        <!-- Info académique -->
+        {% if academic_year %}
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+            <div class="flex items-center">
+                <i class="fas fa-info-circle text-blue-500 mr-3"></i>
+                <div>
+                    <p class="text-sm text-blue-800">
+                        <strong>Année académique:</strong> {{ academic_year.name }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Formulaire de filtres -->
+        <form id="exportForm" method="GET" action="{% url 'finance:student_fees_csv_export' %}">
+            
+            <!-- Section Classes -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-chalkboard mr-2 text-blue-500"></i>
+                    Classes
+                    <span class="text-sm text-blue-500 hover:text-blue-700 cursor-pointer underline ml-4" onclick="toggleSelectAll('classes')">
+                        Tout sélectionner / Tout désélectionner
+                    </span>
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {% for classroom in classrooms %}
+                    <div class="flex items-center p-2 rounded-md hover:bg-gray-100 transition-colors">
+                        <input type="checkbox" name="classes" value="{{ classroom.id }}" 
+                               id="class_{{ classroom.id }}" class="w-4 h-4 mr-2 cursor-pointer classes-checkbox">
+                        <label for="class_{{ classroom.id }}" class="cursor-pointer flex-1 text-sm text-gray-700">
+                            {{ classroom.name }}
+                            {% if classroom.level %}
+                                <span class="text-xs text-gray-500">({{ classroom.level.name }})</span>
+                            {% endif %}
+                        </label>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-500 text-sm">Aucune classe disponible</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Section Types de Frais -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-money-bill-wave mr-2 text-blue-500"></i>
+                    Types de Frais
+                    <span class="text-sm text-blue-500 hover:text-blue-700 cursor-pointer underline ml-4" onclick="toggleSelectAll('fee_types')">
+                        Tout sélectionner / Tout désélectionner
+                    </span>
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {% for fee_type in fee_types %}
+                    <div class="flex items-center p-2 rounded-md hover:bg-gray-100 transition-colors">
+                        <input type="checkbox" name="fee_types" value="{{ fee_type.id }}" 
+                               id="fee_{{ fee_type.id }}" class="w-4 h-4 mr-2 cursor-pointer fee_types-checkbox">
+                        <label for="fee_{{ fee_type.id }}" class="cursor-pointer flex-1 text-sm text-gray-700">
+                            {{ fee_type.name }}
+                            {% if fee_type.is_mandatory %}
+                                <span class="text-xs text-green-600">(Obligatoire)</span>
+                            {% endif %}
+                        </label>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-500 text-sm">Aucun type de frais disponible</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Section Étudiants -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-user-graduate mr-2 text-blue-500"></i>
+                    Étudiants spécifiques (optionnel)
+                    <span class="text-sm text-blue-500 hover:text-blue-700 cursor-pointer underline ml-4" onclick="toggleSelectAll('students')">
+                        Tout sélectionner / Tout désélectionner
+                    </span>
+                </h3>
+                
+                <!-- Recherche -->
+                <div class="mb-4">
+                    <input type="text" id="studentSearch" placeholder="Rechercher un étudiant..." 
+                           onkeyup="filterStudents()"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" id="studentsList">
+                    {% for student in students %}
+                    <div class="flex items-start p-3 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-blue-500 hover:shadow-sm transition-all" data-search="{{ student.user.full_name|lower }} {{ student.matricule|lower }} {% if student.current_class %}{{ student.current_class.name|lower }}{% endif %}">
+                        <input type="checkbox" name="students" value="{{ student.id }}" 
+                               id="student_{{ student.id }}" class="w-5 h-5 mt-0.5 mr-3 cursor-pointer students-checkbox flex-shrink-0">
+                        <label for="student_{{ student.id }}" class="flex-1 cursor-pointer min-w-0">
+                            <div class="font-medium text-gray-900 text-sm truncate">{{ student.user.full_name }}</div>
+                            <div class="text-xs text-gray-500 mt-1">
+                                {{ student.matricule }}
+                                {% if student.current_class %}
+                                    <span class="inline-block">• {{ student.current_class.name }}</span>
+                                {% endif %}
+                            </div>
+                        </label>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-500 text-sm">Aucun étudiant disponible</p>
+                    {% endfor %}
+                </div>
+                
+                <p class="text-xs text-gray-500 mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    Si aucun étudiant n'est sélectionné, tous les étudiants (filtrés par classe si applicable) seront exportés
+                </p>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="flex gap-4 justify-end mt-8">
+                <a href="{% url 'finance:invoice_list' %}" 
+                   class="px-6 py-3 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    Annuler
+                </a>
+                
+                <button type="button" onclick="resetForm()"
+                        class="px-6 py-3 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <i class="fas fa-redo mr-2"></i>
+                    Réinitialiser
+                </button>
+                
+                <button type="submit" 
+                        class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <i class="fas fa-download mr-2"></i>
+                    Télécharger le CSV
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Fonction pour tout sélectionner/désélectionner
+function toggleSelectAll(groupName) {
+    const checkboxes = document.querySelectorAll('.' + groupName + '-checkbox');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = !allChecked;
+    });
+}
+
+// Fonction pour filtrer les étudiants
+function filterStudents() {
+    const searchValue = document.getElementById('studentSearch').value.toLowerCase();
+    const studentItems = document.querySelectorAll('.student-item');
+    
+    studentItems.forEach(item => {
+        const searchData = item.getAttribute('data-search');
+        if (searchData.includes(searchValue)) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+// Fonction pour réinitialiser le formulaire
+function resetForm() {
+    document.getElementById('exportForm').reset();
+    document.getElementById('studentSearch').value = '';
+    filterStudents();
+}
+
+// Validation avant soumission
+document.getElementById('exportForm').addEventListener('submit', function(e) {
+    const hasClassSelection = document.querySelectorAll('.classes-checkbox:checked').length > 0;
+    const hasStudentSelection = document.querySelectorAll('.students-checkbox:checked').length > 0;
+    const hasFeeTypeSelection = document.querySelectorAll('.fee_types-checkbox:checked').length > 0;
+    
+    // Si aucun filtre n'est sélectionné, demander confirmation
+    if (!hasClassSelection && !hasStudentSelection && !hasFeeTypeSelection) {
+        if (!confirm('Aucun filtre sélectionné. L\'export contiendra tous les étudiants et tous les types de frais. Continuer ?')) {
+            e.preventDefault();
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1196,3 +1196,175 @@ def daily_financial_report_export_excel(request, date):
     except Exception as e:
         messages.error(request, f'Erreur: {str(e)}')
         return redirect('finance:daily_financial_report')
+
+
+@finance_required
+def student_fees_export_filters(request):
+    """
+    Interface de filtrage pour l'export CSV des frais étudiants
+    """
+    from academic.models import ClassRoom
+    
+    # Récupérer l'année académique actuelle
+    academic_year = AcademicYear.objects.filter(is_current=True).first()
+    
+    # Récupérer toutes les classes
+    classrooms = ClassRoom.objects.all().select_related('level').order_by('level__name', 'name')
+    
+    # Récupérer tous les types de frais
+    fee_types = FeeType.objects.all().order_by('name')
+    
+    # Récupérer tous les étudiants actifs
+    students = Student.objects.filter(
+        user__is_active=True
+    ).select_related('user', 'current_class').order_by('current_class__name', 'user__last_name')
+    
+    context = {
+        'academic_year': academic_year,
+        'classrooms': classrooms,
+        'fee_types': fee_types,
+        'students': students,
+    }
+    
+    return render(request, 'finance/student_fees_export_filters.html', context)
+
+
+@finance_required
+def student_fees_csv_export(request):
+    """
+    Exporte un rapport CSV avec les élèves, leur classe et tous les frais
+    Format: Student, Class, [Fee Type 1], [Fee Type 2], ..., Total
+    Supporte les filtres: classes, fee_types, students
+    """
+    import csv
+    from django.db.models import Sum, Q
+    from collections import defaultdict
+    from academic.models import ClassRoom
+    
+    # Créer la réponse HTTP CSV
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="student_fees_report.csv"'
+    
+    # Ajouter BOM pour Excel UTF-8
+    response.write('\ufeff')
+    
+    writer = csv.writer(response)
+    
+    # Récupérer l'année académique actuelle (ou filtrer selon les paramètres)
+    academic_year_id = request.GET.get('academic_year')
+    if academic_year_id:
+        academic_year = get_object_or_404(AcademicYear, id=academic_year_id)
+    else:
+        academic_year = AcademicYear.objects.filter(is_current=True).first()
+    
+    if not academic_year:
+        messages.error(request, 'Aucune année académique trouvée.')
+        return redirect('finance:financial_reports')
+    
+    # Récupérer les filtres
+    selected_classes = request.GET.getlist('classes')  # Liste des IDs de classes
+    selected_fee_types = request.GET.getlist('fee_types')  # Liste des IDs de types de frais
+    selected_students = request.GET.getlist('students')  # Liste des IDs d'étudiants
+    
+    # Récupérer tous les types de frais (ou filtrés)
+    if selected_fee_types:
+        fee_types = FeeType.objects.filter(id__in=selected_fee_types).order_by('name')
+    else:
+        fee_types = FeeType.objects.all().order_by('name')
+    
+    # Construire l'en-tête
+    headers = ['Matricule', 'Étudiant', 'Classe']
+    fee_type_headers = [fee_type.name for fee_type in fee_types]
+    headers.extend(fee_type_headers)
+    headers.extend(['Total Facturé', 'Total Payé', 'Solde Restant'])
+    
+    writer.writerow(headers)
+    
+    # Récupérer tous les étudiants actifs (avec filtres)
+    students_query = Student.objects.filter(user__is_active=True)
+    
+    # Filtrer par classes
+    if selected_classes:
+        students_query = students_query.filter(current_class_id__in=selected_classes)
+    
+    # Filtrer par étudiants spécifiques
+    if selected_students:
+        students_query = students_query.filter(id__in=selected_students)
+    
+    students = students_query.select_related(
+        'user', 'current_class', 'current_class__level'
+    ).order_by('current_class__name', 'user__last_name', 'user__first_name')
+    
+    # Parcourir chaque étudiant
+    for student in students:
+        row = [
+            student.matricule,
+            student.user.full_name,
+            student.current_class.name if student.current_class else 'Non assigné'
+        ]
+        
+        # Récupérer toutes les factures de l'étudiant pour l'année
+        invoices = Invoice.objects.filter(
+            student=student,
+            issue_date__year=academic_year.start_date.year
+        ).prefetch_related('items', 'items__fee_type', 'payments')
+        
+        # Calculer les montants par type de frais
+        fee_amounts = defaultdict(Decimal)
+        for invoice in invoices:
+            for item in invoice.items.all():
+                fee_amounts[item.fee_type.id] += item.total
+        
+        # Ajouter les montants pour chaque type de frais
+        for fee_type in fee_types:
+            amount = fee_amounts.get(fee_type.id, Decimal('0.00'))
+            row.append(f"{amount:.2f}")
+        
+        # Calculer les totaux
+        total_invoiced = sum(invoice.total_amount for invoice in invoices)
+        total_paid = sum(invoice.paid_amount for invoice in invoices)
+        balance = total_invoiced - total_paid
+        
+        row.extend([
+            f"{total_invoiced:.2f}",
+            f"{total_paid:.2f}",
+            f"{balance:.2f}"
+        ])
+        
+        writer.writerow(row)
+    
+    # Ajouter une ligne de total si nécessaire
+    writer.writerow([])  # Ligne vide
+    writer.writerow([''] * len(headers))  # Ligne vide avec bon nombre de colonnes
+    
+    # Ligne de résumé
+    total_row = ['', 'TOTAL GÉNÉRAL', '']
+    
+    # Calculer les totaux par type de frais
+    for fee_type in fee_types:
+        total = InvoiceItem.objects.filter(
+            fee_type=fee_type,
+            invoice__issue_date__year=academic_year.start_date.year,
+            invoice__student__user__is_active=True
+        ).aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+        total_row.append(f"{total:.2f}")
+    
+    # Totaux généraux
+    all_invoices = Invoice.objects.filter(
+        issue_date__year=academic_year.start_date.year,
+        student__user__is_active=True
+    )
+    
+    total_invoiced_all = sum(invoice.total_amount for invoice in all_invoices)
+    total_paid_all = sum(invoice.paid_amount for invoice in all_invoices)
+    balance_all = total_invoiced_all - total_paid_all
+    
+    total_row.extend([
+        f"{total_invoiced_all:.2f}",
+        f"{total_paid_all:.2f}",
+        f"{balance_all:.2f}"
+    ])
+    
+    writer.writerow(total_row)
+    
+    return response

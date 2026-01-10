@@ -53,6 +53,10 @@ urlpatterns = [
     path('reports/daily/<str:date>/pdf/', views.daily_financial_report_export_pdf, name='daily_financial_report_export_pdf'),
     path('reports/daily/<str:date>/excel/', views.daily_financial_report_export_excel, name='daily_financial_report_export_excel'),
     
+    # Export CSV des frais étudiants
+    path('reports/students-fees-export/', views.student_fees_export_filters, name='student_fees_export_filters'),
+    path('reports/students-fees-csv/', views.student_fees_csv_export, name='student_fees_csv_export'),
+    
     # URLs pour les dashboards
     path('invoices/generate/', views.invoice_generate, name='invoice_generate'),
 ]
