@@ -37,7 +37,7 @@
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 p-6">
             <div class="text-center">
                 <div class="text-3xl font-bold text-blue-600">{{ total_students }}</div>
-                <div class="text-sm text-gray-600">Étudiants</div>
+                <div class="text-sm text-gray-600">Élèves</div>
             </div>
             <div class="text-center">
                 <div class="text-3xl font-bold text-green-600">{{ class_average }}</div>
@@ -55,13 +55,13 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Liste des étudiants avec moyennes -->
+        <!-- Liste des élèves avec moyennes -->
         <div class="lg:col-span-2">
             <div class="bg-white shadow rounded-lg overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200">
                     <h2 class="text-lg font-semibold text-gray-900">
                         <i class="fas fa-graduation-cap text-blue-500 mr-2"></i>
-                        Étudiants du cours ({{ total_students }})
+                        Élèves du cours ({{ total_students }})
                     </h2>
                 </div>
                 
@@ -71,7 +71,7 @@
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Étudiant
+                                    Élève
                                 </th>
                                 <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Moyenne
@@ -159,7 +159,7 @@
                 {% else %}
                 <div class="p-6 text-center text-gray-500">
                     <i class="fas fa-users text-4xl mb-4 text-gray-300"></i>
-                    <p>Aucun étudiant inscrit dans ce cours.</p>
+                    <p>Aucun élève inscrit dans ce cours.</p>
                 </div>
                 {% endif %}
             </div>
@@ -385,7 +385,7 @@ function addGrade(studentId) {
 }
 
 function viewGrades(studentId) {
-    // Redirection vers la liste des notes de l'étudiant
+    // Redirection vers la liste des notes de l'élève
     window.location.href = `{% url 'academic:grade_list' %}?student=${studentId}&subject={{ course.subject.id }}`;
 }
 </script>

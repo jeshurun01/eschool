@@ -237,38 +237,24 @@ def classroom_create(request):
 @login_required
 def classroom_edit(request, classroom_id):
     """Modifier une classe"""
+    from academic.forms import ClassRoomForm
+    
     classroom = get_object_or_404(ClassRoom, id=classroom_id)
     
     if request.method == 'POST':
-        classroom.name = request.POST.get('name', classroom.name)
-        classroom.capacity = int(request.POST.get('capacity', classroom.capacity))
-        classroom.room_number = request.POST.get('room_number', classroom.room_number)
-        
-        level_id = request.POST.get('level')
-        if level_id:
-            classroom.level = get_object_or_404(Level, id=level_id)
-        
-        head_teacher_id = request.POST.get('head_teacher')
-        if head_teacher_id:
-            classroom.head_teacher = get_object_or_404(Teacher, id=head_teacher_id)
-        else:
-            classroom.head_teacher = None
-        
-        try:
-            classroom.save()
+        form = ClassRoomForm(request.POST, instance=classroom)
+        if form.is_valid():
+            form.save()
             messages.success(request, 'La classe a été modifiée avec succès.')
             return redirect('academic:classroom_detail', classroom_id=classroom.id)
-        except Exception as e:
-            messages.error(request, f'Erreur lors de la modification : {str(e)}')
-    
-    # Données pour le formulaire
-    levels = Level.objects.all()
-    teachers = Teacher.objects.select_related('user').filter(user__is_active=True)
+        else:
+            messages.error(request, 'Veuillez corriger les erreurs ci-dessous.')
+    else:
+        form = ClassRoomForm(instance=classroom)
     
     context = {
         'classroom': classroom,
-        'levels': levels,
-        'teachers': teachers,
+        'form': form,
     }
     
     return render(request, 'academic/classroom_edit.html', context)

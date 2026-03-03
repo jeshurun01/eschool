@@ -126,7 +126,7 @@
                class="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
               <span class="flex items-center justify-center">
                 <span class="material-icons mr-2">school</span>
-                Mon Espace Étudiant
+                Mon Espace Élève
               </span>
             </a>
           {% elif user.is_teacher %}
@@ -214,10 +214,10 @@
     {% if user.is_authenticated %}
       <div class="max-w-6xl mx-auto mb-16">
         {% if user.is_student %}
-          <!-- Interface étudiant -->
+          <!-- Interface élève -->
           <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-100">
             <div class="text-center mb-8">
-              <h3 class="text-2xl font-bold text-gray-900 mb-2">Mon Espace Étudiant</h3>
+              <h3 class="text-2xl font-bold text-gray-900 mb-2">Mon Espace Élève</h3>
               <p class="text-gray-600">Accédez rapidement à vos informations académiques</p>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -244,7 +244,7 @@
           <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-8 border border-green-100">
             <div class="text-center mb-8">
               <h3 class="text-2xl font-bold text-gray-900 mb-2">Espace Enseignant</h3>
-              <p class="text-gray-600">Gérez vos cours et suivez vos étudiants</p>
+              <p class="text-gray-600">Gérez vos cours et suivez vos élèves</p>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
               <a href="{% url 'academic:teacher_sessions' %}" class="bg-white/70 hover:bg-white p-4 rounded-xl text-center transition-all">
@@ -257,7 +257,7 @@
               </a>
               <a href="{% url 'academic:teacher_students' %}" class="bg-white/70 hover:bg-white p-4 rounded-xl text-center transition-all">
                 <span class="material-icons text-purple-600 text-3xl mb-2">group</span>
-                <p class="text-sm font-medium text-gray-900">Étudiants</p>
+                <p class="text-sm font-medium text-gray-900">Élèves</p>
               </a>
               <a href="{% url 'academic:teacher_documents' %}" class="bg-white/70 hover:bg-white p-4 rounded-xl text-center transition-all">
                 <span class="material-icons text-yellow-600 text-3xl mb-2">folder</span>
@@ -313,7 +313,7 @@
               </a>
               <a href="{% url 'academic:admin_students' %}" class="bg-white/70 hover:bg-white p-4 rounded-xl text-center transition-all">
                 <span class="material-icons text-purple-600 text-3xl mb-2">group</span>
-                <p class="text-sm font-medium text-gray-900">Étudiants</p>
+                <p class="text-sm font-medium text-gray-900">Élèves</p>
               </a>
             </div>
           </div>

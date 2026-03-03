@@ -44,7 +44,7 @@
                         {% for user in users %}
                             <option value="{{ user.id }}">
                                 {{ user.first_name }} {{ user.last_name }} 
-                                ({% if user.role == 'STUDENT' %}Étudiant
+                                ({% if user.role == 'STUDENT' %}Élève
                                 {% elif user.role == 'TEACHER' %}Enseignant
                                 {% elif user.role == 'PARENT' %}Parent
                                 {% elif user.role == 'ADMIN' %}Administrateur

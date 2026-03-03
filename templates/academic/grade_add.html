@@ -17,7 +17,7 @@
 
         <div class="mb-8">
             <h1 class="text-3xl font-bold text-gray-900">Ajouter une Note</h1>
-            <p class="text-gray-600 mt-2">Saisir une nouvelle évaluation pour un étudiant</p>
+            <p class="text-gray-600 mt-2">Saisir une nouvelle évaluation pour un élève</p>
         </div>
 
         <!-- Messages d'erreur -->
@@ -75,19 +75,19 @@
                                 </div>
                                 <div class="ml-4">
                                     <h3 class="text-lg font-semibold text-gray-900">Identification</h3>
-                                    <p class="text-sm text-gray-500">Étudiant et matière concernés</p>
+                                    <p class="text-sm text-gray-500">Élève et matière concernés</p>
                                 </div>
                             </div>
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- Sélection de l'étudiant -->
+                                <!-- Sélection de l'élève -->
                                 <div>
                                     <label for="student" class="block text-sm font-medium text-gray-900 mb-2">
-                                        Étudiant <span class="text-red-500">*</span>
+                                        Élève <span class="text-red-500">*</span>
                                     </label>
                                     <select name="student" id="student" required
                                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                                        <option value="">Sélectionner un étudiant</option>
+                                        <option value="">Sélectionner un élève</option>
                                         {% for student in students %}
                                             <option value="{{ student.id }}" data-classroom="{{ student.current_class.name }}" data-classroom-id="{{ student.current_class.id }}">
                                                 {{ student.user.get_full_name }} - {{ student.current_class.name }}
@@ -290,7 +290,7 @@
                         </div>
                         <div class="flex items-start">
                             <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
-                            <span>Les commentaires aident l'étudiant à comprendre sa performance</span>
+                            <span>Les commentaires aident l'élève à comprendre sa performance</span>
                         </div>
                     </div>
                 </div>
@@ -342,12 +342,12 @@ document.addEventListener('DOMContentLoaded', function() {
         subjectSelect.value = presetSubject;
     }
     
-    // Filtrer les étudiants selon la classe si spécifiée dans l'URL
+    // Filtrer les élèves selon la classe si spécifiée dans l'URL
     if (presetClassroom) {
         const studentSelect = document.getElementById('student');
         const allOptions = Array.from(studentSelect.options);
         
-        // Masquer les étudiants qui ne sont pas dans la classe spécifiée
+        // Masquer les élèves qui ne sont pas dans la classe spécifiée
         allOptions.forEach(option => {
             if (option.value && option.dataset.classroomId !== presetClassroom) {
                 option.style.display = 'none';

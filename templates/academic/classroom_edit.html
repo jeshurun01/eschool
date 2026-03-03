@@ -50,9 +50,9 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Nom de la classe -->
                     <div>
-                        <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        <label for="id_name" class="block text-sm font-medium text-gray-700 mb-2">
                             <i class="fas fa-tag text-gray-400 mr-1"></i>
-                            Nom de la classe *
+                            {{ form.name.label }} *
                         </label>
                         {{ form.name }}
                         {% if form.name.errors %}
@@ -66,9 +66,9 @@
 
                     <!-- Niveau -->
                     <div>
-                        <label for="{{ form.level.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        <label for="id_level" class="block text-sm font-medium text-gray-700 mb-2">
                             <i class="fas fa-layer-group text-gray-400 mr-1"></i>
-                            Niveau *
+                            {{ form.level.label }} *
                         </label>
                         {{ form.level }}
                         {% if form.level.errors %}
@@ -82,9 +82,9 @@
 
                     <!-- Année académique -->
                     <div>
-                        <label for="{{ form.academic_year.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        <label for="id_academic_year" class="block text-sm font-medium text-gray-700 mb-2">
                             <i class="fas fa-calendar-alt text-gray-400 mr-1"></i>
-                            Année académique *
+                            {{ form.academic_year.label }} *
                         </label>
                         {{ form.academic_year }}
                         {% if form.academic_year.errors %}
@@ -98,36 +98,75 @@
 
                     <!-- Capacité maximale -->
                     <div>
-                        <label for="{{ form.max_capacity.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        <label for="id_capacity" class="block text-sm font-medium text-gray-700 mb-2">
                             <i class="fas fa-users text-gray-400 mr-1"></i>
-                            Capacité maximale
+                            {{ form.capacity.label }}
                         </label>
-                        {{ form.max_capacity }}
-                        {% if form.max_capacity.errors %}
+                        {{ form.capacity }}
+                        {% if form.capacity.errors %}
                             <div class="mt-1 text-sm text-red-600">
-                                {% for error in form.max_capacity.errors %}
+                                {% for error in form.capacity.errors %}
+                                    <p><i class="fas fa-exclamation-circle mr-1"></i>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {% if form.capacity.help_text %}
+                            <p class="mt-1 text-sm text-gray-500">{{ form.capacity.help_text }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Professeur principal -->
+                    <div>
+                        <label for="id_head_teacher" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-chalkboard-teacher text-gray-400 mr-1"></i>
+                            {{ form.head_teacher.label }}
+                        </label>
+                        {{ form.head_teacher }}
+                        {% if form.head_teacher.errors %}
+                            <div class="mt-1 text-sm text-red-600">
+                                {% for error in form.head_teacher.errors %}
                                     <p><i class="fas fa-exclamation-circle mr-1"></i>{{ error }}</p>
                                 {% endfor %}
                             </div>
                         {% endif %}
                     </div>
+
+                    <!-- Numéro de salle -->
+                    <div>
+                        <label for="id_room_number" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-door-open text-gray-400 mr-1"></i>
+                            {{ form.room_number.label }}
+                        </label>
+                        {{ form.room_number }}
+                        {% if form.room_number.errors %}
+                            <div class="mt-1 text-sm text-red-600">
+                                {% for error in form.room_number.errors %}
+                                    <p><i class="fas fa-exclamation-circle mr-1"></i>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {% if form.room_number.help_text %}
+                            <p class="mt-1 text-sm text-gray-500">{{ form.room_number.help_text }}</p>
+                        {% endif %}
+                    </div>
                 </div>
 
-                <!-- Description -->
-                <div class="mt-6">
-                    <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-align-left text-gray-400 mr-1"></i>
-                        Description
-                    </label>
-                    {{ form.description }}
-                    {% if form.description.errors %}
-                        <div class="mt-1 text-sm text-red-600">
-                            {% for error in form.description.errors %}
-                                <p><i class="fas fa-exclamation-circle mr-1"></i>{{ error }}</p>
-                            {% endfor %}
+                <!-- Erreurs non-field -->
+                {% if form.non_field_errors %}
+                    <div class="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div class="flex items-start">
+                            <i class="fas fa-exclamation-triangle text-red-600 mt-0.5 mr-3"></i>
+                            <div>
+                                <h3 class="text-sm font-medium text-red-800">Erreurs de validation</h3>
+                                <div class="text-sm text-red-700 mt-1">
+                                    {% for error in form.non_field_errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            </div>
                         </div>
-                    {% endif %}
-                </div>
+                    </div>
+                {% endif %}
 
                 <!-- Actions -->
                 <div class="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">

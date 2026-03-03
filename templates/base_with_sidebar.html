@@ -90,7 +90,7 @@
                         {% elif user.role == 'STUDENT' %}
                             <span class="material-icons text-3xl mr-3">person</span>
                             <div>
-                                <h1 class="text-lg font-bold">Espace Étudiant</h1>
+                                <h1 class="text-lg font-bold">Espace Élève</h1>
                                 <p class="text-xs opacity-80">{{ user.get_full_name }}</p>
                             </div>
                         {% elif user.role == 'PARENT' %}
@@ -174,7 +174,7 @@
                     </button>
                     <h1 class="text-lg font-semibold text-gray-900">
                         {% if user.role == 'TEACHER' %}Espace Enseignant
-                        {% elif user.role == 'STUDENT' %}Espace Étudiant
+                        {% elif user.role == 'STUDENT' %}Espace Élève
                         {% elif user.role == 'PARENT' %}Espace Parent
                         {% else %}Administration{% endif %}
                     </h1>

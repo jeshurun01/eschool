@@ -1,7 +1,7 @@
 {% extends 'academic/teacher/base_teacher.html' %}
 {% load static %}
 
-{% block title %}Mes Étudiants - Interface Enseignant{% endblock %}
+{% block title %}Mes Élèves - Interface Enseignant{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
@@ -11,10 +11,10 @@
             <div class="sm:flex-auto">
                 <h1 class="text-3xl font-bold text-gray-900 flex items-center">
                     <span class="material-icons text-yellow-600 mr-3">people</span>
-                    Mes Étudiants
+                    Mes Élèves
                 </h1>
                 <p class="mt-2 text-sm text-gray-700">
-                    Vue d'ensemble de tous mes étudiants par classe
+                    Vue d'ensemble de tous mes élèves par classe
                 </p>
             </div>
             
@@ -50,7 +50,7 @@
                                     Classe {{ class_stat.classroom.name }}
                                 </h3>
                                 <p class="mt-1 max-w-2xl text-sm text-gray-500">
-                                    {{ class_stat.classroom.level.name }} • {{ class_stat.student_count }} étudiant{{ class_stat.student_count|pluralize }}
+                                    {{ class_stat.classroom.level.name }} • {{ class_stat.student_count }} élève{{ class_stat.student_count|pluralize }}
                                 </p>
                             </div>
                             
@@ -74,7 +74,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                             <div class="text-center">
                                 <div class="text-lg font-semibold text-gray-900">{{ class_stat.student_count }}</div>
-                                <div class="text-sm text-gray-500">Étudiants</div>
+                                <div class="text-sm text-gray-500">Élèves</div>
                             </div>
                             
                             <div class="text-center">
@@ -111,7 +111,7 @@
                             <a href="{% url 'academic:teacher_class_detail' class_stat.classroom.pk %}" 
                                class="inline-flex items-center px-3 py-1.5 border border-blue-300 shadow-sm text-xs font-medium rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">
                                 <span class="material-icons text-sm mr-1">people</span>
-                                Liste des étudiants
+                                Liste des élèves
                             </a>
                             
                             <a href="{% url 'academic:teacher_sessions' %}?classroom={{ class_stat.classroom.pk }}" 
