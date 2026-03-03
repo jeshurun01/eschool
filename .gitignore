@@ -34,5 +34,5 @@ Thumbs.db
 node_modules/
 package-lock.json
 
-# Compiled CSS
-static/css/output.css
+# Compiled CSS (uncomment to exclude from git)
+# static/css/output.css
